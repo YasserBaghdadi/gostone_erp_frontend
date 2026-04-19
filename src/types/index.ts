@@ -1,0 +1,766 @@
+export type OpportunityStatus = 'new' | 'measurements_requested' | 'measurements_completed' | 'priced' | 'work_order_pending' | 'converted' | 'rejected';
+
+export type WorkOrderStatus = 'active' | 'completed' | 'on_hold' | 'cancelled';
+
+// Unified Approval Types
+export type ApprovalStatus = 'pending' | 'in_progress' | 'approved' | 'rejected';
+
+export interface ApprovalStep {
+  id: number;
+  order: number;
+  name: string;
+  is_required: boolean;
+  send_notification: boolean;
+}
+
+export interface ApprovalActionItem {
+  id: number;
+  step: number;
+  action: 'approved' | 'rejected';
+  performed_by: number;
+  performed_by_name: string;
+  comment: string;
+  created_at: string;
+}
+
+export interface Approval {
+  id: number;
+  workflow: number;
+  workflow_name: string;
+  content_type: number;
+  content_type_label: string;
+  object_id: number;
+  status: ApprovalStatus;
+  current_step: ApprovalStep;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApprovalDetails extends Approval {
+  actions: ApprovalActionItem[];
+}
+
+// Reusing JournalEntry structure for consistency as the API returns nested journal entries now
+export interface CustomerTransaction {
+  id: number;
+  created_at: string;
+  items: JournalEntryItem[];
+}
+
+export interface CustomerAccount {
+  id: number;
+  customer: number;
+  number: string;
+  balance: string;
+  total_debit: string;
+  total_credit: string;
+  total: string;
+  created_at: string;
+  updated_at: string;
+  transactions: CustomerTransaction[];
+}
+
+export interface Customer {
+  id: number;
+  phone_number: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  is_active?: boolean;
+  date_joined?: string;
+  phone_number2?: string | null;
+  phone_number3?: string | null;
+  last_visit?: string | null;
+  visit_repetition_days?: number;
+  color?: string;
+  salesmen?: Salesman[]; 
+  
+  // Legal & Address Info
+  vat_number?: string | null;
+  vat_number_file?: string | null;
+  tax_number?: number | null; // Changed to number based on JSON
+  tax_file?: string | null;
+  cr_number?: string | null;
+  cr_file?: string | null;
+  /** عنوان مفكك للباك اند (NATIONAL ADDRESS PARTS) */
+  street?: string | null;
+  building_number?: string | null;
+  district?: string | null;
+  secondary_number?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+
+  /** عنوان نصي (Legacy / fallback) */
+  address?: string | null;
+  address_file?: string | null;
+  
+  // Financials
+  account?: CustomerAccount;
+
+  // Approvals (timestamp-based: null = not done, value = done)
+  accepted_at?: string | null;
+  verified_at?: string | null;
+  rejected_at?: string | null;
+  accepted_by?: number | null;
+  verified_by?: number | null;
+  rejected_by?: number | null;
+  rejected_reason?: string;
+  
+  // Legacy fields (deprecated or mapped)
+  commercial_registration?: string | null;
+  national_address?: string | null;
+}
+
+export interface Salesman {
+  id: number;
+  user: number;
+  discount_percentage?: string;
+  phone_number?: string;
+  first_name: string;
+  last_name: string;
+}
+
+// Employee (Staff) Management
+export interface Permission {
+  id: number;
+  codename: string;
+  name: string;
+}
+
+export interface PermissionGroup {
+  id: number;
+  name: string;
+}
+
+export interface Employee {
+  id: number;
+  first_name: string;
+  last_name: string;
+  phone_number?: string;
+  phone: string; // New spec uses 'phone' but let's keep phone_number for types consistency if mapped, or add both
+  email?: string; // Optional now
+  is_active: boolean | string;
+  gender?: string; // New field
+  permission_groups?: string | PermissionGroup[]; // Updated to allow array of objects
+  groups?: PermissionGroup[]; // Keep for compatibility if we map it, likely removed in raw response
+  date_joined?: string;
+  password?: string; // Optional, only for creation/update payload
+}
+
+// Sessions (Salesman Shifts)
+export interface Session {
+  id: number;
+  salesman: Salesman;
+  created_at: string;
+  closed_at?: string;
+  sell_orders_total: string;
+  sell_orders_count: string;
+  opportunities_total: string;
+  opportunities_count: string;
+}
+
+export interface Dimension {
+  id: number;
+  opportunity: number;
+  session: number;
+  file: string;
+  notes: string;
+  created_at: string;
+}
+
+export interface OpportunityItem {
+  id?: number;
+  opportunity?: number;
+  item?: number | { id: number; name: string;[key: string]: any }; // Updated to match latest API where item is returned as object
+  item_id?: number; // For payload compatibility
+  quantity: string | number;
+  unit_name: string;
+  unit_factor?: string; // Added to match API response
+  unit_price_before_tax?: string;
+  unit_price_after_tax?: string;
+  total_price_before_tax?: string;
+  total_price_after_tax?: string;
+  counter_offer_before_tax?: string;
+  counter_offer_after_tax?: string;
+  dis_percentage?: string;
+  dis_total_before_tax?: string;
+  dis_total_after_tax?: string;
+  notes?: string;
+  // UI helpers
+  name?: string; 
+  price?: number; // fallback for UI components expecting 'price'
+  unit?: string; // fallback for UI components expecting 'unit'
+}
+
+export interface Opportunity {
+  id: number;
+  customer?: Customer;
+  salesman?: Salesman;
+  notes?: string;
+  location?: string;
+  interest_level?: string;
+  total_price_before_tax?: string;
+  total_price_after_tax?: string;
+  total_counter_offer?: string;
+  need_dim_order?: boolean;
+  have_sell_order?: boolean;
+  item_count?: number;
+  items: OpportunityItem[];
+  dimensions?: Dimension[];
+  created_at?: string;
+  dis_percentage?: string; // Global discount percentage
+  status?: string; // API doesn't strictly return status in the new v1 example, but might be there.
+  
+  // UI Helpers (optional mapping)
+  clientName?: string;
+  clientPhone?: string;
+  totalPrice?: number;
+
+  // Approvals (timestamp-based: null = not done, value = done)
+  accepted_at?: string | null;
+  verified_at?: string | null;
+  rejected_at?: string | null;
+  accepted_by?: number | null;
+  verified_by?: number | null;
+  rejected_by?: number | null;
+}
+
+export interface Expense {
+  id: string;
+  opportunityId: string;
+  amount: number;
+  reason: string;
+  date: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface Payment {
+  id: string;
+  opportunityId: string;
+  amount: number;
+  date: string;
+  method?: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface WorkOrder {
+  id: string;
+  opportunityId: string;
+  clientName: string;
+  clientPhone: string;
+  location: string;
+  items: OpportunityItem[]; // Reusing OpportunityItem might be tricky if structure differs
+  expenses: Expense[];
+  payments: Payment[];
+  totalPrice: number;
+  status: WorkOrderStatus;
+  createdAt: string;
+  startDate?: string;
+  endDate?: string;
+  notes?: string;
+}
+
+export const INTEREST_LEVELS = {
+  not_interested: { label: 'غير مهتم', color: 'bg-red-100 text-red-800' },
+  interested: { label: 'مهتم', color: 'bg-yellow-100 text-yellow-800' },
+  very_interested: { label: 'مهتم جداً', color: 'bg-green-100 text-green-800' },
+};
+
+export const STATUS_LABELS: Record<string, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
+  new: { label: 'جديدة', color: 'secondary' },
+  measurements_requested: { label: 'طلب مقاسات', color: 'warning' },
+  measurements_completed: { label: 'تم الرفع', color: 'info' },
+  priced: { label: 'تم التسعير', color: 'primary' as "default" },
+  work_order_pending: { label: 'بانتظار الموافقة', color: 'warning' },
+  converted: { label: 'تم التحويل لأمر بيع', color: 'success' },
+  rejected: { label: 'مرفوضة', color: 'destructive' },
+};
+
+export const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
+  active: { label: 'قيد التنفيذ', color: 'info' },
+  completed: { label: 'مكتمل', color: 'success' },
+  on_hold: { label: 'متوقف مؤقتاً', color: 'warning' },
+  cancelled: { label: 'ملغي', color: 'destructive' },
+};
+export interface CustodyRequest {
+  id: string;
+  employeeName: string;
+  amount: number;
+  type: 'cash' | 'transfer' | 'both';
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  date: string;
+
+  notes?: string;
+
+  // Approvals (timestamp-based: null = not done, value = done)
+  accepted_at?: string | null;
+  verified_at?: string | null;
+  rejected_at?: string | null;
+  accepted_by?: number | null;
+  verified_by?: number | null;
+  rejected_by?: number | null;
+
+  // Level-based approvals (for custody-specific workflow)
+  is_accepted_level1?: boolean;
+  is_accepted_level2?: boolean;
+}
+
+export type CustodyStatus = CustodyRequest['status'];
+
+export type ExpenseCategory = 'labor' | 'car' | 'project' | 'consumables';
+
+export interface EmployeeExpenseRequest {
+  id: string;
+  employeeName: string;
+  amount: number;
+  source: 'custody' | 'transfer' | 'both';
+  categories: ExpenseCategory[];
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  date: string;
+  attachmentUrl?: string; // Mock URL
+  attachmentType?: 'tax_invoice' | 'regular_invoice';
+}
+
+export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+  labor: 'عمالة',
+  car: 'سيارة',
+  project: 'مشروع',
+  consumables: 'مواد استهلاكية',
+};
+
+export const UNIT_LABELS = {
+  meter: 'متر طول',
+  sqm: 'متر مربع',
+  pcs: 'حبة',
+  job: 'عمل'
+};
+
+export const PERMISSION_GROUP_LABELS: Record<string, string> = {
+  customer_management: 'إدارة العملاء',
+  opportunity_management: 'إدارة الفرص',
+  employee_management: 'إدارة الموظفين',
+  inventory_management: 'إدارة المخزون',
+  financial_management: 'الإدارة المالية',
+  reports_viewing: 'عرض التقارير',
+  settings_access: 'الوصول للإعدادات',
+  work_order_management: 'إدارة أوامر العمل',
+  purchase_order_management: 'إدارة أوامر الشراء',
+  supplier_management: 'إدارة الموردين',
+  
+  // New keys from screenshot
+  dim_management: 'إدارة المقاسات',
+  storage_areas_management: 'إدارة المستودعات',
+  items_management: 'إدارة الأصناف',
+  sell_order_management: 'إدارة أوامر البيع',
+  Purchase_order_management: 'إدارة أوامر الشراء', // Case sensitive from screenshot
+  suppliers_management: 'إدارة الموردين',
+  disbursement_request_management: 'إدارة طلبات الصرف',
+  custodian_transaction_request: 'إدارة العهد',
+  session_management: 'إدارة الجلسات',
+  approval_management: 'إدارة الموافقات',
+  
+  // Accounts, Journal Entries, Payment Gateways
+  accounts_management: 'إدارة الحسابات',
+  account_management: 'إدارة الحسابات',
+  journal_entry_management: 'إدارة سندات القيد',
+  journal_entries_management: 'إدارة سندات القيد',
+  payment_gateways_management: 'إدارة بوابات الدفع',
+  payment_gateway_management: 'إدارة بوابات الدفع',
+};
+
+export type InterestLevel = keyof typeof INTEREST_LEVELS;
+
+// Sell Order Types
+export interface SellOrderItem {
+  id: number;
+  item: {
+    id: number;
+    name: string;
+    is_sellable: boolean;
+    is_purchable: boolean;
+    unit_price: string;
+    unit2_price?: string;
+    unit3_price?: string;
+    default_unit_name: string;
+    unit2_name?: string;
+    unit2_factor?: string;
+    unit3_name?: string;
+    unit3_factor?: string;
+  };
+  quantity: string;
+  price_before_tax: string;
+  price_after_tax: string;
+  unit_name: string;
+  unit_factor: string;
+  dis_percentage: string;
+  total_price_before_tax: string;
+  total_price_after_tax: string;
+  notes: string;
+  dis_total_before_tax: string;
+  dis_total_after_tax: string;
+}
+
+export interface SellOrder {
+  id: number;
+  opportunity_id?: number;
+  customer: Customer;
+  salesman?: Salesman;
+  total_price_before_tax: string;
+  total_price_after_tax: string;
+  dis_percentage: string;
+  location?: string;
+  notes?: string;
+  sell_order_items: SellOrderItem[];
+  created_at?: string;
+  /** رابط أو مسار ملف الفاتورة بعد الرفع؛ عند وجوده لا يُسمح بتعديل أمر البيع */
+  invoice_file?: string | null;
+
+  // Approvals (timestamp-based: null = not done, value = done)
+  accepted_at?: string | null;
+  verified_at?: string | null;
+  rejected_at?: string | null;
+  accepted_by?: number | null;
+  verified_by?: number | null;
+  rejected_by?: number | null;
+}
+
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface Item {
+  id: number;
+  name: string;
+  is_sellable: boolean;
+  is_purchable: boolean;
+  unit_price: string;
+  unit2_price?: string | null;
+  unit3_price?: string | null;
+  default_unit_name: string;
+  unit2_name?: string | null;
+  unit2_factor?: string | null;
+  unit3_name?: string | null;
+  unit3_factor?: string | null;
+  linked_purchasable_items: number[];
+  linked_sellable_items: number[];
+  inventory?: number;
+  thickness?: string | null;
+}
+
+export interface StorageArea {
+  id: number;
+  name: string;
+}
+
+// Purchase Order Types
+export type PurchaseOrderStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING' | 'APPROVED' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
+
+export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
+  DRAFT: { label: 'مسودة', color: 'secondary' },
+  SUBMITTED: { label: 'مُقدم', color: 'info' },
+  PENDING: { label: 'قيد الانتظار', color: 'warning' },
+  APPROVED: { label: 'تمت الموافقة', color: 'info' },
+  ORDERED: { label: 'تم الطلب', color: 'default' },
+  RECEIVED: { label: 'تم الاستلام', color: 'success' },
+  CANCELLED: { label: 'ملغي', color: 'destructive' },
+};
+
+export interface PurchaseOrderItem {
+  id?: number;
+  item: number;
+  item_name?: string;
+  supplier?: number;
+  supplier_name?: string;
+  quantity: string;
+  unit_name: string;
+  unit_factor?: string;
+  normalized_quantity?: string;
+  purchase_price: string;
+  line_total?: string;
+  notes?: string;
+  created_at?: string;
+  created_by?: number;
+}
+
+export interface PurchaseOrderHistoryEntry {
+  id: number;
+  purchase_order: number;
+  action: string;
+  status: string;
+  details?: string;
+  created_by: number;
+  created_at: string;
+}
+
+export interface PurchaseOrderSupplierSummary {
+  id: number;
+  display_name: string;
+  balance?: number | string;
+}
+
+export interface PurchaseOrder {
+  id: number;
+  supplier: number;
+  supplier_name?: string;
+  supplier_list?: PurchaseOrderSupplierSummary[];
+  sell_order?: number;
+  status: PurchaseOrderStatus;
+  total_cost?: string;
+  item_count?: number;
+  notes?: string;
+  items?: PurchaseOrderItem[];
+  history_entries?: PurchaseOrderHistoryEntry[];
+  created_at?: string;
+  updated_at?: string;
+  created_by?: number;
+  accepted_at?: string;
+
+  // Approvals (timestamp-based: null = not done, value = done)
+  verified_at?: string | null;
+  rejected_at?: string | null;
+  verified_by?: number | null;
+  rejected_by?: number | null;
+}
+
+// Supplier Types (placeholder for future API)
+export interface SupplierAccount {
+  id: number;
+  name: string;
+  note: string;
+  number: string;
+  parent: number | null;
+  balance: string;
+  total_debit: string;
+  total_credit: string;
+  total: string;
+  journal_entries: JournalEntry[];
+  created_at: string;
+  updated_at: string;
+  supplier: number;
+}
+
+export interface Supplier {
+  id: number;
+  user: number;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  display_name: string;
+  contact_name: string;
+  phone_number3: string;
+  phone_number2: string;
+  email: string;
+  vat_number: string;
+  vat_number_file: string | null;
+  tax_number?: number | null;
+  tax_file?: string | null;
+  cr_number: string;
+  cr_file: string | null;
+  commercial_registration?: string | null;
+  commercial_registration_file?: string | null;
+  street?: string | null;
+  building_number?: string | null;
+  district?: string | null;
+  secondary_number?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+  address?: string | null;
+  address_file: string | null;
+  national_address?: string | null;
+  national_address_file?: string | null;
+  notes: string;
+  order_count: number;
+  created_at: string;
+  created_by: number;
+  account?: SupplierAccount;
+}
+
+// Disbursement Types
+export interface DisbursementType {
+  id: number;
+  name: string;
+}
+
+// Disbursement Request
+export interface DisbursementRequest {
+  id: number;
+  created_by: number;
+  created_at: string;
+  notes?: string;
+  total_cost: string;
+  custody_amount: string;
+  transfer_amount: string;
+  type: DisbursementType;
+  sell_order?: number;
+  file?: string;
+  accepted_by1?: number;
+  accepted_at1?: string;
+  accepted_by2?: number;
+  accepted_at2?: string;
+  rejected_at?: string;
+  rejected_reason?: string;
+
+  // Approvals (timestamp-based: null = not done, value = done)
+  accepted_at?: string | null;
+  verified_at?: string | null;
+  accepted_by?: number | null;
+  verified_by?: number | null;
+  rejected_by?: number | null;
+}
+
+
+// Accounts Management Types
+export interface JournalEntryItem {
+  id: number;
+  journal_entry: number;
+  journal_entry_created_at: string;
+  account_name: string;
+  account: number;
+  account_number: string;
+  debit: string;
+  credit: string;
+  order: null | number;
+  created_at: string;
+}
+
+export interface JournalEntry {
+  id: number;
+  created_at: string;
+  items: JournalEntryItem[];
+}
+
+export interface Account {
+  id: number;
+  name: string;
+  note: string;
+  number: string;
+  parent: number | null;
+  balance: string;
+  total_debit: string;
+  total_credit: string;
+  total: string;
+  journal_entries: JournalEntry[];
+  created_at: string;
+  updated_at: string;
+}
+
+// Payment Method Types
+// Base interface for shared fields
+export interface BasePaymentGateway {
+  id: number;
+  name: string;
+  notes: string;
+  account?: Account; // Account details are nested in the response
+}
+
+export interface CashRegister extends BasePaymentGateway {
+  cash_register?: number; // In the response, it seems like a self-referencing ID or type ID might be present, but based on example: "cash_register": 1
+}
+
+export interface CardMachine extends BasePaymentGateway {
+  card_machine?: number;
+}
+
+export interface Bank extends BasePaymentGateway {
+  bank?: number;
+}
+
+export interface BuyNowPayLater extends BasePaymentGateway {
+  buy_now_pay_later?: number;
+}
+
+// ----------------------------------------------------------------------------
+// Customer Returns
+// ----------------------------------------------------------------------------
+
+export type CustomerReturnStatus = 'DRAFT' | 'APPROVED' | 'CANCELLED';
+
+export const CUSTOMER_RETURN_STATUS_LABELS: Record<CustomerReturnStatus, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
+  DRAFT: { label: 'مسودة', color: 'secondary' },
+  APPROVED: { label: 'تمت الموافقة', color: 'success' },
+  CANCELLED: { label: 'ملغي', color: 'destructive' },
+};
+
+export interface CustomerReturn {
+  id: number;
+  sell_order: number;
+  customer_name: string;
+  /** إن أعادها الـ API لعرض الرصيد بجانب الاسم */
+  customer?: Customer;
+  customer_account_balance?: string | null;
+  return_date: string;
+  status: CustomerReturnStatus;
+  total_amount: string;
+  item_count: number;
+  accepted_by: number | null;
+  accepted_at: string | null;
+  verified_by: number | null;
+  verified_at: string | null;
+  rejected_by: number | null;
+  rejected_at: string | null;
+  created_at: string;
+  created_by: number;
+}
+
+export interface CustomerReturnItem {
+  id: number;
+  sell_order_item: number;
+  sell_order_item_original_quantity: string;
+  item: number;
+  item_name: string;
+  quantity: string;
+  unit_price: string;
+  unit_name: string;
+  unit_factor: string;
+  line_total: string;
+  notes: string;
+  created_at: string;
+}
+
+export interface CustomerReturnDetail extends CustomerReturn {
+  notes: string;
+  items: CustomerReturnItem[];
+  updated_at: string;
+}
+
+// ----------------------------------------------------------------------------
+// Payment Requests (CR = Customer Return, PO = Purchase Order)
+// ----------------------------------------------------------------------------
+
+export type PaymentRequestStatus = string;
+
+export interface CRPaymentRequest {
+  id: number;
+  customer_return: number;
+  customer_name: string;
+  customer?: Customer;
+  customer_account_balance?: string | null;
+  amount: string;
+  source_account: number | null;
+  status: PaymentRequestStatus;
+  notes: string;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface POPaymentRequest {
+  id: number;
+  purchase_order: number;
+  supplier_name?: string;
+  amount: string;
+  source_account: number | null;
+  status: PaymentRequestStatus;
+  notes: string;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** @deprecated kept for backward compatibility */
+export type PaymentRequest = CRPaymentRequest;

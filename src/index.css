@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@theme {
+  --font-sans: "Cairo", "sans-serif";
+  --radius-lg: 0.75rem;
+  --radius-md: calc(0.75rem - 2px);
+  --radius-sm: calc(0.75rem - 4px);
+
+  --color-background: hsl(210 20% 98%);
+  --color-foreground: hsl(222.2 84% 4.9%);
+
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222.2 84% 4.9%);
+
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(222.2 84% 4.9%);
+
+  /* Go Stone Primary (Red - #de2341) */
+  --color-primary: hsl(351 72% 50%); 
+  --color-primary-foreground: hsl(0 0% 100%);
+
+  /* Go Stone Secondary */
+  --color-secondary: hsl(351 30% 20%);
+  --color-secondary-foreground: hsl(0 0% 100%);
+
+  --color-muted: hsl(0 0% 96%);
+  --color-muted-foreground: hsl(0 0% 46%);
+
+  --color-accent: hsl(351 72% 50%);
+  --color-accent-foreground: hsl(0 0% 100%);
+
+  --color-destructive: hsl(0 84.2% 60.2%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+
+  /* ===== Semantic Status Colors (for easy branding) ===== */
+  
+  /* Success - Active states, profits, positive values */
+  --color-success: hsl(142 71% 45%);
+  --color-success-foreground: hsl(0 0% 100%);
+  --color-success-light: hsl(142 76% 96%);
+  --color-success-dark: hsl(142 76% 36%);
+
+  /* Warning - Pending states, cautions */
+  --color-warning: hsl(38 92% 50%);
+  --color-warning-foreground: hsl(0 0% 100%);
+  --color-warning-light: hsl(48 96% 95%);
+  --color-warning-dark: hsl(25 95% 53%);
+
+  /* Info - Information, secondary actions */
+  --color-info: hsl(217 91% 60%);
+  --color-info-foreground: hsl(0 0% 100%);
+  --color-info-light: hsl(214 100% 97%);
+  --color-info-dark: hsl(217 91% 50%);
+
+  /* Custody - Purple color for custody/expense related */
+  --color-custody: hsl(271 81% 56%);
+  --color-custody-foreground: hsl(0 0% 100%);
+  --color-custody-light: hsl(270 100% 97%);
+  --color-custody-dark: hsl(271 81% 45%);
+
+  /* Transfer - Indigo color for bank transfers */
+  --color-transfer: hsl(239 84% 67%);
+  --color-transfer-foreground: hsl(0 0% 100%);
+  --color-transfer-light: hsl(226 100% 97%);
+  --color-transfer-dark: hsl(239 84% 50%);
+
+  /* Tabby/BNPL - Pink brand color */
+  --color-tabby: hsl(330 81% 60%);
+  --color-tabby-foreground: hsl(0 0% 100%);
+  --color-tabby-light: hsl(326 100% 97%);
+  --color-tabby-dark: hsl(330 65% 45%);
+
+  /* Notes - Yellow for notes/comments */
+  --color-notes: hsl(45 93% 58%);
+  --color-notes-foreground: hsl(0 0% 0%);
+  --color-notes-light: hsl(48 100% 96%);
+  --color-notes-dark: hsl(32 95% 44%);
+
+  /* Slate - For secondary/neutral UI elements */
+  --color-slate: hsl(215 16% 47%);
+  --color-slate-foreground: hsl(0 0% 100%);
+  --color-slate-light: hsl(210 40% 96%);
+
+  /* ===== End Semantic Colors ===== */
+
+  --color-border: hsl(0 0% 90%);
+  --color-input: hsl(0 0% 90%);
+  --color-ring: hsl(351 72% 50%);
+
+  /* Chart Colors - Red/Slate Gradations */
+  --color-chart-1: hsl(351 72% 50%);
+  --color-chart-2: hsl(351 30% 20%);
+  --color-chart-3: hsl(0 40% 50%);
+  --color-chart-4: hsl(351 50% 75%);
+  --color-chart-5: hsl(351 25% 30%);
+}
+
+/* RTL Support & Global Styles */
+html {
+  direction: rtl;
+  font-family: "Cairo", sans-serif;
+}
+
+body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    @apply antialiased selection:bg-primary/20;
+}
+
+/* Modern Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full hover:bg-muted-foreground/50 transition-colors;
+}
+
+.hidden-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hidden-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm;
+}
+.glass-card {
+  @apply bg-white/90 backdrop-blur-sm shadow-md border-border/50 hover:shadow-lg transition-all duration-300;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

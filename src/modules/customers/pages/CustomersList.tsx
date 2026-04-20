@@ -381,7 +381,7 @@ export default function CustomersList() {
                               {customer.is_active ? "نشط" : "غير نشط"}
                           </Badge>
                        </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -389,21 +389,22 @@ export default function CustomersList() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/customers/${customer.id}`)}>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/customers/${customer.id}`); }}>
                               <Eye className="ml-2 h-4 w-4" />
                               عرض التفاصيل
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => navigate(`/customers/${customer.id}/edit`)}>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/customers/${customer.id}/edit`); }}>
                               <Edit className="ml-2 h-4 w-4" />
                               تعديل البيانات
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 openPaymentModal(
                                   customer.id,
                                   formatCustomerWithBalance(customer),
-                                )
-                              }
+                                );
+                              }}
                             >
                               <CreditCard className="ml-2 h-4 w-4" />
                               إضافة دفعة

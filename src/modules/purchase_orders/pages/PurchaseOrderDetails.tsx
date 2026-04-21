@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,6 +15,8 @@ import {
   Printer,
   Truck,
   ListOrdered,
+  Upload,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +31,16 @@ import { Separator } from "@/components/ui/separator";
 import {
   usePurchaseOrderDetails,
   usePrintPurchaseOrder,
+  useUploadPurchaseOrderInvoice,
 } from "@/hooks/usePurchaseOrders";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   LinkedSellOrderHeaderButton,
   LinkedSellOrderLink,
@@ -42,6 +53,7 @@ import {
 } from "@/types";
 import { toast } from "sonner";
 import { formatNameWithBalance } from "@/lib/partyDisplay";
+import { parseBackendError } from "@/lib/utils";
 
 function formatLineNotes(notes?: string | null): string | null {
   const t = notes?.trim();
@@ -84,6 +96,14 @@ function translatePoHistoryDetails(details: string): string {
   return PO_HISTORY_DETAILS_EN_TO_AR[lower] ?? details;
 }
 
+/** مسار أو رابط ملف الفاتورة من الـ API لعرضه في المتصفح */
+function buildInvoiceFileHref(raw: string | null | undefined): string {
+  const t = typeof raw === "string" ? raw.trim() : "";
+  if (!t) return "";
+  if (/^https?:\/\//i.test(t)) return t;
+  return t.startsWith("/") ? t : `/${t}`;
+}
+
 function supplierBalanceForSupplierId(
   po: Pick<PurchaseOrder, "supplier_list">,
   sid: number | undefined,
@@ -106,6 +126,16 @@ export default function PurchaseOrderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const invoiceInputRef = useRef<HTMLInputElement>(null);
+  const invoiceBlobRef = useRef<string | null>(null);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [pendingInvoiceFile, setPendingInvoiceFile] = useState<File | null>(
+    null,
+  );
+  const [invoicePreviewUrl, setInvoicePreviewUrl] = useState<string | null>(
+    null,
+  );
+
   const {
     data: purchaseOrder,
     isLoading,
@@ -113,6 +143,7 @@ export default function PurchaseOrderDetails() {
     error,
   } = usePurchaseOrderDetails(id!);
   const printMutation = usePrintPurchaseOrder();
+  const uploadInvoiceMutation = useUploadPurchaseOrderInvoice();
 
   const itemsBySupplier = useMemo(() => {
     if (!purchaseOrder?.items?.length) return [];
@@ -158,6 +189,52 @@ export default function PurchaseOrderDetails() {
     return ids.size > 1;
   }, [purchaseOrder]);
 
+  const setInvoiceBlobUrl = (next: string | null) => {
+    if (invoiceBlobRef.current) {
+      URL.revokeObjectURL(invoiceBlobRef.current);
+      invoiceBlobRef.current = null;
+    }
+    if (next) invoiceBlobRef.current = next;
+    setInvoicePreviewUrl(next);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (invoiceBlobRef.current) {
+        URL.revokeObjectURL(invoiceBlobRef.current);
+        invoiceBlobRef.current = null;
+      }
+    };
+  }, []);
+
+  const closeInvoiceDialog = () => {
+    setInvoiceDialogOpen(false);
+    setPendingInvoiceFile(null);
+    setInvoiceBlobUrl(null);
+    if (invoiceInputRef.current) invoiceInputRef.current.value = "";
+  };
+
+  const openInvoicePreview = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setInvoiceBlobUrl(url);
+    setPendingInvoiceFile(file);
+    setInvoiceDialogOpen(true);
+  };
+
+  const handleConfirmInvoiceUpload = (poId: string | number) => {
+    if (!pendingInvoiceFile) return;
+    uploadInvoiceMutation.mutate(
+      { id: poId, file: pendingInvoiceFile },
+      {
+        onSuccess: () => {
+          toast.success("تم رفع الفاتورة بنجاح");
+          closeInvoiceDialog();
+        },
+        onError: (err) => toast.error(parseBackendError(err)),
+      },
+    );
+  };
+
   if (isLoading) {
     return (
       <div className='flex flex-col items-center justify-center min-h-[60vh] gap-4'>
@@ -190,6 +267,12 @@ export default function PurchaseOrderDetails() {
     purchaseOrder.status as PurchaseOrderStatus
   ] || { label: purchaseOrder.status, color: "secondary" };
   const totalCost = parseFloat(purchaseOrder.total_cost || "0");
+  const hasInvoice =
+    typeof purchaseOrder.invoice_file === "string" &&
+    purchaseOrder.invoice_file.trim().length > 0;
+  const invoiceHref = hasInvoice
+    ? buildInvoiceFileHref(purchaseOrder.invoice_file)
+    : "";
 
   return (
     <div
@@ -263,10 +346,58 @@ export default function PurchaseOrderDetails() {
         </div>
 
         <div className='flex gap-2 items-center w-full md:w-auto'>
+          <input
+            ref={invoiceInputRef}
+            type="file"
+            className="sr-only"
+            accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
+            aria-hidden
+            tabIndex={-1}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file) return;
+              openInvoicePreview(file);
+            }}
+          />
           {purchaseOrder.sell_order != null && purchaseOrder.sell_order > 0 && (
             <LinkedSellOrderHeaderButton
               sellOrderId={purchaseOrder.sell_order}
             />
+          )}
+          {hasInvoice && invoiceHref ? (
+            <a
+              href={invoiceHref}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex"
+              title="فتح الفاتورة في نافذة جديدة"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                فتح الفاتورة
+              </Button>
+            </a>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-xl gap-2"
+              disabled={uploadInvoiceMutation.isPending || invoiceDialogOpen}
+              onClick={() => invoiceInputRef.current?.click()}
+              title="رفع فاتورة طلب الشراء"
+            >
+              {uploadInvoiceMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              رفع الفاتورة
+            </Button>
           )}
           <Button
             variant='outline'
@@ -301,6 +432,83 @@ export default function PurchaseOrderDetails() {
           </Button>
         </div>
       </div>
+
+      <Dialog
+        open={invoiceDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeInvoiceDialog();
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>معاينة الفاتورة</DialogTitle>
+            <DialogDescription>
+              راجع الملف ثم اضغط “تأكيد الرفع”.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-xl border bg-muted/20 p-3">
+            {invoicePreviewUrl && pendingInvoiceFile ? (
+              pendingInvoiceFile.type === "application/pdf" ||
+              pendingInvoiceFile.name.toLowerCase().endsWith(".pdf") ? (
+                <iframe
+                  title="معاينة الفاتورة"
+                  src={invoicePreviewUrl}
+                  className="w-full h-[60vh] rounded-lg bg-background"
+                />
+              ) : pendingInvoiceFile.type.startsWith("image/") ? (
+                <a
+                  href={invoicePreviewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block"
+                  title="فتح الصورة بحجم كامل"
+                >
+                  <img
+                    src={invoicePreviewUrl}
+                    alt="معاينة فاتورة طلب الشراء"
+                    className="max-h-[60vh] w-full object-contain rounded-lg bg-background"
+                    loading="lazy"
+                  />
+                </a>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  نوع الملف غير مدعوم للمعاينة. يمكنك رفعه مباشرة.
+                </div>
+              )
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                لم يتم اختيار ملف بعد.
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeInvoiceDialog}
+              disabled={uploadInvoiceMutation.isPending}
+              className="rounded-xl"
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handleConfirmInvoiceUpload(purchaseOrder.id)}
+              disabled={
+                uploadInvoiceMutation.isPending || !pendingInvoiceFile
+              }
+              className="rounded-xl"
+            >
+              {uploadInvoiceMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              ) : null}
+              تأكيد الرفع
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className='grid gap-6 lg:grid-cols-3'>
         {/* Main Content */}

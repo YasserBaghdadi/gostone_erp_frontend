@@ -149,6 +149,8 @@ export const API_ENDPOINTS = {
     REJECT: (id: string | number) => `/custom-v1/purchase-orders/${id}/reject/`,
     VERIFY: (id: string | number) => `/custom-v1/purchase-orders/${id}/verify/`,
     PRINT: (id: string | number) => `/custom-v1/purchase-orders/${id}/print/`,
+    UPLOAD_INVOICE: (id: string | number) =>
+      `/custom-v1/purchase-orders/${id}/upload-invoice/`,
   },
 
   // Suppliers

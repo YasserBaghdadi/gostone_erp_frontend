@@ -519,6 +519,8 @@ export interface PurchaseOrder {
   updated_at?: string;
   created_by?: number;
   accepted_at?: string;
+  /** رابط أو مسار ملف الفاتورة بعد الرفع */
+  invoice_file?: string | null;
 
   // Approvals (timestamp-based: null = not done, value = done)
   verified_at?: string | null;

@@ -162,3 +162,34 @@ export function usePrintPurchaseOrder() {
     },
   });
 }
+
+export function useUploadPurchaseOrderInvoice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      file,
+    }: {
+      id: string | number;
+      file: File;
+    }) => {
+      const formData = new FormData();
+      // API expects field name: "file"
+      formData.append("file", file);
+      const res = await api.post(
+        API_ENDPOINTS.PURCHASE_ORDERS.UPLOAD_INVOICE(id),
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return res.data as PurchaseOrder;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.lists() });
+      if (data?.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: purchaseOrderKeys.detail(data.id),
+        });
+      }
+    },
+  });
+}

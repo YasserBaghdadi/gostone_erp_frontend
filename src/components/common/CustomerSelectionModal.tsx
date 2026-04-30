@@ -55,13 +55,22 @@ export function CustomerSelectionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]" dir="rtl">
-        <DialogHeader>
+      {/*
+        IMPORTANT: DialogContent has its own `grid gap-6 p-8` base classes.
+        We override with `!flex !flex-col` + reduce gap/padding so children
+        stack predictably and stay inside the modal bounds. `max-h-[90vh]`
+        + `min-h-0` on the scroll area is what makes overflow behave under RTL.
+      */}
+      <DialogContent
+        className="!flex !flex-col !gap-4 !p-6 sm:max-w-[500px] max-h-[90vh] overflow-hidden"
+        dir="rtl"
+      >
+        <DialogHeader className="shrink-0">
           <DialogTitle>اختيار العميل</DialogTitle>
         </DialogHeader>
 
         {/* Search */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="بحث باسم العميل أو رقم الهاتف..."
@@ -72,8 +81,8 @@ export function CustomerSelectionModal({
           />
         </div>
 
-        {/* Customers List */}
-        <div className="h-[300px] overflow-y-auto custom-scrollbar pr-2">
+        {/* Customers List — flex-1 + min-h-0 lets it shrink/scroll inside the modal */}
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -95,8 +104,8 @@ export function CustomerSelectionModal({
                   key={customer.id}
                   onClick={() => handleSelect(customer)}
                   className={`flex w-full items-center justify-between gap-3 overflow-hidden rounded-lg border p-3 text-right transition-colors
-                    ${selectedId === customer.id 
-                      ? 'border-primary bg-primary/10' 
+                    ${selectedId === customer.id
+                      ? 'border-primary bg-primary/10'
                       : 'border-border hover:border-primary/50 hover:bg-muted/50'
                     }`}
                 >
@@ -108,10 +117,10 @@ export function CustomerSelectionModal({
                     aria-hidden
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium">
+                    <p className="font-medium truncate">
                       {formatCustomerWithBalance(customer)}
                     </p>
-                    <p className="text-sm text-muted-foreground font-mono" dir="ltr">
+                    <p className="text-sm text-muted-foreground font-mono truncate" dir="ltr">
                       {customer.phone_number}
                     </p>
                   </div>
@@ -126,7 +135,7 @@ export function CustomerSelectionModal({
 
         {/* Pagination */}
         {totalCount > 0 && (
-          <div className="[&_nav]:border-t-0 [&_nav]:mt-2 [&_nav]:pt-0 px-1">
+          <div className="shrink-0 [&_nav]:border-t-0 [&_nav]:mt-2 [&_nav]:pt-0 px-1">
             <Pagination
               page={page}
               totalPages={totalPages}
@@ -140,7 +149,7 @@ export function CustomerSelectionModal({
         )}
 
         {/* Footer Actions */}
-        <div className="flex justify-between items-center pt-2 border-t">
+        <div className="shrink-0 flex justify-between items-center pt-2 border-t">
           <Button variant="ghost" onClick={onClose}>
             إلغاء
           </Button>

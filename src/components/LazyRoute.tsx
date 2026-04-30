@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode, type ComponentType } from 'react';
+import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import { ModuleErrorBoundary } from '@/components/ModuleErrorBoundary';
 import { Loader2 } from 'lucide-react';
 
@@ -23,17 +24,32 @@ const PageLoader = () => (
 
 /**
  * LazyRoute - Wrapper for lazy loaded route components
- * Combines Suspense with ModuleErrorBoundary for better error handling
- * 
+ *
+ * Combines:
+ *   - Suspense                  → handles the lazy() chunk loading state
+ *   - QueryErrorResetBoundary   → lets the retry button re-run failed queries
+ *   - ModuleErrorBoundary       → renders the error screen for thrown errors,
+ *                                 including react-query failures (via the
+ *                                 `throwOnError: data === undefined` option set
+ *                                 in QueryProvider)
+ *
  * @example
  * <Route path="customers" element={<LazyRoute component={CustomersList} moduleName="العملاء" />} />
  */
 export function LazyRoute({ component: Component, moduleName, fallbackPath = '/' }: LazyRouteProps): ReactNode {
   return (
-    <ModuleErrorBoundary moduleName={moduleName} fallbackPath={fallbackPath}>
-      <Suspense fallback={<PageLoader />}>
-        <Component />
-      </Suspense>
-    </ModuleErrorBoundary>
+    <QueryErrorResetBoundary>
+      {({ reset }) => (
+        <ModuleErrorBoundary
+          moduleName={moduleName}
+          fallbackPath={fallbackPath}
+          onReset={reset}
+        >
+          <Suspense fallback={<PageLoader />}>
+            <Component />
+          </Suspense>
+        </ModuleErrorBoundary>
+      )}
+    </QueryErrorResetBoundary>
   );
 }

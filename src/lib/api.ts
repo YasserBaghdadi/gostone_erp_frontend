@@ -1,7 +1,50 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { toast } from 'sonner';
 import { API_BASE_URL, API_ENDPOINTS } from './server';
 import { authTokens, type RefreshResponse } from './auth';
 import { useAuthStore } from '@/store/useAuthStore';
+
+/**
+ * Detect "no network" errors raised by axios:
+ *   - browser truly offline (navigator.onLine === false)
+ *   - DNS / connection refused / CORS-preflight failure (no error.response)
+ *   - axios timeout (code === 'ECONNABORTED')
+ */
+export function isNetworkOrTimeoutError(error: AxiosError): boolean {
+  if (!navigator.onLine) return true;
+  if (error.code === 'ECONNABORTED') return true; // timeout
+  if (error.code === 'ERR_NETWORK') return true;
+  if (!error.response && !!error.message) return true;
+  return false;
+}
+
+// Throttle network-error toasts so flapping connections don't spam the user.
+let lastNetworkToastAt = 0;
+const NETWORK_TOAST_COOLDOWN_MS = 4000;
+
+function showNetworkToast(error: AxiosError) {
+  const now = Date.now();
+  if (now - lastNetworkToastAt < NETWORK_TOAST_COOLDOWN_MS) return;
+  lastNetworkToastAt = now;
+
+  if (!navigator.onLine) {
+    toast.error('لا يوجد اتصال بالإنترنت', {
+      description: 'يرجى التحقق من اتصالك والمحاولة مرة أخرى.',
+    });
+    return;
+  }
+
+  if (error.code === 'ECONNABORTED') {
+    toast.warning('الاتصال بطيء', {
+      description: 'استغرق الطلب وقتاً أطول من المتوقع. يرجى المحاولة مرة أخرى.',
+    });
+    return;
+  }
+
+  toast.error('تعذر الاتصال بالخادم', {
+    description: 'حدثت مشكلة في الاتصال. يرجى التحقق من الإنترنت والمحاولة مرة أخرى.',
+  });
+}
 
 // Create Axios Instance
 const api = axios.create({
@@ -57,9 +100,18 @@ api.interceptors.response.use(
     const isAuthRequest = authPaths.some((path) => requestUrl.includes(path));
     
     if (isAuthRequest) {
+      // Even auth requests should surface a network problem to the user.
+      if (isNetworkOrTimeoutError(error)) showNetworkToast(error);
       return Promise.reject(error);
     }
-    
+
+    // Network / timeout: tell the user, then bubble the error up to the caller
+    // (react-query) so it can decide whether to retry.
+    if (isNetworkOrTimeoutError(error)) {
+      showNetworkToast(error);
+      return Promise.reject(error);
+    }
+
     // If 401 and not already retrying
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {

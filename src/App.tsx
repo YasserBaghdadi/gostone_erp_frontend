@@ -13,6 +13,7 @@ import { API_ENDPOINTS } from "@/lib/server";
 import { useEffect } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LazyRoute } from "@/components/LazyRoute";
+import { OfflineBanner } from "@/components/common/OfflineBanner";
 
 // Auth pages (not lazy - needed for initial load)
 import LoginPage from "@/modules/auth/pages/LoginPage";
@@ -135,6 +136,7 @@ function AppContent() {
 
   return (
     <>
+      <OfflineBanner />
       <Routes>
           <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/suppliers" />} />
           

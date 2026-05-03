@@ -1,6 +1,6 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
+import { API_ENDPOINTS } from "@/lib/server";
 import type { Account, PaginatedResponse } from "@/types";
 import { toast } from "sonner";
 
@@ -108,5 +108,23 @@ export const useNextAccountNumber = (parentId: string | number | null) => {
     },
     enabled: !!parentId,
     retry: false,
+  });
+};
+
+/** Fetches account statement PDF and opens it in a print-ready window. */
+export const usePrintAccountStatement = () => {
+  return useMutation({
+    mutationFn: async ({ id }: { id: string | number }): Promise<void> => {
+      const { extractFilenameFromResponse, openPdfInWindow } =
+        await import("@/lib/pdfUtils");
+      const response = await api.get(API_ENDPOINTS.ACCOUNTS.STATEMENT(id), {
+        responseType: "blob",
+      });
+      const filename = extractFilenameFromResponse(
+        response,
+        `account_statement_${id}.pdf`,
+      );
+      openPdfInWindow(response.data, filename);
+    },
   });
 };

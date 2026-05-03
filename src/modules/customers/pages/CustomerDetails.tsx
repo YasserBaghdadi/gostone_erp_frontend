@@ -14,12 +14,17 @@ import {
   File,
   Eye,
   ExternalLink,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-import { useCustomerDetails, useSyncCustomerToOdoo } from "@/hooks/useCustomers";
+import {
+  useCustomerDetails,
+  usePrintCustomerStatement,
+  useSyncCustomerToOdoo,
+} from "@/hooks/useCustomers";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 import { useState } from "react";
@@ -112,6 +117,7 @@ export default function CustomerDetails() {
   const { data: customer, isLoading, isError } = useCustomerDetails(id!);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const syncCustomerToOdooMutation = useSyncCustomerToOdoo();
+  const printStatement = usePrintCustomerStatement();
 
   if (isLoading) {
     return (
@@ -175,6 +181,29 @@ export default function CustomerDetails() {
                 </div>
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0">
+                <Button
+                    variant="outline"
+                    className="flex-1 md:flex-none gap-2"
+                    disabled={printStatement.isPending}
+                    onClick={() =>
+                      id &&
+                      printStatement.mutate(
+                        { id },
+                        {
+                          onError: () =>
+                            toast.error("تعذّر طباعة كشف الحساب"),
+                        },
+                      )
+                    }
+                >
+                    {printStatement.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Printer className="h-4 w-4" />
+                    )}
+                    <span className="sm:hidden md:inline">طباعة كشف حساب</span>
+                    <span className="hidden sm:inline md:hidden">طباعة</span>
+                </Button>
                 <Button
                     className="flex-1 md:flex-none gap-2 border-0 bg-[#875A7B] text-white hover:bg-[#714a67] shadow-sm"
                     disabled={syncCustomerToOdooMutation.isPending}

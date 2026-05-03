@@ -1,10 +1,23 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Wallet, Calendar, FileText, ArrowRightLeft, Eye, EyeOff } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Wallet,
+  Calendar,
+  FileText,
+  ArrowRightLeft,
+  Eye,
+  EyeOff,
+  Printer,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAccountDetails } from "@/hooks/useAccounts";
+import {
+  useAccountDetails,
+  usePrintAccountStatement,
+} from "@/hooks/useAccounts";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 import {
@@ -15,12 +28,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
 
 export default function AccountDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: account, isLoading, isError } = useAccountDetails(id!);
   const [showAllAccounts, setShowAllAccounts] = useState(false);
+  const printStatement = usePrintAccountStatement();
 
   if (isLoading) {
     return (
@@ -74,11 +89,35 @@ export default function AccountDetails() {
                  </p>
             </div>
          </div>
-         <div className="text-right md:text-left bg-muted/30 md:bg-transparent p-3 md:p-0 rounded-xl">
-            <p className="text-xs md:text-sm text-muted-foreground mb-1">الرصيد الحالي</p>
-            <p className={`text-xl md:text-2xl font-bold font-mono ${parseFloat(account.balance) < 0 ? 'text-destructive' : 'text-primary'}`} dir="ltr">
-                {parseFloat(account.balance).toLocaleString()} SAR
-            </p>
+         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+            <Button
+              variant="outline"
+              className="gap-2 shrink-0"
+              disabled={printStatement.isPending}
+              onClick={() =>
+                id &&
+                printStatement.mutate(
+                  { id },
+                  {
+                    onError: () =>
+                      toast.error("تعذّر طباعة كشف الحساب"),
+                  },
+                )
+              }
+            >
+              {printStatement.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Printer className="h-4 w-4" />
+              )}
+              طباعة كشف حساب
+            </Button>
+            <div className="text-right md:text-left bg-muted/30 md:bg-transparent p-3 md:p-0 rounded-xl flex-1 min-w-0">
+              <p className="text-xs md:text-sm text-muted-foreground mb-1">الرصيد الحالي</p>
+              <p className={`text-xl md:text-2xl font-bold font-mono ${parseFloat(account.balance) < 0 ? 'text-destructive' : 'text-primary'}`} dir="ltr">
+                  {parseFloat(account.balance).toLocaleString()} SAR
+              </p>
+            </div>
          </div>
       </div>
 

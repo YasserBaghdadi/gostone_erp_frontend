@@ -19,11 +19,15 @@ import {
   File,
   CreditCard,
   ExternalLink,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useSupplierDetails } from "@/hooks/useSuppliers";
+import {
+  usePrintSupplierStatement,
+  useSupplierDetails,
+} from "@/hooks/useSuppliers";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 import { CustomerTransactionsTable } from "@/modules/customers/components/CustomerTransactionsTable";
@@ -32,11 +36,13 @@ import { AttachmentPreviewDialog } from "@/components/shared/AttachmentPreviewDi
 import { NationalAddressReadOnlyFields } from "@/components/shared";
 import { inferAttachmentKindFromUrl } from "@/lib/attachmentPreview";
 import { formatSupplierWithBalance } from "@/lib/partyDisplay";
+import { toast } from "sonner";
 
 export default function SupplierDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: supplier, isLoading, isError } = useSupplierDetails(id!);
+  const printStatement = usePrintSupplierStatement();
 
   if (isLoading) {
     return (
@@ -107,7 +113,30 @@ export default function SupplierDetails() {
             </div>
           </div>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex gap-3 w-full md:w-auto flex-wrap">
+          <Button
+            variant="outline"
+            size="lg"
+            className="flex-1 md:flex-none rounded-xl gap-2 font-bold min-w-[140px]"
+            disabled={printStatement.isPending}
+            onClick={() =>
+              id &&
+              printStatement.mutate(
+                { id },
+                {
+                  onError: () =>
+                    toast.error("تعذّر طباعة كشف الحساب"),
+                },
+              )
+            }
+          >
+            {printStatement.isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Printer className="h-5 w-5" />
+            )}
+            طباعة كشف حساب
+          </Button>
           <Link to={`/suppliers/${id}/edit`} className="flex-1 md:flex-none">
             <Button size="lg" className="w-full rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 gap-2 font-bold min-w-[160px]">
               <Edit className="h-5 w-5" />

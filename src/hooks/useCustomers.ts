@@ -168,3 +168,21 @@ export function useSyncAllCustomersToOdoo(): UseMutationResult<
     },
   });
 }
+
+/** Fetches customer account statement PDF and opens it in a print-ready window. */
+export function usePrintCustomerStatement() {
+  return useMutation({
+    mutationFn: async ({ id }: { id: string | number }): Promise<void> => {
+      const { extractFilenameFromResponse, openPdfInWindow } =
+        await import('@/lib/pdfUtils');
+      const response = await api.get(API_ENDPOINTS.CUSTOMERS.STATEMENT(id), {
+        responseType: 'blob',
+      });
+      const filename = extractFilenameFromResponse(
+        response,
+        `customer_statement_${id}.pdf`,
+      );
+      openPdfInWindow(response.data, filename);
+    },
+  });
+}

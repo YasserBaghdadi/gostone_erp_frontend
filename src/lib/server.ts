@@ -70,6 +70,8 @@ export const API_ENDPOINTS = {
     SYNC_TO_ODOO: (id: string | number) =>
       `/custom-v1/customers/${id}/sync-to-odoo/`,
     SYNC_ALL_TO_ODOO: "/custom-v1/customers/sync-all-to-odoo/",
+    STATEMENT: (id: string | number) =>
+      `/custom-v1/customers/${id}/statement/`,
   },
 
   // Work Orders
@@ -159,6 +161,19 @@ export const API_ENDPOINTS = {
     DETAILS: (id: string | number) => `/custom-v1/suppliers/${id}/`,
     CREATE: "/custom-v1/suppliers/",
     UPDATE: (id: string | number) => `/custom-v1/suppliers/${id}/`,
+    STATEMENT: (id: string | number) =>
+      `/custom-v1/suppliers/${id}/statement/`,
+  },
+
+  // Accounts (Chart of Accounts)
+  ACCOUNTS: {
+    LIST: "/custom-v1/accounts/",
+    DETAILS: (id: string | number) => `/custom-v1/accounts/${id}/`,
+    CREATE: "/custom-v1/accounts/",
+    NEXT_CHILD_NUMBER: (id: string | number) =>
+      `/custom-v1/accounts/${id}/next-child-number/`,
+    STATEMENT: (id: string | number) =>
+      `/custom-v1/accounts/${id}/statement/`,
   },
 
   // Disbursement Requests

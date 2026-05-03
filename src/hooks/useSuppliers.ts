@@ -128,3 +128,21 @@ export function useUpdateSupplier(id: string | number): UseMutationResult<Suppli
     },
   });
 }
+
+/** Fetches supplier account statement PDF and opens it in a print-ready window. */
+export function usePrintSupplierStatement() {
+  return useMutation({
+    mutationFn: async ({ id }: { id: string | number }): Promise<void> => {
+      const { extractFilenameFromResponse, openPdfInWindow } =
+        await import("@/lib/pdfUtils");
+      const response = await api.get(API_ENDPOINTS.SUPPLIERS.STATEMENT(id), {
+        responseType: "blob",
+      });
+      const filename = extractFilenameFromResponse(
+        response,
+        `supplier_statement_${id}.pdf`,
+      );
+      openPdfInWindow(response.data, filename);
+    },
+  });
+}

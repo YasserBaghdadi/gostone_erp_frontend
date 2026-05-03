@@ -17,8 +17,21 @@ export const useAccounts = (params: AccountsParams = { page: 1, page_size: 10 })
   return useQuery({
     queryKey: [ACCOUNTS_QUERY_KEY, params],
     queryFn: async () => {
-      const { data } = await api.get<PaginatedResponse<Account>>("/custom-v1/accounts/", { params });
-      return data;
+      const { data } = await api.get<any>("/custom-v1/accounts/", { params });
+
+      // بعض بيئات الباك اند ترجع Array مباشرة بدل PaginatedResponse.
+      // نوحّد الشكل علشان الـ UI يعتمد دائمًا على `results`.
+      if (Array.isArray(data)) {
+        const normalized: PaginatedResponse<Account> = {
+          count: data.length,
+          next: null,
+          previous: null,
+          results: data,
+        };
+        return normalized;
+      }
+
+      return data as PaginatedResponse<Account>;
     },
     placeholderData: (previousData) => previousData,
   });

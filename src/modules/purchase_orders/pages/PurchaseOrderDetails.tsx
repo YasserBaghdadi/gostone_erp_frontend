@@ -51,6 +51,7 @@ import {
   type PurchaseOrderItem,
   type PurchaseOrderStatus,
 } from "@/types";
+import { AttachmentLinksList } from "@/components/shared";
 import { toast } from "sonner";
 import { formatNameWithBalance } from "@/lib/partyDisplay";
 import { parseBackendError } from "@/lib/utils";
@@ -901,6 +902,25 @@ export default function PurchaseOrderDetails() {
                   </span>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Attachments Card */}
+          <Card className='shadow-sm border-none ring-1 ring-border/50'>
+            <CardHeader>
+              <CardTitle className='text-lg flex items-center gap-2'>
+                <FileText className='h-5 w-5 text-primary' />
+                المرفقات
+                <Badge variant='secondary' className='mr-2 font-mono text-xs'>
+                  {purchaseOrder.attachments?.length ?? 0}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AttachmentLinksList
+                attachments={purchaseOrder.attachments}
+                emptyLabel='لا توجد مرفقات لهذا الطلب'
+              />
             </CardContent>
           </Card>
 

@@ -497,6 +497,16 @@ export interface PurchaseOrderHistoryEntry {
   created_at: string;
 }
 
+export interface PurchaseOrderAttachment {
+  id: number;
+  purchase_order: number;
+  purchase_order_item: number | null;
+  file: string;
+  description?: string;
+  created_at: string;
+  created_by: number | null;
+}
+
 export interface PurchaseOrderSupplierSummary {
   id: number;
   display_name: string;
@@ -514,6 +524,7 @@ export interface PurchaseOrder {
   item_count?: number;
   notes?: string;
   items?: PurchaseOrderItem[];
+  attachments?: PurchaseOrderAttachment[];
   history_entries?: PurchaseOrderHistoryEntry[];
   created_at?: string;
   updated_at?: string;

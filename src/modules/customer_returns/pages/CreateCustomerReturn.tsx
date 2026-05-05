@@ -160,11 +160,39 @@ export default function CreateCustomerReturn() {
   const watchedItems = form.watch("items");
   const selectedItems = watchedItems.filter((item) => item.selected);
 
+  const orderLineTotalsByItemId = new Map<number, string>(
+    (sellOrderDetails?.sell_order_items ?? []).map((i) => [i.id, i.total_price_after_tax]),
+  );
+
+  const toNumber = (value: unknown): number => {
+    const n =
+      typeof value === "number"
+        ? value
+        : typeof value === "string"
+          ? parseFloat(value)
+          : NaN;
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  /**
+   * Total of the returned qty for a sell-order line.
+   * We prefer the backend-computed line total (`total_price_after_tax`) and prorate it by return qty.
+   * This avoids frontend rounding/discount/tax mismatches.
+   */
+  const getReturnedLineTotal = (sellOrderItemId: number, qty: number, originalQty: number, fallbackUnitPrice: number) => {
+    const backendLineTotal = toNumber(orderLineTotalsByItemId.get(sellOrderItemId));
+    if (backendLineTotal > 0 && originalQty > 0) {
+      return (qty / originalQty) * backendLineTotal;
+    }
+    return qty * fallbackUnitPrice;
+  };
+
   const calculateTotal = () => {
     return selectedItems.reduce((sum, item) => {
-      const qty = parseFloat(item.quantity || "0");
-      const price = parseFloat(item.unit_price || "0");
-      return sum + qty * price;
+      const qty = toNumber(item.quantity);
+      const price = toNumber(item.unit_price);
+      const originalQty = toNumber(item.original_quantity);
+      return sum + getReturnedLineTotal(item.sell_order_item, qty, originalQty, price);
     }, 0);
   };
 
@@ -470,9 +498,14 @@ export default function CreateCustomerReturn() {
                         const price = parseFloat(
                           form.watch(`items.${index}.unit_price`) || "0",
                         );
-                        const lineTotal = qty * price;
                         const originalQtyRaw = parseFloat(
                           form.watch(`items.${index}.original_quantity`) || "0",
+                        );
+                        const lineTotal = getReturnedLineTotal(
+                          Number(form.watch(`items.${index}.sell_order_item`) || 0),
+                          Number.isFinite(qty) ? qty : 0,
+                          Number.isFinite(originalQtyRaw) ? originalQtyRaw : 0,
+                          Number.isFinite(price) ? price : 0,
                         );
                         const maxQty =
                           Number.isFinite(originalQtyRaw) && originalQtyRaw > 0

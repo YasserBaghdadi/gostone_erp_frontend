@@ -638,13 +638,25 @@ export interface JournalEntryItem {
   debit: string;
   credit: string;
   order: null | number;
+  note?: string;
   created_at: string;
+}
+
+export interface JournalEntryAttachment {
+  id: number;
+  journal_entry: number;
+  file: string;
+  description?: string;
+  created_at: string;
+  created_by: number | null;
 }
 
 export interface JournalEntry {
   id: number;
+  note?: string;
   created_at: string;
   items: JournalEntryItem[];
+  attachments?: JournalEntryAttachment[];
 }
 
 export interface Account {
@@ -771,6 +783,24 @@ export interface POPaymentRequest {
   status: PaymentRequestStatus;
   notes: string;
   created_by: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DRPaymentRequest {
+  id: number;
+  disbursement_request: number;
+  disbursement_type_name: string;
+  payment_method: string;
+  amount: string;
+  final_amount: string;
+  source_account: number | null;
+  source_account_name?: string;
+  status: PaymentRequestStatus;
+  approval_status: string;
+  notes: string;
+  created_by: number | null;
+  created_by_name?: string;
   created_at: string;
   updated_at: string;
 }

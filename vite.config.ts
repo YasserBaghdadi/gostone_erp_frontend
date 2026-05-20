@@ -54,9 +54,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://api-management.baghdadi.sa',
+        target: 'https://api-nahda.test.origami.sa',
         changeOrigin: true,
         secure: false,
+        timeout: 120000,
+        proxyTimeout: 120000,
         
       },
     },
@@ -64,7 +66,7 @@ export default defineConfig({
   preview: {
     proxy: {
       '/api': {
-        target: 'https://api-management.gostone.baghdadi.sa',
+        target: 'https://api-management.osseilan.sa',
         changeOrigin: true,
         secure: false,
       },

@@ -443,33 +443,13 @@ export default function CustomerDetails() {
                       <div className="bg-muted/30 p-3 rounded-lg border">
                           <p className="text-sm text-muted-foreground">إجمالي المدين</p>
                           <p className="font-mono font-semibold text-lg text-success" dir="ltr">
-                              {(() => {
-                                // Use API value if available, otherwise calculate from transactions
-                                const apiDebit = parseFloat(customer.account?.total_debit || "0");
-                                if (apiDebit > 0) return apiDebit.toLocaleString();
-                                
-                                // Calculate from transactions for customer's account
-                                const calculated = customer.account?.transactions?.reduce((acc, t) => 
-                                  acc + t.items.filter(i => i.account === customer.account?.id)
-                                    .reduce((sum, i) => sum + parseFloat(i.debit || "0"), 0), 0) || 0;
-                                return calculated.toLocaleString();
-                              })()}
+                              {parseFloat(customer.account?.total_debit || "0").toLocaleString()}
                           </p>
                       </div>
                       <div className="bg-muted/30 p-3 rounded-lg border">
                           <p className="text-sm text-muted-foreground">إجمالي الدائن</p>
                           <p className="font-mono font-semibold text-lg text-destructive" dir="ltr">
-                              {(() => {
-                                // Use API value if available, otherwise calculate from transactions
-                                const apiCredit = parseFloat(customer.account?.total_credit || "0");
-                                if (apiCredit > 0) return apiCredit.toLocaleString();
-                                
-                                // Calculate from transactions for customer's account
-                                const calculated = customer.account?.transactions?.reduce((acc, t) => 
-                                  acc + t.items.filter(i => i.account === customer.account?.id)
-                                    .reduce((sum, i) => sum + parseFloat(i.credit || "0"), 0), 0) || 0;
-                                return calculated.toLocaleString();
-                              })()}
+                              {parseFloat(customer.account?.total_credit || "0").toLocaleString()}
                           </p>
                       </div>
                       <div className="bg-muted/30 p-3 rounded-lg border col-span-2 md:col-span-2">

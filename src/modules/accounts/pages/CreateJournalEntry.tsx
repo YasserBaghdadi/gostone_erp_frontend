@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Loader2, Save, AlertCircle } from "lucide-react";
-import { useCreateJournalEntry } from "@/hooks/useJournalEntries";
+import { ArrowLeft, Plus, Trash2, Loader2, Save, AlertCircle, UploadCloud, X, FileIcon } from "lucide-react";
+import { useCreateJournalEntry, useUploadJournalEntryAttachment } from "@/hooks/useJournalEntries";
 import { AccountSelectionModal } from "../components/AccountSelectionModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ interface JournalItem {
   account: Account | null;
   debit: string;
   credit: string;
+  note: string;
 }
 
 let journalRowIdSeq = 0;
@@ -30,6 +32,7 @@ function createEmptyJournalRow(): JournalItem {
     account: null,
     debit: "",
     credit: "",
+    note: "",
   };
 }
 
@@ -42,9 +45,23 @@ export default function CreateJournalEntry() {
     createEmptyJournalRow(),
   ]);
 
+  const uploadMutation = useUploadJournalEntryAttachment();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [entryNote, setEntryNote] = useState("");
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+  const addFiles = (files: FileList | File[]) => {
+    setAttachmentFiles(prev => [...prev, ...Array.from(files)]);
+  };
+
+  const removeFile = (index: number) => {
+    setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   // Totals
   const totalDebit = items.reduce((sum, item) => sum + parseFloat(item.debit || "0"), 0);
@@ -237,17 +254,27 @@ export default function CreateJournalEntry() {
     // So I should stick to `items` key and this structure unless I know otherwise.
     
     const payload = {
+      ...(entryNote.trim() ? { note: entryNote.trim() } : {}),
       items: validItems.map((item) => ({
         account: item.account!.id,
         debit: item.debit || "0",
         credit: item.credit || "0",
+        ...(item.note.trim() ? { note: item.note.trim() } : {}),
       })),
     };
 
     createMutation.mutate(payload, {
-      onSuccess: () => {
+      onSuccess: async (created) => {
+        if (attachmentFiles.length > 0) {
+          const uploads = attachmentFiles.map(file =>
+            uploadMutation.mutateAsync({ id: created.id, file }).catch(() => {
+              toast.error(`فشل رفع "${file.name}"`);
+            }),
+          );
+          await Promise.allSettled(uploads);
+        }
         toast.success("تم إنشاء القيد بنجاح");
-        navigate("/journal-entries"); // Redirect to list? Previous code had /journal-entries
+        navigate("/journal-entries");
       },
       onError: (error) => {
         toast.error(parseBackendError(error));
@@ -320,80 +347,179 @@ export default function CreateJournalEntry() {
         </CardHeader>
         <CardContent className="space-y-4">
           {items.map((item, index) => (
-            <div 
-              key={item.id} 
-              className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 rounded-xl border bg-muted/20 items-end"
+            <div
+              key={item.id}
+              className="p-4 rounded-xl border bg-muted/20 space-y-3"
             >
-              {/* Row number */}
-              <div className="md:col-span-1 flex items-center justify-center">
-                <Badge variant="secondary" className="rounded-full w-8 h-8 flex items-center justify-center">
-                  {index + 1}
-                </Badge>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                {/* Row number */}
+                <div className="md:col-span-1 flex items-center justify-center">
+                  <Badge variant="secondary" className="rounded-full w-8 h-8 flex items-center justify-center">
+                    {index + 1}
+                  </Badge>
+                </div>
+
+                {/* Account Selection */}
+                <div className="md:col-span-5">
+                  <label className="text-sm text-muted-foreground mb-1 block">الحساب</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-10"
+                    onClick={() => openAccountModal(item.id)}
+                  >
+                    {item.account ? (
+                      <span className="truncate">
+                        {item.account.name} <span className="text-muted-foreground">({item.account.number})</span>
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">اختر الحساب...</span>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Debit */}
+                <div className="md:col-span-2">
+                  <label className="text-sm text-muted-foreground mb-1 block">مدين</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={item.debit}
+                    onChange={(e) => updateItemAmount(item.id, "debit", e.target.value)}
+                    className="font-mono"
+                    disabled={!!item.credit && parseFloat(item.credit) > 0}
+                  />
+                </div>
+
+                {/* Credit */}
+                <div className="md:col-span-2">
+                  <label className="text-sm text-muted-foreground mb-1 block">دائن</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={item.credit}
+                    onChange={(e) => updateItemAmount(item.id, "credit", e.target.value)}
+                    className="font-mono"
+                    disabled={!!item.debit && parseFloat(item.debit) > 0}
+                  />
+                </div>
+
+                {/* Delete */}
+                <div className="md:col-span-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => removeItem(item.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
-              {/* Account Selection */}
-              <div className="md:col-span-5">
-                <label className="text-sm text-muted-foreground mb-1 block">الحساب</label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-start h-10"
-                  onClick={() => openAccountModal(item.id)}
-                >
-                  {item.account ? (
-                    <span className="truncate">
-                      {item.account.name} <span className="text-muted-foreground">({item.account.number})</span>
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">اختر الحساب...</span>
-                  )}
-                </Button>
-              </div>
-
-              {/* Debit */}
-              <div className="md:col-span-2">
-                <label className="text-sm text-muted-foreground mb-1 block">مدين</label>
+              {/* Item Note */}
+              <div className="md:mr-[calc(100%/12)]">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={item.debit}
-                  onChange={(e) => updateItemAmount(item.id, "debit", e.target.value)}
-                  className="font-mono"
-                  disabled={!!item.credit && parseFloat(item.credit) > 0}
+                  placeholder="ملاحظة على البند (اختياري)"
+                  value={item.note}
+                  onChange={(e) => updateItem(item.id, "note", e.target.value)}
+                  className="text-sm"
                 />
-              </div>
-
-              {/* Credit */}
-              <div className="md:col-span-2">
-                <label className="text-sm text-muted-foreground mb-1 block">دائن</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={item.credit}
-                  onChange={(e) => updateItemAmount(item.id, "credit", e.target.value)}
-                  className="font-mono"
-                  disabled={!!item.debit && parseFloat(item.debit) > 0}
-                />
-              </div>
-
-              {/* Delete */}
-              <div className="md:col-span-2 flex justify-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => removeItem(item.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Entry Note */}
+      <Card className="border-border/50 shadow-sm">
+        <CardHeader>
+          <CardTitle>ملاحظات القيد</CardTitle>
+          <CardDescription>ملاحظات عامة على سند القيد (اختياري)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="أدخل ملاحظات القيد..."
+            value={entryNote}
+            onChange={(e) => setEntryNote(e.target.value)}
+            className="min-h-[80px] resize-y"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Attachments */}
+      <Card className="border-border/50 shadow-sm">
+        <CardHeader>
+          <CardTitle>المرفقات</CardTitle>
+          <CardDescription>إرفاق ملفات بسند القيد (اختياري)</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {attachmentFiles.length > 0 && (
+            <div className="space-y-2">
+              {attachmentFiles.map((file, index) => (
+                <div
+                  key={`${file.name}-${index}`}
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                >
+                  <div className="bg-primary/10 p-2 rounded-md text-primary shrink-0">
+                    <FileIcon className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                    onClick={() => removeFile(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            onChange={(e) => {
+              const input = e.target;
+              if (input.files && input.files.length > 0) {
+                addFiles(input.files);
+              }
+              requestAnimationFrame(() => { input.value = ""; });
+            }}
+          />
+          <div
+            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragOver(false);
+              if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
+            }}
+            onClick={() => fileInputRef.current?.click()}
+            className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 cursor-pointer transition-all ${
+              isDragOver
+                ? "border-primary bg-primary/5"
+                : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"
+            }`}
+          >
+            <UploadCloud className="h-6 w-6 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">اضغط أو اسحب ملفات لإرفاقها</p>
+          </div>
         </CardContent>
       </Card>
 

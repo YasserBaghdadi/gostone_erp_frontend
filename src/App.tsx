@@ -85,6 +85,7 @@ const PaymentGatewaysPage = lazy(() => import("@/modules/accounts/pages/PaymentG
 const PaymentRequestsPage = lazy(() => import("@/modules/payment_requests/pages/PaymentRequestsPage"));
 const CRPaymentRequestDetails = lazy(() => import("@/modules/payment_requests/pages/CRPaymentRequestDetails"));
 const POPaymentRequestDetails = lazy(() => import("@/modules/payment_requests/pages/POPaymentRequestDetails"));
+const DRPaymentRequestDetails = lazy(() => import("@/modules/payment_requests/pages/DRPaymentRequestDetails"));
 
 function LegacyCRPaymentDetailRedirect() {
   const { id } = useParams();
@@ -278,6 +279,7 @@ function AppContent() {
                     <Route index element={<LazyRoute component={PaymentRequestsPage} moduleName="طلبات الدفع" />} />
                     <Route path="cr/:id" element={<LazyRoute component={CRPaymentRequestDetails} moduleName="تفاصيل طلب دفع مرتجع" />} />
                     <Route path="po/:id" element={<LazyRoute component={POPaymentRequestDetails} moduleName="تفاصيل طلب دفع شراء" />} />
+                    <Route path="dr/:id" element={<LazyRoute component={DRPaymentRequestDetails} moduleName="تفاصيل طلب دفع صرف" />} />
                 </Route>
                 <Route path="cr-payment-requests" element={<Navigate to="/payment-requests" replace />} />
                 <Route path="cr-payment-requests/:id" element={<LegacyCRPaymentDetailRedirect />} />

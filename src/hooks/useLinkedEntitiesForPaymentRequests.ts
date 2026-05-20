@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { API_ENDPOINTS } from "@/lib/server";
-import { customerReturnKeys, purchaseOrderKeys } from "@/lib/queryKeys";
-import type { CustomerReturnDetail, PurchaseOrder } from "@/types";
+import { customerReturnKeys, purchaseOrderKeys, accountKeys } from "@/lib/queryKeys";
+import type { Account, CustomerReturnDetail, PurchaseOrder } from "@/types";
 
 /** نص الرابط لمرتجع: يفضّل أمر البيع المرتبط؛ وإلا رقم المرتجع. */
 export function customerReturnLinkLabel(
@@ -106,4 +106,38 @@ export function supplierDisplayForPoPayment(
   if (order?.supplier != null && order.supplier > 0)
     return `مورد #${order.supplier}`;
   return "—";
+}
+
+/** Batch-fetch account details by IDs for showing account names & links. */
+export function useAccountsMapByIds(accountIds: number[]) {
+  const key = accountIds.join("|");
+  const uniqueSorted = useMemo(() => {
+    const s = [...new Set(accountIds.filter((x) => typeof x === "number" && x > 0))];
+    s.sort((a, b) => a - b);
+    return s;
+  }, [key]);
+
+  const queries = useQueries({
+    queries: uniqueSorted.map((id) => ({
+      queryKey: accountKeys.detail(id),
+      queryFn: async () => {
+        const { data } = await api.get<Account>(
+          API_ENDPOINTS.ACCOUNTS.DETAILS(id),
+        );
+        return data;
+      },
+      staleTime: 5 * 60 * 1000,
+      throwOnError: false as const,
+      retry: false,
+    })),
+  });
+
+  return useMemo(() => {
+    const m = new Map<number, Account>();
+    uniqueSorted.forEach((id, i) => {
+      const row = queries[i];
+      if (row?.data) m.set(id, row.data);
+    });
+    return m;
+  }, [uniqueSorted, queries]);
 }

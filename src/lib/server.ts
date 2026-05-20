@@ -284,10 +284,20 @@ export const API_ENDPOINTS = {
       `/custom-v1/po-payment-requests/${id}/mark-done/`,
   },
 
+  // Payment Requests — Disbursement Requests
+  DR_PAYMENT_REQUESTS: {
+    LIST: "/custom-v1/dr-payment-requests/",
+    DETAILS: (id: string | number) => `/custom-v1/dr-payment-requests/${id}/`,
+    MARK_DONE: (id: string | number) =>
+      `/custom-v1/dr-payment-requests/${id}/mark-done/`,
+  },
+
   // Journal Entries (سندات القيد)
   JOURNAL_ENTRIES: {
     LIST: "/custom-v1/journal-entries/",
     DETAILS: (id: string | number) => `/custom-v1/journal-entries/${id}/`,
     CREATE: "/custom-v1/journal-entries/",
+    UPLOAD_ATTACHMENT: (id: string | number) =>
+      `/custom-v1/journal-entries/${id}/upload-attachment/`,
   },
 };

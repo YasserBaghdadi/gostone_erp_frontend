@@ -171,6 +171,17 @@ export const poPaymentRequestKeys = {
 };
 
 // =====================
+// DR Payment Requests (طلبات صرف)
+// =====================
+export const drPaymentRequestKeys = {
+  all: ['dr-payment-requests'] as const,
+  lists: () => [...drPaymentRequestKeys.all, 'list'] as const,
+  list: (filters: object) => [...drPaymentRequestKeys.lists(), filters] as const,
+  details: () => [...drPaymentRequestKeys.all, 'detail'] as const,
+  detail: (id: string | number) => [...drPaymentRequestKeys.details(), id] as const,
+};
+
+// =====================
 // Dashboard
 // =====================
 export const dashboardKeys = {

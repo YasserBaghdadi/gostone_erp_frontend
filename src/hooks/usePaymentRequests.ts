@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { API_ENDPOINTS } from "@/lib/server";
-import { crPaymentRequestKeys, poPaymentRequestKeys } from "@/lib/queryKeys";
-import type { PaginatedResponse, CRPaymentRequest, POPaymentRequest } from "@/types";
+import { crPaymentRequestKeys, poPaymentRequestKeys, drPaymentRequestKeys } from "@/lib/queryKeys";
+import type { PaginatedResponse, CRPaymentRequest, POPaymentRequest, DRPaymentRequest } from "@/types";
 
 // ─── Shared filter params ────────────────────────────────────────────────────
 
@@ -118,6 +118,77 @@ export function useMarkPOPaymentDone() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: poPaymentRequestKeys.all });
       qc.invalidateQueries({ queryKey: poPaymentRequestKeys.detail(variables.id) });
+    },
+  });
+}
+
+// ─── DR Payment Requests (طلبات صرف) ──────────────────────────────────────
+
+export interface UseDRPaymentRequestsParams extends CommonPaymentRequestParams {
+  disbursement_request?: number;
+  payment_method?: string;
+}
+
+export function useDRPaymentRequests(params: UseDRPaymentRequestsParams = {}) {
+  return useQuery({
+    queryKey: drPaymentRequestKeys.list(params),
+    queryFn: async () => {
+      const { data } = await api.get<PaginatedResponse<DRPaymentRequest>>(
+        API_ENDPOINTS.DR_PAYMENT_REQUESTS.LIST,
+        { params: cleanParams(params as Record<string, unknown>) },
+      );
+      return data;
+    },
+  });
+}
+
+export function useDRPaymentRequestDetails(id: string | number) {
+  return useQuery<DRPaymentRequest>({
+    queryKey: drPaymentRequestKeys.detail(id),
+    queryFn: async () => {
+      const { data } = await api.get(API_ENDPOINTS.DR_PAYMENT_REQUESTS.DETAILS(id));
+      return data;
+    },
+    enabled: !!id,
+  });
+}
+
+export interface MarkDRPaymentDonePayload {
+  id: string | number;
+  source_account: number;
+  actual_amount: string;
+}
+
+export function useMarkDRPaymentDone() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, source_account, actual_amount }: MarkDRPaymentDonePayload) => {
+      const { data } = await api.post(
+        API_ENDPOINTS.DR_PAYMENT_REQUESTS.MARK_DONE(id),
+        { source_account, actual_amount },
+      );
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: drPaymentRequestKeys.all });
+      qc.invalidateQueries({ queryKey: drPaymentRequestKeys.detail(variables.id) });
+    },
+  });
+}
+
+export function useUpdateDRPaymentRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...body }: { id: string | number; source_account?: number; notes?: string }) => {
+      const { data } = await api.patch(
+        API_ENDPOINTS.DR_PAYMENT_REQUESTS.DETAILS(id),
+        body,
+      );
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: drPaymentRequestKeys.all });
+      qc.invalidateQueries({ queryKey: drPaymentRequestKeys.detail(variables.id) });
     },
   });
 }

@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
-import { ArrowLeft, FileText, Loader2, Calendar, Hash, ArrowUpDown } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Calendar, Hash, ArrowUpDown, StickyNote, Paperclip } from "lucide-react";
 import { useJournalEntryDetails } from "@/hooks/useJournalEntries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,12 +15,12 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
+import { AttachmentLinksList } from "@/components/shared";
 
 export default function JournalEntryDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: entry, isLoading, isError } = useJournalEntryDetails(id!);
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -62,8 +62,8 @@ export default function JournalEntryDetails() {
             </p>
           </div>
         </div>
-        <Badge 
-          variant={isBalanced ? "default" : "destructive"} 
+        <Badge
+          variant={isBalanced ? "default" : "destructive"}
           className={`text-sm px-4 py-2 ${isBalanced ? 'bg-success-light text-success hover:bg-success-light' : ''}`}
         >
           {isBalanced ? "✓ متوازن" : "✗ غير متوازن"}
@@ -99,6 +99,21 @@ export default function JournalEntryDetails() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Entry Note */}
+      {entry.note && (
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <StickyNote className="h-5 w-5 text-primary" />
+              ملاحظات القيد
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap">{entry.note}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Items Table */}
       <Card className="border-border/50 shadow-sm">
@@ -137,6 +152,12 @@ export default function JournalEntryDetails() {
                     </p>
                   </div>
                 </div>
+                {item.note && (
+                  <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                    <StickyNote className="h-3 w-3 inline ml-1" />
+                    {item.note}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -150,6 +171,7 @@ export default function JournalEntryDetails() {
                   <TableHead className="text-right">اسم الحساب</TableHead>
                   <TableHead className="text-right">مدين</TableHead>
                   <TableHead className="text-right">دائن</TableHead>
+                  <TableHead className="text-right">ملاحظة</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -167,6 +189,9 @@ export default function JournalEntryDetails() {
                     <TableCell className="font-mono text-destructive">
                       {parseFloat(item.credit) > 0 ? parseFloat(item.credit).toLocaleString() : "—"}
                     </TableCell>
+                    <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+                      {item.note || "—"}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -175,10 +200,30 @@ export default function JournalEntryDetails() {
                   <TableCell colSpan={2} className="text-right">الإجمالي</TableCell>
                   <TableCell className="font-mono text-success">{totalDebit.toLocaleString()}</TableCell>
                   <TableCell className="font-mono text-destructive">{totalCredit.toLocaleString()}</TableCell>
+                  <TableCell />
                 </TableRow>
               </TableFooter>
             </Table>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Attachments */}
+      <Card className="border-border/50 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Paperclip className="h-5 w-5 text-primary" />
+            المرفقات
+            <Badge variant="secondary" className="mr-2 font-mono text-xs">
+              {entry.attachments?.length ?? 0}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AttachmentLinksList
+            attachments={entry.attachments}
+            emptyLabel="لا توجد مرفقات لهذا القيد"
+          />
         </CardContent>
       </Card>
     </div>

@@ -9,6 +9,7 @@ import {
   Calendar,
   BadgeDollarSign,
   CreditCard,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { PageHeader, Pagination, SearchBar, LoadingState, EmptyState } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 import { useSearch } from "@/hooks/useSearch";
-import { useCRPaymentRequests, usePOPaymentRequests } from "@/hooks/usePaymentRequests";
+import { useCRPaymentRequests, usePOPaymentRequests, useDRPaymentRequests } from "@/hooks/usePaymentRequests";
 import {
   customerReturnLinkLabel,
   customerReturnLinkTitle,
@@ -44,8 +45,9 @@ import {
   supplierDisplayForPoPayment,
   useCustomerReturnsMapByIds,
   usePurchaseOrdersMapByIds,
+  useAccountsMapByIds,
 } from "@/hooks/useLinkedEntitiesForPaymentRequests";
-import type { CRPaymentRequest, CustomerReturnDetail, POPaymentRequest, PurchaseOrder } from "@/types";
+import type { CRPaymentRequest, CustomerReturnDetail, POPaymentRequest, PurchaseOrder, DRPaymentRequest } from "@/types";
 import { formatCrPaymentCustomerLabel } from "@/lib/partyDisplay";
 
 function statusBadgeVariant(
@@ -70,13 +72,15 @@ export default function PaymentRequestsPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 md:pb-0">
       <PageHeader
         title="طلبات الدفع"
-        subtitle="مرتجعات العملاء وطلبات الشراء — كل قائمة منفصلة في نفس الصفحة"
+        subtitle="مرتجعات العملاء وطلبات الشراء وطلبات الصرف — كل قائمة منفصلة في نفس الصفحة"
         icon={<CreditCard className="w-7 h-7" />}
       />
 
       <CRSection />
       <Separator className="opacity-60" />
       <POSection />
+      <Separator className="opacity-60" />
+      <DRSection />
     </div>
   );
 }
@@ -107,6 +111,8 @@ function CRSection() {
   const { data, isLoading, isError, refetch, isRefetching } = useCRPaymentRequests(queryParams);
   const rows = data?.results || [];
   const returnsMap = useCustomerReturnsMapByIds(rows.map((r) => r.customer_return));
+  const crAccountIds = useMemo(() => rows.map((r) => r.source_account).filter((id): id is number => id != null && id > 0), [rows]);
+  const crAccountsMap = useAccountsMapByIds(crAccountIds);
   const totalCount = data?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
   const hasActiveFilters =
@@ -273,7 +279,7 @@ function CRSection() {
           <>
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:hidden">
               {rows.map((req) => (
-                <CRCard key={req.id} req={req} returnsMap={returnsMap} />
+                <CRCard key={req.id} req={req} returnsMap={returnsMap} accountsMap={crAccountsMap} />
               ))}
             </div>
             <div className="hidden lg:block rounded-xl border bg-card overflow-x-auto">
@@ -311,7 +317,22 @@ function CRSection() {
                         {req.id}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap font-medium">
-                        {formatCrPaymentCustomerLabel(req, retDetail)}
+                        {(() => {
+                          const customerId = retDetail?.customer?.id ?? req.customer?.id;
+                          const label = formatCrPaymentCustomerLabel(req, retDetail);
+                          if (customerId) {
+                            return (
+                              <Link
+                                to={`/customers/${customerId}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="hover:text-primary hover:underline transition-colors"
+                              >
+                                {label}
+                              </Link>
+                            );
+                          }
+                          return label;
+                        })()}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         <span className="font-bold text-primary font-mono">
@@ -319,8 +340,18 @@ function CRSection() {
                         </span>
                         <span className="text-[10px] text-muted-foreground mr-1">ر.س</span>
                       </TableCell>
-                      <TableCell className="text-center whitespace-nowrap font-mono text-xs text-muted-foreground">
-                        {formatSourceAccountLabel(req.source_account)}
+                      <TableCell className="text-center whitespace-nowrap text-xs">
+                        {req.source_account && req.source_account > 0 ? (
+                          <Link
+                            to={`/accounts/${req.source_account}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary hover:underline transition-colors font-medium"
+                          >
+                            {crAccountsMap.get(req.source_account)?.name || `#${req.source_account}`}
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center whitespace-nowrap max-w-[200px]">
                         <Link
@@ -400,6 +431,8 @@ function POSection() {
   const { data, isLoading, isError, refetch, isRefetching } = usePOPaymentRequests(queryParams);
   const rows = data?.results || [];
   const ordersMap = usePurchaseOrdersMapByIds(rows.map((r) => r.purchase_order));
+  const poAccountIds = useMemo(() => rows.map((r) => r.source_account).filter((id): id is number => id != null && id > 0), [rows]);
+  const poAccountsMap = useAccountsMapByIds(poAccountIds);
   const totalCount = data?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
   const hasActiveFilters =
@@ -566,7 +599,7 @@ function POSection() {
           <>
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:hidden">
               {rows.map((req) => (
-                <POCard key={req.id} req={req} ordersMap={ordersMap} />
+                <POCard key={req.id} req={req} ordersMap={ordersMap} accountsMap={poAccountsMap} />
               ))}
             </div>
             <div className="hidden lg:block rounded-xl border bg-card overflow-x-auto">
@@ -597,7 +630,17 @@ function POSection() {
                         {req.id}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap font-medium">
-                        {supplierLabel}
+                        {poDetail?.supplier ? (
+                          <Link
+                            to={`/suppliers/${poDetail.supplier}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:text-primary hover:underline transition-colors"
+                          >
+                            {supplierLabel}
+                          </Link>
+                        ) : (
+                          supplierLabel
+                        )}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         <span className="font-bold text-primary font-mono">
@@ -605,8 +648,18 @@ function POSection() {
                         </span>
                         <span className="text-[10px] text-muted-foreground mr-1">ر.س</span>
                       </TableCell>
-                      <TableCell className="text-center whitespace-nowrap font-mono text-xs text-muted-foreground">
-                        {formatSourceAccountLabel(req.source_account)}
+                      <TableCell className="text-center whitespace-nowrap text-xs">
+                        {req.source_account && req.source_account > 0 ? (
+                          <Link
+                            to={`/accounts/${req.source_account}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary hover:underline transition-colors font-medium"
+                          >
+                            {poAccountsMap.get(req.source_account)?.name || `#${req.source_account}`}
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center whitespace-nowrap max-w-[220px]">
                         <Link
@@ -663,9 +716,11 @@ function POSection() {
 function CRCard({
   req,
   returnsMap,
+  accountsMap,
 }: {
   req: CRPaymentRequest;
   returnsMap: Map<number, CustomerReturnDetail>;
+  accountsMap: Map<number, import("@/types").Account>;
 }) {
   const retDetail = returnsMap.get(req.customer_return);
   const returnLabel = customerReturnLinkLabel(req.customer_return, retDetail);
@@ -678,7 +733,19 @@ function CRCard({
           <span className="font-bold text-lg flex items-center gap-2">
             <PackageOpen className="h-4 w-4 text-primary" /> طلب #{req.id}
           </span>
-          <span className="text-xs text-muted-foreground mt-1">{customerLabel}</span>
+          <span className="text-xs text-muted-foreground mt-1">
+            {(() => {
+              const customerId = retDetail?.customer?.id ?? req.customer?.id;
+              if (customerId) {
+                return (
+                  <Link to={`/customers/${customerId}`} className="hover:text-primary hover:underline transition-colors">
+                    {customerLabel}
+                  </Link>
+                );
+              }
+              return customerLabel;
+            })()}
+          </span>
         </div>
         <Badge variant={statusBadgeVariant(req.status)} className="text-[10px] shrink-0">
           {statusLabel(req.status)}
@@ -694,9 +761,13 @@ function CRCard({
         </div>
         <div className="bg-muted/30 p-2 rounded-lg px-3">
           <span className="block text-xs text-muted-foreground mb-1">حساب المصدر</span>
-          <span className="font-mono text-xs text-muted-foreground">
-            {formatSourceAccountLabel(req.source_account)}
-          </span>
+          {req.source_account && req.source_account > 0 ? (
+            <Link to={`/accounts/${req.source_account}`} className="text-primary hover:underline text-xs font-medium">
+              {accountsMap.get(req.source_account)?.name || `#${req.source_account}`}
+            </Link>
+          ) : (
+            <span className="font-mono text-xs text-muted-foreground">—</span>
+          )}
         </div>
         <div className="bg-muted/30 p-2 rounded-lg px-3 min-w-0 col-span-2">
           <span className="block text-xs text-muted-foreground mb-1">المرتجع</span>
@@ -724,9 +795,11 @@ function CRCard({
 function POCard({
   req,
   ordersMap,
+  accountsMap,
 }: {
   req: POPaymentRequest;
   ordersMap: Map<number, PurchaseOrder>;
+  accountsMap: Map<number, import("@/types").Account>;
 }) {
   const poDetail = ordersMap.get(req.purchase_order);
   const supplierLabel = supplierDisplayForPoPayment(req, poDetail);
@@ -737,7 +810,15 @@ function POCard({
           <span className="font-bold text-lg flex items-center gap-2">
             <ShoppingCart className="h-4 w-4 text-orange-600 dark:text-orange-400" /> طلب #{req.id}
           </span>
-          <span className="text-xs text-muted-foreground mt-1">{supplierLabel}</span>
+          <span className="text-xs text-muted-foreground mt-1">
+            {poDetail?.supplier ? (
+              <Link to={`/suppliers/${poDetail.supplier}`} className="hover:text-primary hover:underline transition-colors">
+                {supplierLabel}
+              </Link>
+            ) : (
+              supplierLabel
+            )}
+          </span>
         </div>
         <Badge variant={statusBadgeVariant(req.status)} className="text-[10px] shrink-0">
           {statusLabel(req.status)}
@@ -753,9 +834,13 @@ function POCard({
         </div>
         <div className="bg-muted/30 p-2 rounded-lg px-3">
           <span className="block text-xs text-muted-foreground mb-1">حساب المصدر</span>
-          <span className="font-mono text-xs text-muted-foreground">
-            {formatSourceAccountLabel(req.source_account)}
-          </span>
+          {req.source_account && req.source_account > 0 ? (
+            <Link to={`/accounts/${req.source_account}`} className="text-primary hover:underline text-xs font-medium">
+              {accountsMap.get(req.source_account)?.name || `#${req.source_account}`}
+            </Link>
+          ) : (
+            <span className="font-mono text-xs text-muted-foreground">—</span>
+          )}
         </div>
         <div className="bg-muted/30 p-2 rounded-lg px-3 min-w-0 col-span-2">
           <span className="block text-xs text-muted-foreground mb-1">طلب الشراء</span>
@@ -773,6 +858,303 @@ function POCard({
           variant="outline"
           className="w-full text-primary border-primary/20 hover:bg-primary/5 rounded-xl mt-1"
         >
+          عرض التفاصيل
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+// ─── DR Section (طلبات الصرف) ───────────────────────────────────────────────
+
+function approvalStatusLabel(s: string) {
+  const map: Record<string, string> = {
+    waiting_for_missing_data: "بانتظار بيانات",
+    pending_approval: "بانتظار الموافقة",
+    approved: "تمت الموافقة",
+    rejected: "مرفوض",
+  };
+  return map[s] || s;
+}
+
+function DRSection() {
+  const navigate = useNavigate();
+  const { page, pageSize, setPage, setPageSize, reset: resetPage } = usePagination();
+  const { searchTerm, debouncedTerm, setSearchTerm, clear: clearSearch } = useSearch({ debounceMs: 300 });
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [createdAfter, setCreatedAfter] = useState("");
+  const [createdBefore, setCreatedBefore] = useState("");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+
+  const queryParams = useMemo(
+    () => ({
+      page,
+      page_size: pageSize,
+      search: debouncedTerm,
+      status: statusFilter === "all" ? undefined : statusFilter,
+      created_after: createdAfter ? `${createdAfter}T00:00:00` : undefined,
+      created_before: createdBefore ? `${createdBefore}T23:59:59` : undefined,
+    }),
+    [page, pageSize, debouncedTerm, statusFilter, createdAfter, createdBefore],
+  );
+
+  const { data, isLoading, isError, refetch, isRefetching } = useDRPaymentRequests(queryParams);
+  const rows = data?.results || [];
+  const totalCount = data?.count || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const hasActiveFilters = statusFilter !== "all" || Boolean(createdAfter) || Boolean(createdBefore);
+
+  // Batch-fetch account names for source_account IDs
+  const accountIds = useMemo(() => rows.map((r) => r.source_account).filter((id): id is number => id != null && id > 0), [rows]);
+  const accountsMap = useAccountsMapByIds(accountIds);
+
+  const handleResetFilters = () => {
+    resetPage();
+    clearSearch();
+    setStatusFilter("all");
+    setCreatedAfter("");
+    setCreatedBefore("");
+    setIsFiltersOpen(false);
+  };
+
+  return (
+    <Card className="border shadow-sm overflow-hidden border-violet-500/20">
+      <CardHeader className="bg-muted/30 border-b space-y-1">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Receipt className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+          دفع طلبات الصرف
+        </CardTitle>
+        <CardDescription>طلبات التحويل المرتبطة بطلبات الصرف</CardDescription>
+      </CardHeader>
+      <CardContent className="p-4 space-y-4">
+        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+          <SearchBar
+            value={searchTerm}
+            onChange={(v) => { setSearchTerm(v); resetPage(); }}
+            placeholder="بحث في طلبات دفع الصرف..."
+            className="max-w-md"
+          />
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <Button
+              variant={isFiltersOpen ? "secondary" : "outline"}
+              className={`flex-1 md:flex-none gap-2 rounded-xl transition-all ${
+                isFiltersOpen || hasActiveFilters ? "bg-primary/5 border-primary/20 text-primary" : ""
+              }`}
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+            >
+              <Filter className="h-4 w-4" />
+              تصفية
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="mr-1 h-5 px-1.5 rounded-md bg-primary/20 text-primary border-none text-[10px]">1</Badge>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => refetch()}
+              disabled={isLoading || isRefetching}
+              className="rounded-xl shrink-0"
+              aria-label="تحديث"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin text-primary" : ""}`} />
+            </Button>
+          </div>
+        </div>
+
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+          <CollapsibleContent className="animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="p-4 border border-border/50 rounded-xl bg-muted/20 space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                <Filter className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-sm">تصفية — طلبات الصرف</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">الحالة</Label>
+                  <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+                    <SelectTrigger className="w-full bg-background/50 rounded-xl"><SelectValue placeholder="الكل" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">الكل</SelectItem>
+                      <SelectItem value="PENDING">قيد الانتظار</SelectItem>
+                      <SelectItem value="DONE">تم التحويل</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">من تاريخ</Label>
+                  <div className="relative">
+                    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input type="date" value={createdAfter} onChange={(e) => { setCreatedAfter(e.target.value); setPage(1); }} className="pr-9 rounded-xl bg-background/50" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">إلى تاريخ</Label>
+                  <div className="relative">
+                    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input type="date" value={createdBefore} onChange={(e) => { setCreatedBefore(e.target.value); setPage(1); }} className="pr-9 rounded-xl bg-background/50" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button variant="ghost" size="sm" onClick={handleResetFilters} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg text-xs gap-1.5">
+                  <X className="h-3.5 w-3.5" />
+                  إعادة تعيين
+                </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {isLoading ? (
+          <LoadingState message="جاري تحميل طلبات دفع الصرف..." />
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center min-h-[240px] text-destructive space-y-3">
+            <p className="font-medium">فشل تحميل بيانات طلبات الصرف</p>
+            <Button onClick={() => refetch()} variant="outline" size="sm" className="rounded-xl">إعادة المحاولة</Button>
+          </div>
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title="لا توجد طلبات دفع"
+            description={searchTerm || hasActiveFilters ? "لم يتم العثور على نتائج مطابقة في طلبات الصرف." : "لا توجد طلبات دفع صرف حالياً."}
+          />
+        ) : (
+          <>
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:hidden">
+              {rows.map((req) => (
+                <DRCard key={req.id} req={req} accountsMap={accountsMap} />
+              ))}
+            </div>
+            <div className="hidden lg:block rounded-xl border bg-card overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-[70px] text-right whitespace-nowrap">#</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">نوع الصرف</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">المبلغ</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">المبلغ النهائي</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">طريقة الدفع</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">حساب المصدر</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">الحالة</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">التاريخ</TableHead>
+                    <TableHead className="w-[110px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((req) => (
+                    <TableRow
+                      key={req.id}
+                      className="group hover:bg-muted/30 transition-colors cursor-pointer"
+                      onClick={() => navigate(`/payment-requests/dr/${req.id}`)}
+                    >
+                      <TableCell className="font-mono text-xs text-muted-foreground text-right">{req.id}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap font-medium">{req.disbursement_type_name || "—"}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <span className="font-bold text-primary font-mono">{parseFloat(req.amount || "0").toLocaleString()}</span>
+                        <span className="text-[10px] text-muted-foreground mr-1">ر.س</span>
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <span className="font-bold font-mono">{parseFloat(req.final_amount || "0").toLocaleString()}</span>
+                        <span className="text-[10px] text-muted-foreground mr-1">ر.س</span>
+                      </TableCell>
+                      <TableCell className="text-center whitespace-nowrap text-sm">{req.payment_method || "—"}</TableCell>
+                      <TableCell className="text-center whitespace-nowrap text-xs">
+                        {req.source_account && req.source_account > 0 ? (
+                          <Link
+                            to={`/accounts/${req.source_account}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary hover:underline transition-colors font-medium"
+                          >
+                            {accountsMap.get(req.source_account)?.name || `#${req.source_account}`}
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center whitespace-nowrap">
+                        <Badge variant={statusBadgeVariant(req.status)} className="text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                          {statusLabel(req.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center whitespace-nowrap text-xs text-muted-foreground font-mono">
+                        {req.created_at ? new Date(req.created_at).toLocaleString("ar-SA") : "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Link to={`/payment-requests/dr/${req.id}`} onClick={(e) => e.stopPropagation()}>
+                          <Button size="sm" className="rounded-lg gap-2 text-xs">
+                            التفاصيل
+                            <BadgeDollarSign className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              isLoading={isLoading}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              entityName="طلب"
+            />
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DRCard({ req, accountsMap }: { req: DRPaymentRequest; accountsMap: Map<number, import("@/types").Account> }) {
+  return (
+    <div className="bg-card p-4 rounded-xl border shadow-sm space-y-3">
+      <div className="flex justify-between items-start">
+        <div className="flex flex-col">
+          <span className="font-bold text-lg flex items-center gap-2">
+            <Receipt className="h-4 w-4 text-violet-600 dark:text-violet-400" /> طلب #{req.id}
+          </span>
+          <span className="text-xs text-muted-foreground mt-1">{req.disbursement_type_name || "—"}</span>
+        </div>
+        <Badge variant={statusBadgeVariant(req.status)} className="text-[10px] shrink-0">
+          {statusLabel(req.status)}
+        </Badge>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="bg-muted/30 p-2 rounded-lg px-3">
+          <span className="block text-xs text-muted-foreground mb-1">المبلغ</span>
+          <span className="font-bold text-primary font-mono">
+            {parseFloat(req.amount || "0").toLocaleString()}{" "}
+            <span className="text-xs text-muted-foreground">ر.س</span>
+          </span>
+        </div>
+        <div className="bg-muted/30 p-2 rounded-lg px-3">
+          <span className="block text-xs text-muted-foreground mb-1">المبلغ النهائي</span>
+          <span className="font-bold font-mono">
+            {parseFloat(req.final_amount || "0").toLocaleString()}{" "}
+            <span className="text-xs text-muted-foreground">ر.س</span>
+          </span>
+        </div>
+        <div className="bg-muted/30 p-2 rounded-lg px-3">
+          <span className="block text-xs text-muted-foreground mb-1">طريقة الدفع</span>
+          <span className="text-sm">{req.payment_method || "—"}</span>
+        </div>
+        <div className="bg-muted/30 p-2 rounded-lg px-3">
+          <span className="block text-xs text-muted-foreground mb-1">حساب المصدر</span>
+          {req.source_account && req.source_account > 0 ? (
+            <Link to={`/accounts/${req.source_account}`} className="text-primary hover:underline text-xs font-medium">
+              {accountsMap.get(req.source_account)?.name || `#${req.source_account}`}
+            </Link>
+          ) : (
+            <span className="font-mono text-xs text-muted-foreground">—</span>
+          )}
+        </div>
+      </div>
+      <Link to={`/payment-requests/dr/${req.id}`}>
+        <Button variant="outline" className="w-full text-primary border-primary/20 hover:bg-primary/5 rounded-xl mt-1">
           عرض التفاصيل
         </Button>
       </Link>

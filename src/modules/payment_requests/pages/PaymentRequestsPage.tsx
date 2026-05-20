@@ -40,7 +40,6 @@ import { useCRPaymentRequests, usePOPaymentRequests, useDRPaymentRequests } from
 import {
   customerReturnLinkLabel,
   customerReturnLinkTitle,
-  formatSourceAccountLabel,
   purchaseOrderLinkLabel,
   supplierDisplayForPoPayment,
   useCustomerReturnsMapByIds,
@@ -866,16 +865,6 @@ function POCard({
 }
 
 // ─── DR Section (طلبات الصرف) ───────────────────────────────────────────────
-
-function approvalStatusLabel(s: string) {
-  const map: Record<string, string> = {
-    waiting_for_missing_data: "بانتظار بيانات",
-    pending_approval: "بانتظار الموافقة",
-    approved: "تمت الموافقة",
-    rejected: "مرفوض",
-  };
-  return map[s] || s;
-}
 
 function DRSection() {
   const navigate = useNavigate();

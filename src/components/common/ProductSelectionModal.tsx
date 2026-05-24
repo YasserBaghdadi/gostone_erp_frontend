@@ -45,6 +45,15 @@ export function ProductSelectionModal({
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedItems([]);
+      setSearch("");
+      setDebouncedSearch("");
+      setPage(1);
+    }
+  }, [isOpen]);
+
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {

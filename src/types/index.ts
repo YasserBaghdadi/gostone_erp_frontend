@@ -433,6 +433,14 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
+/** نوع الإنتاج للصنف: جاهزة أو تفصيل */
+export type ProductionType = 'ready' | 'custom';
+
+export const PRODUCTION_TYPE_LABELS: Record<ProductionType, string> = {
+  ready: 'جاهزة',
+  custom: 'تفصيل',
+};
+
 export interface Item {
   id: number;
   name: string;
@@ -450,6 +458,43 @@ export interface Item {
   linked_sellable_items: number[];
   inventory?: number;
   thickness?: string | null;
+  /** نوع الإنتاج: 'ready' (جاهزة) أو 'custom' (تفصيل) — الافتراضي 'ready' */
+  production_type?: ProductionType;
+}
+
+// ----------------------------------------------------------------------------
+// Production Orders (أوامر التصنيع)
+// ----------------------------------------------------------------------------
+
+export type ProductionOrderStatus = 'open' | 'closed' | 'canceled';
+
+export const PRODUCTION_ORDER_STATUS_LABELS: Record<ProductionOrderStatus, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
+  open: { label: 'مفتوح', color: 'info' },
+  closed: { label: 'مقفل', color: 'success' },
+  canceled: { label: 'ملغى', color: 'destructive' },
+};
+
+export interface ProductionOrderMaterial {
+  id: number;
+  item: number;
+  item_name: string;
+  quantity: string;
+  unit_name: string;
+  created_at: string;
+}
+
+export interface ProductionOrder {
+  id: number;
+  finished_item: number;
+  finished_item_name: string;
+  quantity: string;
+  unit_name: string;
+  status: ProductionOrderStatus;
+  sell_order: number | null;
+  sell_order_item: number | null;
+  materials: ProductionOrderMaterial[];
+  created_at: string;
+  closed_at: string | null;
 }
 
 export interface StorageArea {

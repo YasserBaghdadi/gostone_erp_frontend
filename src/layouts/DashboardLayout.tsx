@@ -19,7 +19,8 @@ import {
   CreditCard,
   FileText,
   PackageOpen,
-  Package
+  Package,
+  Factory
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUser } from "@/hooks/useAuth";
@@ -44,6 +45,7 @@ const navigationGroups = [
     items: [
       { name: "الموردين", href: "/suppliers", icon: Users, permission: "suppliers_management" },
       { name: "المنتجات", href: "/items", icon: Package, permission: "items_management" },
+      { name: "أوامر التصنيع", href: "/production-orders", icon: Factory, permission: "items_management" },
       { name: "طلبات الشراء", href: "/purchase-orders", icon: ShoppingCart, permission: "purchase_order_management" },
     ]
   },

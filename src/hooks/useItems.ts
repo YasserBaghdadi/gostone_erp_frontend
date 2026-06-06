@@ -13,6 +13,8 @@ interface UseItemsParams {
   ordering?: string; // e.g., 'name', '-name', 'unit_price', '-unit_price'
   /** عند التمرير، تقتصر النتائج على أصناف هذا المورد */
   supplier?: number;
+  /** تصفية حسب نوع الإنتاج: 'ready' (جاهزة) أو 'custom' (تفصيل) */
+  production_type?: string;
 }
 
 export function useItems(params: UseItemsParams = {}) {

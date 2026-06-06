@@ -17,6 +17,7 @@ export const ROUTE_PERMISSIONS = {
   
   // Inventory Management
   items: "items_management",
+  productionOrders: "items_management",
   purchaseOrders: "purchase_order_management",
   suppliers: "suppliers_management",
   storageAreas: "storage_areas_management",

@@ -62,6 +62,11 @@ const ItemsList = lazy(() => import("@/modules/items/pages/ItemsList"));
 const CreateItem = lazy(() => import("@/modules/items/pages/CreateItem"));
 const ItemDetails = lazy(() => import("@/modules/items/pages/ItemDetails"));
 
+// Production Orders (أوامر التصنيع)
+const ProductionOrdersList = lazy(() => import("@/modules/production_orders/pages/ProductionOrdersList"));
+const CreateProductionOrder = lazy(() => import("@/modules/production_orders/pages/CreateProductionOrder"));
+const ProductionOrderDetails = lazy(() => import("@/modules/production_orders/pages/ProductionOrderDetails"));
+
 // Purchase Orders & Suppliers
 const PurchaseOrdersList = lazy(() => import("@/modules/purchase_orders/pages/PurchaseOrdersList"));
 const PurchaseOrderDetails = lazy(() => import("@/modules/purchase_orders/pages/PurchaseOrderDetails"));
@@ -234,6 +239,15 @@ function AppContent() {
                     <Route path="new" element={<LazyRoute component={CreateItem} moduleName="منتج جديد" />} />
                     <Route path=":id" element={<LazyRoute component={ItemDetails} moduleName="تفاصيل المنتج" />} />
                     <Route path=":id/edit" element={<LazyRoute component={CreateItem} moduleName="تعديل المنتج" />} />
+                </Route>
+              </Route>
+
+              {/* Production Orders (أوامر التصنيع) */}
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.productionOrders} />}>
+                <Route path="production-orders">
+                    <Route index element={<LazyRoute component={ProductionOrdersList} moduleName="أوامر التصنيع" />} />
+                    <Route path="new" element={<LazyRoute component={CreateProductionOrder} moduleName="أمر تصنيع جديد" />} />
+                    <Route path=":id" element={<LazyRoute component={ProductionOrderDetails} moduleName="تفاصيل أمر التصنيع" />} />
                 </Route>
               </Route>
 

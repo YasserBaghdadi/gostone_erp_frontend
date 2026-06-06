@@ -20,6 +20,13 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useCreateItem, useUpdateItem, useItemDetails, useItems } from "@/hooks/useItems";
 import { parseBackendError, preventNegative, clampToPositive } from "@/lib/utils";
@@ -39,6 +46,7 @@ const formSchema = z.object({
   linked_purchasable_items: z.array(z.number()).optional().default([]),
   linked_sellable_items: z.array(z.number()).optional().default([]),
   thickness: z.string().optional().nullable(),
+  production_type: z.enum(["ready", "custom"]).default("ready"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -69,6 +77,7 @@ export default function CreateItem() {
       linked_purchasable_items: [],
       linked_sellable_items: [],
       thickness: "",
+      production_type: "ready",
     },
   });
 
@@ -100,6 +109,7 @@ export default function CreateItem() {
         linked_purchasable_items: existingItem.linked_purchasable_items || [],
         linked_sellable_items: existingItem.linked_sellable_items || [],
         thickness: existingItem.thickness || "",
+        production_type: existingItem.production_type || "ready",
       });
     }
   }, [isEditing, existingItem, form]);
@@ -299,6 +309,31 @@ export default function CreateItem() {
                       </FormControl>
                       <FormDescription>
                         الوحدة المستخدمة افتراضياً عند إضافة المنتج
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="production_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>نوع الإنتاج</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="اختر نوع الإنتاج" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ready">جاهزة</SelectItem>
+                          <SelectItem value="custom">تفصيل</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        «جاهزة» للأصناف الجاهزة و«تفصيل» للأصناف التي تُصنّع حسب الطلب
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

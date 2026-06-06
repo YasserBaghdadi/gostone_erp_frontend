@@ -29,6 +29,8 @@ interface ProductSelectionModalProps {
   filterPurchable?: boolean; // Only show purchasable products
   /** عند التمرير (>0) تُجلب أصناف المورد فقط */
   filterSupplier?: number;
+  /** تصفية حسب نوع الإنتاج: 'ready' (جاهزة) أو 'custom' (تفصيل) */
+  filterProductionType?: "ready" | "custom";
 }
 
 export function ProductSelectionModal({
@@ -39,6 +41,7 @@ export function ProductSelectionModal({
   filterSellable,
   filterPurchable,
   filterSupplier,
+  filterProductionType,
 }: ProductSelectionModalProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -74,6 +77,7 @@ export function ProductSelectionModal({
     is_sellable: filterSellable,
     is_purchable: filterPurchable,
     ...(filterSupplier && filterSupplier > 0 ? { supplier: filterSupplier } : {}),
+    ...(filterProductionType ? { production_type: filterProductionType } : {}),
   });
 
   const handleSelect = (item: Item, checked: boolean) => {

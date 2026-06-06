@@ -140,6 +140,17 @@ export const API_ENDPOINTS = {
     DELETE: (id: string | number) => `/custom-v1/items/${id}/`,
   },
 
+  // Production Orders (أوامر التصنيع)
+  PRODUCTION_ORDERS: {
+    LIST: "/custom-v1/production-orders/",
+    DETAILS: (id: string | number) => `/custom-v1/production-orders/${id}/`,
+    CREATE: "/custom-v1/production-orders/",
+    ADD_MATERIAL: (id: string | number) =>
+      `/custom-v1/production-orders/${id}/add-material/`,
+    CLOSE: (id: string | number) =>
+      `/custom-v1/production-orders/${id}/close/`,
+  },
+
   // Purchase Orders
   PURCHASE_ORDERS: {
     LIST: "/custom-v1/purchase-orders/",

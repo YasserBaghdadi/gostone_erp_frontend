@@ -76,6 +76,17 @@ export const purchaseOrderKeys = {
 };
 
 // =====================
+// Production Orders (أوامر التصنيع)
+// =====================
+export const productionOrderKeys = {
+  all: ['production-orders'] as const,
+  lists: () => [...productionOrderKeys.all, 'list'] as const,
+  list: (filters: object) => [...productionOrderKeys.lists(), filters] as const,
+  details: () => [...productionOrderKeys.all, 'detail'] as const,
+  detail: (id: string | number) => [...productionOrderKeys.details(), id] as const,
+};
+
+// =====================
 // Suppliers
 // =====================
 export const supplierKeys = {

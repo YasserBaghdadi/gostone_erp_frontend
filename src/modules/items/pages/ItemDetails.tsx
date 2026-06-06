@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useItemDetails, useItems } from "@/hooks/useItems";
+import { PRODUCTION_TYPE_LABELS } from "@/types";
 import { useMemo } from "react";
 
 export default function ItemDetails() {
@@ -85,6 +86,12 @@ export default function ItemDetails() {
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-muted-foreground">الوحدة الافتراضية</span>
               <Badge variant="outline">{item.default_unit_name}</Badge>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b">
+              <span className="text-muted-foreground">نوع الإنتاج</span>
+              <Badge variant="secondary">
+                {PRODUCTION_TYPE_LABELS[item.production_type ?? "ready"]}
+              </Badge>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-muted-foreground">المخزون</span>

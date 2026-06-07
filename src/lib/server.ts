@@ -89,6 +89,12 @@ export const API_ENDPOINTS = {
     ADD_PAYMENT: (id: string) => `/work-orders/${id}/payments`,
   },
 
+  // Branches (الفروع)
+  BRANCHES: {
+    LIST: "/custom-v1/branches/",
+    CREATE: "/custom-v1/branches/",
+  },
+
   // Sell Orders (Sales Orders API)
   SELL_ORDERS: {
     LIST: "/custom-v1/sell_orders/",

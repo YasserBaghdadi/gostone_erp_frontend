@@ -54,6 +54,15 @@ export const opportunityKeys = {
 };
 
 // =====================
+// Branches (الفروع)
+// =====================
+export const branchKeys = {
+  all: ['branches'] as const,
+  lists: () => [...branchKeys.all, 'list'] as const,
+  list: (filters?: object) => filters ? [...branchKeys.lists(), filters] as const : branchKeys.lists(),
+};
+
+// =====================
 // Sell Orders
 // =====================
 export const sellOrderKeys = {

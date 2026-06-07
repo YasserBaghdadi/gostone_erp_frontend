@@ -460,10 +460,20 @@ export interface SellOrderItem {
   dis_total_after_tax: string;
 }
 
+export interface Branch {
+  id: number;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+  sell_orders_count: number;
+}
+
 export interface SellOrder {
   id: number;
   opportunity_id?: number;
   customer: Customer;
+  branch?: number;
+  branch_name?: string;
   salesman?: Salesman;
   total_price_before_tax: string;
   total_price_after_tax: string;

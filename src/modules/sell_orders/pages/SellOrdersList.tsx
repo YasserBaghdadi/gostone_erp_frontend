@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ShoppingCart,
   Plus,
@@ -10,10 +10,13 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSellOrders } from "@/hooks/useSellOrders";
+import { useBranches, useCreateBranch } from "@/hooks/useBranches";
 import { usePagination } from "@/hooks/usePagination";
 import { useSearch } from "@/hooks/useSearch";
 import type { SellOrder } from "@/types";
@@ -25,9 +28,10 @@ import {
   EmptyState,
   SellOrderInvoiceOdooBadge,
 } from "@/components/shared";
-import { cn } from "@/lib/utils";
+import { cn, parseBackendError } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
 import { sellOrderHasInvoice } from "@/hooks/useSellOrders";
+import { BranchDialog } from "../components/BranchDialog";
 
 function sellOrderCustomerLabel(order: SellOrder): string {
   if (!order.customer) return "—";
@@ -207,6 +211,9 @@ function SellOrderMobileCard({ order }: { order: SellOrderRowData }) {
 export default function SellOrdersList() {
   /** الافتراضي: كل الأوامر. عند التفعيل يُرسل `have_invoice=false` لإخفاء التي لها فاتورة. */
   const [hideOrdersWithInvoice, setHideOrdersWithInvoice] = useState(false);
+  const [isBranchDialogOpen, setIsBranchDialogOpen] = useState(false);
+
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { page, pageSize, setPage, setPageSize, reset: resetPage } = usePagination();
   const {
@@ -215,11 +222,44 @@ export default function SellOrdersList() {
     setSearchTerm: setSearchQuery,
   } = useSearch({ debounceMs: 300 });
 
+  // --- الفروع ---
+  const { data: branches = [] } = useBranches();
+  const createBranch = useCreateBranch();
+
+  const branchParam = searchParams.get("branch");
+  // الفرع الفعّال: قيمة الرابط إن صحّت، وإلا أول فرع.
+  const activeBranchId = useMemo<number | null>(() => {
+    if (branches.length === 0) return null;
+    const fromUrl = branchParam ? Number(branchParam) : NaN;
+    if (Number.isFinite(fromUrl) && branches.some((b) => b.id === fromUrl)) {
+      return fromUrl;
+    }
+    return branches[0].id;
+  }, [branches, branchParam]);
+
+  // ثبّت الفرع الفعّال في الرابط (لكي يبقى عند التحديث/الرجوع).
+  useEffect(() => {
+    if (activeBranchId == null) return;
+    if (branchParam !== String(activeBranchId)) {
+      const next = new URLSearchParams(searchParams);
+      next.set("branch", String(activeBranchId));
+      setSearchParams(next, { replace: true });
+    }
+  }, [activeBranchId, branchParam, searchParams, setSearchParams]);
+
+  const handleBranchChange = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("branch", value);
+    setSearchParams(next);
+    resetPage();
+  };
+
   const { data, isLoading, isError, error, refetch, isRefetching } =
     useSellOrders({
       search: debouncedTerm,
       page,
       page_size: pageSize,
+      ...(activeBranchId != null ? { branch: activeBranchId } : {}),
       ...(hideOrdersWithInvoice ? { have_invoice: false } : {}),
     });
 
@@ -227,9 +267,30 @@ export default function SellOrdersList() {
   const totalCount = data?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
 
+  const createOrderHref =
+    activeBranchId != null
+      ? `/sell-orders/new?branch=${activeBranchId}`
+      : "/sell-orders/new";
+
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     resetPage();
+  };
+
+  const handleCreateBranch = (values: { name: string }) => {
+    createBranch.mutate(values, {
+      onSuccess: (branch) => {
+        toast.success("تم إضافة الفرع بنجاح");
+        setIsBranchDialogOpen(false);
+        const next = new URLSearchParams(searchParams);
+        next.set("branch", String(branch.id));
+        setSearchParams(next);
+        resetPage();
+      },
+      onError: (err) => {
+        toast.error(parseBackendError(err));
+      },
+    });
   };
 
   return (
@@ -256,7 +317,7 @@ export default function SellOrdersList() {
                 className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`}
               />
             </Button>
-            <Link to='/sell-orders/new'>
+            <Link to={createOrderHref}>
               <Button className='rounded-xl shadow-lg shadow-primary/20 gap-2'>
                 <Plus className='h-4 w-4' />
                 <span className='hidden sm:inline'>أمر بيع جديد</span>
@@ -265,6 +326,46 @@ export default function SellOrdersList() {
           </div>
         }
       />
+
+      {/* تبويبات الفروع */}
+      <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+        {branches.length > 0 && activeBranchId != null && (
+          <Tabs
+            value={String(activeBranchId)}
+            onValueChange={handleBranchChange}
+            dir='rtl'
+            className='w-full sm:w-auto'
+          >
+            <TabsList className='flex flex-wrap h-auto gap-1 bg-muted/50 w-full sm:w-auto'>
+              {branches.map((branch) => (
+                <TabsTrigger
+                  key={branch.id}
+                  value={String(branch.id)}
+                  className='gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm'
+                >
+                  {branch.name}
+                  <Badge
+                    variant='secondary'
+                    className='font-mono text-[10px] px-1.5 py-0'
+                  >
+                    {branch.sell_orders_count}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
+        <Button
+          type='button'
+          variant='outline'
+          size='sm'
+          className='shrink-0 gap-2 rounded-full self-start'
+          onClick={() => setIsBranchDialogOpen(true)}
+        >
+          <Plus className='h-4 w-4' />
+          إضافة فرع
+        </Button>
+      </div>
 
       <div className='bg-card p-4 rounded-2xl border shadow-sm'>
         <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
@@ -328,7 +429,7 @@ export default function SellOrdersList() {
           }
           action={
             !searchQuery && (
-              <Link to='/sell-orders/new'>
+              <Link to={createOrderHref}>
                 <Button>
                   <Plus className='h-4 w-4 ml-2' />
                   أمر بيع جديد
@@ -385,6 +486,13 @@ export default function SellOrdersList() {
           />
         </>
       )}
+
+      <BranchDialog
+        open={isBranchDialogOpen}
+        onOpenChange={setIsBranchDialogOpen}
+        onSubmit={handleCreateBranch}
+        isLoading={createBranch.isPending}
+      />
     </div>
   );
 }

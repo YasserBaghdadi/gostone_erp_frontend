@@ -38,12 +38,15 @@ interface SellOrdersFilters {
   is_verified?: boolean;
   /** عند `false`: أوامر بدون فاتورة فقط (حسب الـ API). عند `undefined`: لا يُرسل المعامل = كل الأوامر. */
   have_invoice?: boolean;
+  /** فلترة حسب الفرع. اختياري — عند غيابه تُعرض كل الفروع. */
+  branch?: number;
 }
 
 interface CreateSellOrderData {
   customer_phonenumber: string;
   location?: string;
   notes?: string;
+  branch?: number;
   dis_percentage?: string;
   sell_order_items: {
     item_id: number;
@@ -71,6 +74,7 @@ export function useSellOrders(filters: SellOrdersFilters = {}) {
       if (filters.have_invoice !== undefined) {
         params.append("have_invoice", filters.have_invoice ? "true" : "false");
       }
+      if (filters.branch !== undefined) params.append("branch", String(filters.branch));
 
       const url = `${API_ENDPOINTS.SELL_ORDERS.LIST}?${params.toString()}`;
       const res = await api.get(url);

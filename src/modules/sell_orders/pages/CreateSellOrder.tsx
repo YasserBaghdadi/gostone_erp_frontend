@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,6 +9,8 @@ import { CustomerSelectionModal } from "@/components/common/CustomerSelectionMod
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import type { Item, Customer } from "@/types";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -38,6 +40,7 @@ import {
   sellOrderHasInvoice,
 } from "@/hooks/useSellOrders";
 import { useCreateCustomer } from "@/hooks/useCustomers";
+import { useBranches } from "@/hooks/useBranches";
 import { UNIT_LABELS, HOLE_POSITION_LABELS, BOWL_TYPE_LABELS, FAUCET_HOLE_LABELS } from "@/types";
 import type { WashbasinSpec } from "@/types";
 import { parseBackendError, preventNegative, clampToPositive, formatPrice } from "@/lib/utils";
@@ -327,7 +330,18 @@ function WashbasinSpecFields({
 export default function CreateSellOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isEditing = Boolean(id);
+
+  // الفرع المحدّد للأمر الجديد (يُمرَّر من قائمة أوامر البيع عبر ?branch=<id>).
+  const branchParam = searchParams.get("branch");
+  const branchId = useMemo<number | null>(() => {
+    const n = branchParam ? Number(branchParam) : NaN;
+    return Number.isFinite(n) ? n : null;
+  }, [branchParam]);
+
+  const { data: branches = [] } = useBranches();
+  const selectedBranch = branches.find((b) => b.id === branchId) ?? null;
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isCustomerSelectionOpen, setIsCustomerSelectionOpen] = useState(false);
@@ -615,7 +629,9 @@ export default function CreateSellOrder() {
         }
       );
     } else {
-      createMutation.mutate(payload, {
+      const createPayload =
+        branchId != null ? { ...payload, branch: branchId } : payload;
+      createMutation.mutate(createPayload, {
         onSuccess: () => {
           toast.success("تم إنشاء أمر البيع بنجاح");
           navigate("/sell-orders");
@@ -655,6 +671,12 @@ export default function CreateSellOrder() {
             {isEditing ? "تعديل بيانات أمر البيع" : "إنشاء أمر بيع جديد"}
           </p>
         </div>
+        {!isEditing && branchId != null && (
+          <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm">
+            <Building2 className="h-4 w-4" />
+            الفرع: {selectedBranch?.name ?? `#${branchId}`}
+          </Badge>
+        )}
       </div>
 
       <Form {...form}>

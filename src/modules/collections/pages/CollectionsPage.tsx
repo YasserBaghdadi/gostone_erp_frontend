@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Printer, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useCollections } from "@/hooks/useCollections";
+import { useCollections, usePrintCollection } from "@/hooks/useCollections";
 import { PAYMENT_TYPE_LABELS } from "@/types";
 import { RecordCollectionModal } from "../components/RecordCollectionModal";
 
@@ -27,6 +28,19 @@ function formatDateTime(value: string | null | undefined): string {
 export default function CollectionsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: collections, isLoading } = useCollections();
+  const printMutation = usePrintCollection();
+  const [printingId, setPrintingId] = useState<number | null>(null);
+
+  const handlePrint = (id: number) => {
+    setPrintingId(id);
+    printMutation.mutate(
+      { id },
+      {
+        onError: () => toast.error("تعذّر توليد سند القبض"),
+        onSettled: () => setPrintingId(null),
+      },
+    );
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 md:pb-0" dir="rtl">
@@ -80,6 +94,20 @@ export default function CollectionsPage() {
                         <Badge variant="secondary">غير موثّقة</Badge>
                       )}
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-1"
+                      onClick={() => handlePrint(c.id)}
+                      disabled={printingId === c.id}
+                    >
+                      {printingId === c.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Printer className="h-3.5 w-3.5" />
+                      )}
+                      طباعة سند القبض
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -95,6 +123,7 @@ export default function CollectionsPage() {
                       <TableHead className="text-right whitespace-nowrap">المبلغ</TableHead>
                       <TableHead className="text-right whitespace-nowrap">التاريخ</TableHead>
                       <TableHead className="text-right whitespace-nowrap">الحالة</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">سند القبض</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -117,6 +146,22 @@ export default function CollectionsPage() {
                           ) : (
                             <Badge variant="secondary">غير موثّقة</Badge>
                           )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => handlePrint(c.id)}
+                            disabled={printingId === c.id}
+                          >
+                            {printingId === c.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Printer className="h-3.5 w-3.5" />
+                            )}
+                            طباعة
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

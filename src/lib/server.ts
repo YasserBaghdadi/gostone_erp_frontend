@@ -61,6 +61,7 @@ export const API_ENDPOINTS = {
   // Payments / Collections (قبض) — flat list across all customers
   PAYMENTS: {
     LIST: "/custom-v1/payments/",
+    PRINT: (id: string | number) => `/custom-v1/payments/${id}/print/`,
   },
 
   // Customers (Custom V1)

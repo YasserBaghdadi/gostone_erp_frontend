@@ -27,6 +27,7 @@ export const ROUTE_PERMISSIONS = {
   accounts: "accounts_management",
   journalEntries: "journal_entries_management",
   paymentGateways: "payment_gateways_management",
+  collections: "payment_gateways_management",
   
   // General
   approvals: "approval_management",

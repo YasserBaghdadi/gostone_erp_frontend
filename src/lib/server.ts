@@ -58,6 +58,11 @@ export const API_ENDPOINTS = {
     CREATE: "/opportunity-dimensions/",
   },
 
+  // Payments / Collections (قبض) — flat list across all customers
+  PAYMENTS: {
+    LIST: "/custom-v1/payments/",
+  },
+
   // Customers (Custom V1)
   CUSTOMERS: {
     CHECK: (phone: string) => `/custom-v1/customers/check/${phone}/`,

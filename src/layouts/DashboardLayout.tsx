@@ -21,7 +21,8 @@ import {
   PackageOpen,
   Package,
   Factory,
-  Truck
+  Truck,
+  HandCoins
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUser } from "@/hooks/useAuth";
@@ -76,6 +77,7 @@ const navigationGroups = [
       { name: "الحسابات", href: "/accounts", icon: DollarSign, permission: "accounts_management" },
       { name: "سندات القيد", href: "/journal-entries", icon: FileText, permission: "journal_entries_management" },
       { name: "بوابات الدفع", href: "/accounts/payment-gateways", icon: CreditCard, permission: "payment_gateways_management" },
+      { name: "بوابات القبض", href: "/collections", icon: HandCoins, permission: "payment_gateways_management" },
       { name: "طلبات الدفع", href: "/payment-requests", icon: CreditCard, permission: "accounts_management" },
     ]
   },

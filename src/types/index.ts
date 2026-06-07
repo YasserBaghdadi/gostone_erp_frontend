@@ -949,3 +949,31 @@ export interface DRPaymentRequest {
 
 /** @deprecated kept for backward compatibility */
 export type PaymentRequest = CRPaymentRequest;
+
+// =====================
+// Collections (Customer Payments / قبض)
+// =====================
+export type PaymentType = 'card' | 'cash' | 'transfer' | 'tabby' | 'buy_now_pay_later';
+
+/** A single customer payment (قبض) as returned by the flat payments list endpoint. */
+export interface CollectionPayment {
+  id: number;
+  payment_type: PaymentType;
+  customer: { id: number; name: string } | null;
+  channel_name: string | null;
+  amount: string;
+  is_verified: boolean;
+  verified_at: string | null;
+  verified_by: string | null;
+  created_by: string | null;
+  actual_date_time: string | null;
+  created_at: string;
+}
+
+export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
+  card: 'شبكة',
+  cash: 'نقدي',
+  transfer: 'تحويل',
+  tabby: 'تابي',
+  buy_now_pay_later: 'اشترِ الآن وادفع لاحقاً',
+};

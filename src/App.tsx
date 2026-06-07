@@ -88,6 +88,9 @@ const AccountsPage = lazy(() => import("@/modules/accounts/pages/AccountsPage"))
 const AccountDetails = lazy(() => import("@/modules/accounts/pages/AccountDetails"));
 const PaymentGatewaysPage = lazy(() => import("@/modules/accounts/pages/PaymentGatewaysPage"));
 
+// Collections (بوابات القبض)
+const CollectionsPage = lazy(() => import("@/modules/collections/pages/CollectionsPage"));
+
 // Payment Requests (قائمة موحّدة + تفاصيل منفصلة)
 const PaymentRequestsPage = lazy(() => import("@/modules/payment_requests/pages/PaymentRequestsPage"));
 const CRPaymentRequestDetails = lazy(() => import("@/modules/payment_requests/pages/CRPaymentRequestDetails"));
@@ -305,6 +308,14 @@ function AppContent() {
                     <Route path="po/:id" element={<LazyRoute component={POPaymentRequestDetails} moduleName="تفاصيل طلب دفع شراء" />} />
                     <Route path="dr/:id" element={<LazyRoute component={DRPaymentRequestDetails} moduleName="تفاصيل طلب دفع صرف" />} />
                 </Route>
+              </Route>
+
+              {/* Collections (بوابات القبض) */}
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.collections} />}>
+                <Route path="collections" element={<LazyRoute component={CollectionsPage} moduleName="بوابات القبض" />} />
+              </Route>
+
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.accounts} />}>
                 <Route path="cr-payment-requests" element={<Navigate to="/payment-requests" replace />} />
                 <Route path="cr-payment-requests/:id" element={<LegacyCRPaymentDetailRedirect />} />
                 <Route path="po-payment-requests" element={<Navigate to="/payment-requests" replace />} />

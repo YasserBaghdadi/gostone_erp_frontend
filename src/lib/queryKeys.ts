@@ -204,6 +204,15 @@ export const drPaymentRequestKeys = {
 };
 
 // =====================
+// Collections (Customer Payments / قبض)
+// =====================
+export const collectionKeys = {
+  all: ['collections'] as const,
+  lists: () => [...collectionKeys.all, 'list'] as const,
+  list: (filters?: object) => filters ? [...collectionKeys.lists(), filters] as const : collectionKeys.lists(),
+};
+
+// =====================
 // Dashboard
 // =====================
 export const dashboardKeys = {

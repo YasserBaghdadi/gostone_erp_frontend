@@ -554,6 +554,8 @@ export interface ProductionOrder {
   materials: ProductionOrderMaterial[];
   created_at: string;
   closed_at: string | null;
+  /** مواصفات تصنيع المغسلة الفعّالة (للبنود من نوع تفصيل)؛ متوفّر في تفاصيل الأمر فقط */
+  washbasin_spec?: WashbasinSpec | null;
 }
 
 // ----------------------------------------------------------------------------

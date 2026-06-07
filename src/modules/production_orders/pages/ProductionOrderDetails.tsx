@@ -11,6 +11,7 @@ import {
   Calendar,
   Boxes,
   Printer,
+  Box,
 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
@@ -28,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ProductSelectionModal } from "@/components/common/ProductSelectionModal";
+import { WashbasinDrawing } from "@/components/common/WashbasinDrawing";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import {
   useProductionOrderDetails,
@@ -246,6 +248,21 @@ export default function ProductionOrderDetails() {
           )}
         </CardContent>
       </Card>
+
+      {/* Washbasin 3D drawing (only when a spec is present) */}
+      {order.washbasin_spec && (
+        <Card className="shadow-lg border-none ring-1 ring-border/50 overflow-hidden">
+          <CardHeader className="bg-muted/5 pb-4 border-b border-border/50">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Box className="w-5 h-5 text-primary" />
+              مخطط المغسلة (رسم ثلاثي الأبعاد)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6" dir="rtl">
+            <WashbasinDrawing spec={order.washbasin_spec} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Add Material Form (when open or in progress) */}
       {isActive && (

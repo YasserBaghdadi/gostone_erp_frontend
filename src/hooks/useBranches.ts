@@ -16,7 +16,7 @@ export function useBranches(): UseQueryResult<Branch[], Error> {
     queryKey: branchKeys.list(),
     queryFn: async () => {
       const { data } = await api.get<PaginatedResponse<Branch>>(
-        API_ENDPOINTS.BRANCHES.LIST,
+        `${API_ENDPOINTS.BRANCHES.LIST}?page_size=100`,
       );
       return data.results;
     },

@@ -46,7 +46,8 @@ interface CreateSellOrderData {
   customer_phonenumber: string;
   location?: string;
   notes?: string;
-  branch?: number;
+  /** الفرع (FK). null = إزالة الفرع/بدون فرع (يُرسل في وضع التعديل). */
+  branch?: number | null;
   dis_percentage?: string;
   sell_order_items: {
     item_id: number;

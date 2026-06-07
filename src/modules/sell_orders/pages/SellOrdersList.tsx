@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ShoppingCart,
@@ -226,26 +226,32 @@ export default function SellOrdersList() {
   const { data: branches = [] } = useBranches();
   const createBranch = useCreateBranch();
 
+  // الفروع النشطة فقط تظهر كتبويبات (تبويب «الكل» يظهر دائماً).
+  const activeBranches = useMemo(
+    () => branches.filter((b) => b.is_active === true),
+    [branches],
+  );
+
   const branchParam = searchParams.get("branch");
-  // الفرع الفعّال: قيمة الرابط إن صحّت، وإلا أول فرع.
-  const activeBranchId = useMemo<number | null>(() => {
-    if (branches.length === 0) return null;
+  /**
+   * التحديد الفعّال: «الكل» أو رقم فرع.
+   * - "all" → لا نُرسل فلتر الفرع (تظهر كل الأوامر بما فيها التي بلا فرع).
+   * - رقم   → نُرسل branch=<id>.
+   * القيمة تُشتق من ?branch=: "all" لتبويب الكل، أو الرقم؛ الافتراضي (لا قيمة/غير صالحة) → "all".
+   */
+  const activeSelection = useMemo<"all" | number>(() => {
+    if (branchParam === "all") return "all";
     const fromUrl = branchParam ? Number(branchParam) : NaN;
-    if (Number.isFinite(fromUrl) && branches.some((b) => b.id === fromUrl)) {
+    if (
+      Number.isFinite(fromUrl) &&
+      activeBranches.some((b) => b.id === fromUrl)
+    ) {
       return fromUrl;
     }
-    return branches[0].id;
-  }, [branches, branchParam]);
+    return "all";
+  }, [activeBranches, branchParam]);
 
-  // ثبّت الفرع الفعّال في الرابط (لكي يبقى عند التحديث/الرجوع).
-  useEffect(() => {
-    if (activeBranchId == null) return;
-    if (branchParam !== String(activeBranchId)) {
-      const next = new URLSearchParams(searchParams);
-      next.set("branch", String(activeBranchId));
-      setSearchParams(next, { replace: true });
-    }
-  }, [activeBranchId, branchParam, searchParams, setSearchParams]);
+  const tabValue = activeSelection === "all" ? "all" : String(activeSelection);
 
   const handleBranchChange = (value: string) => {
     const next = new URLSearchParams(searchParams);
@@ -259,7 +265,7 @@ export default function SellOrdersList() {
       search: debouncedTerm,
       page,
       page_size: pageSize,
-      ...(activeBranchId != null ? { branch: activeBranchId } : {}),
+      ...(activeSelection !== "all" ? { branch: activeSelection } : {}),
       ...(hideOrdersWithInvoice ? { have_invoice: false } : {}),
     });
 
@@ -268,8 +274,8 @@ export default function SellOrdersList() {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const createOrderHref =
-    activeBranchId != null
-      ? `/sell-orders/new?branch=${activeBranchId}`
+    activeSelection !== "all"
+      ? `/sell-orders/new?branch=${activeSelection}`
       : "/sell-orders/new";
 
   const handleSearchChange = (value: string) => {
@@ -329,32 +335,36 @@ export default function SellOrdersList() {
 
       {/* تبويبات الفروع */}
       <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-        {branches.length > 0 && activeBranchId != null && (
-          <Tabs
-            value={String(activeBranchId)}
-            onValueChange={handleBranchChange}
-            dir='rtl'
-            className='w-full sm:w-auto'
-          >
-            <TabsList className='flex flex-wrap h-auto gap-1 bg-muted/50 w-full sm:w-auto'>
-              {branches.map((branch) => (
-                <TabsTrigger
-                  key={branch.id}
-                  value={String(branch.id)}
-                  className='gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm'
+        <Tabs
+          value={tabValue}
+          onValueChange={handleBranchChange}
+          dir='rtl'
+          className='w-full sm:w-auto'
+        >
+          <TabsList className='flex flex-wrap h-auto gap-1 bg-muted/50 w-full sm:w-auto'>
+            <TabsTrigger
+              value='all'
+              className='gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm'
+            >
+              الكل
+            </TabsTrigger>
+            {activeBranches.map((branch) => (
+              <TabsTrigger
+                key={branch.id}
+                value={String(branch.id)}
+                className='gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm'
+              >
+                {branch.name}
+                <Badge
+                  variant='secondary'
+                  className='font-mono text-[10px] px-1.5 py-0'
                 >
-                  {branch.name}
-                  <Badge
-                    variant='secondary'
-                    className='font-mono text-[10px] px-1.5 py-0'
-                  >
-                    {branch.sell_orders_count}
-                  </Badge>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        )}
+                  {branch.sell_orders_count}
+                </Badge>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
         <Button
           type='button'
           variant='outline'

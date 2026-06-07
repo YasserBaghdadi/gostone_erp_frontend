@@ -117,6 +117,8 @@ const formSchema = z.object({
   location: z.string().min(1, "الموقع مطلوب"),
   notes: z.string().optional(),
   dis_percentage: z.string().default("0"),
+  /** الفرع — يُستخدم في وضع التعديل فقط (null = بدون فرع). */
+  branch: z.number().nullable().default(null),
   sell_order_items: z.array(itemSchema),
 });
 
@@ -365,6 +367,7 @@ export default function CreateSellOrder() {
       location: "",
       notes: "",
       dis_percentage: "0",
+      branch: null,
       sell_order_items: [],
     },
   });
@@ -403,6 +406,7 @@ export default function CreateSellOrder() {
         location: existingSellOrder.location || "",
         notes: existingSellOrder.notes || "",
         dis_percentage: existingSellOrder.dis_percentage || "0",
+        branch: existingSellOrder.branch ?? null,
         sell_order_items: existingSellOrder.sell_order_items.map(item => {
           const available_units = [
             { name: item.item?.default_unit_name, factor: "1", label: UNIT_LABELS[item.item?.default_unit_name as keyof typeof UNIT_LABELS] || item.item?.default_unit_name, price: item.item?.unit_price }
@@ -614,8 +618,10 @@ export default function CreateSellOrder() {
     };
 
     if (isEditing && id) {
+      // في وضع التعديل فقط: نُرسل الفرع المختار (id أو null لإزالته/تركه بدون فرع).
+      const updatePayload = { ...payload, branch: values.branch ?? null };
       updateMutation.mutate(
-        { id, data: payload },
+        { id, data: updatePayload },
         {
           onSuccess: () => {
             toast.success("تم تحديث أمر البيع بنجاح");
@@ -760,6 +766,44 @@ export default function CreateSellOrder() {
                   <CardTitle>تفاصيل إضافية</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {isEditing && (
+                    <FormField
+                      control={form.control}
+                      name="branch"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>الفرع</FormLabel>
+                          <Select
+                            value={
+                              field.value == null ? NONE : String(field.value)
+                            }
+                            onValueChange={(val) =>
+                              field.onChange(val === NONE ? null : Number(val))
+                            }
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="بدون فرع" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value={NONE}>بدون فرع</SelectItem>
+                              {branches.map((branch) => (
+                                <SelectItem
+                                  key={branch.id}
+                                  value={String(branch.id)}
+                                >
+                                  {branch.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
                   <FormField
                     control={form.control}
                     name="dis_percentage"

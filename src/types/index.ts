@@ -372,6 +372,61 @@ export const PERMISSION_GROUP_LABELS: Record<string, string> = {
 
 export type InterestLevel = keyof typeof INTEREST_LEVELS;
 
+// ----------------------------------------------------------------------------
+// Washbasin manufacturing specs (مواصفات تصنيع المغاسل) — custom (تفصيل) lines
+// ----------------------------------------------------------------------------
+
+export type WashbasinHolePosition = 'right' | 'center' | 'left';
+
+export type WashbasinBowlType =
+  | 'porcelain_square'
+  | 'square_with_tile'
+  | 'waterfall_pipe'
+  | 'waterfall_slot'
+  | 'ceramic_round'
+  | 'ceramic_oval'
+  | 'ceramic_square'
+  | 'special';
+
+export type WashbasinFaucetHole = 'wall' | 'basin';
+
+export interface WashbasinSpec {
+  surface_length: number | null;
+  surface_width: number | null;
+  has_custom_bowl_size: boolean;
+  bowl_length: number | null;
+  bowl_width: number | null;
+  bowl_depth: number | null;
+  hole_position: WashbasinHolePosition | null;
+  bowl_type: WashbasinBowlType | null;
+  bowls_count: 1 | 2;
+  faucet_hole: WashbasinFaucetHole | null;
+  front_length: number | null;
+  front_height: number | null;
+}
+
+export const HOLE_POSITION_LABELS: Record<WashbasinHolePosition, string> = {
+  right: 'يمين',
+  center: 'وسط',
+  left: 'يسار',
+};
+
+export const BOWL_TYPE_LABELS: Record<WashbasinBowlType, string> = {
+  porcelain_square: 'مربع بورسلين',
+  square_with_tile: 'مربع مع بلاطة',
+  waterfall_pipe: 'شلال ماسورة',
+  waterfall_slot: 'شلال شريحة',
+  ceramic_round: 'خزف دائري',
+  ceramic_oval: 'خزف بيضاوي',
+  ceramic_square: 'خزف مربع',
+  special: 'طلب خاص',
+};
+
+export const FAUCET_HOLE_LABELS: Record<WashbasinFaucetHole, string> = {
+  wall: 'جداري',
+  basin: 'في المغسلة',
+};
+
 // Sell Order Types
 export interface SellOrderItem {
   id: number;
@@ -388,7 +443,10 @@ export interface SellOrderItem {
     unit2_factor?: string;
     unit3_name?: string;
     unit3_factor?: string;
+    production_type?: ProductionType;
   };
+  /** مواصفات تصنيع المغسلة (للبنود من نوع تفصيل فقط) */
+  washbasin_spec?: WashbasinSpec | null;
   quantity: string;
   price_before_tax: string;
   price_after_tax: string;

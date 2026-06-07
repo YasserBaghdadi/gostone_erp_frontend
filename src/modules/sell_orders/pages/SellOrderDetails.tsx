@@ -38,7 +38,57 @@ import {
 } from "@/hooks/useSellOrders";
 import { parseBackendError } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
+import {
+  HOLE_POSITION_LABELS,
+  BOWL_TYPE_LABELS,
+  FAUCET_HOLE_LABELS,
+} from "@/types";
+import type { WashbasinSpec } from "@/types";
 import { toast } from "sonner";
+
+/** صفوف عرض مواصفات تصنيع المغسلة (قراءة فقط) للبنود من نوع «تفصيل» */
+function washbasinSpecRows(spec: WashbasinSpec): { label: string; value: string }[] {
+  const rows: { label: string; value: string }[] = [];
+  const num = (v: number | null | undefined) =>
+    v === null || v === undefined ? "" : String(v);
+  const add = (label: string, value: string) => {
+    if (value !== "") rows.push({ label, value });
+  };
+
+  add("طول السطح", num(spec.surface_length));
+  add("عرض السطح", num(spec.surface_width));
+  if (spec.has_custom_bowl_size) {
+    add("طول الحوض", num(spec.bowl_length));
+    add("عرض الحوض", num(spec.bowl_width));
+    add("عمق الحوض", num(spec.bowl_depth));
+  }
+  if (spec.hole_position) add("مكان فتحة الحوض", HOLE_POSITION_LABELS[spec.hole_position]);
+  if (spec.bowl_type) add("نوع الحوض", BOWL_TYPE_LABELS[spec.bowl_type]);
+  add("عدد الأحواض", spec.bowls_count === 2 ? "حوضين" : spec.bowls_count === 1 ? "حوض" : "");
+  if (spec.faucet_hole) add("فتحة الخلاط", FAUCET_HOLE_LABELS[spec.faucet_hole]);
+  add("طول المنظور الأمامي", num(spec.front_length));
+  add("ارتفاع المنظور الأمامي", num(spec.front_height));
+
+  return rows;
+}
+
+function WashbasinSpecView({ spec }: { spec: WashbasinSpec }) {
+  const rows = washbasinSpecRows(spec);
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
+      <p className="mb-1.5 text-xs font-semibold text-primary">تفاصيل التصنيع</p>
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+        {rows.map((r) => (
+          <div key={r.label} className="flex justify-between gap-2">
+            <dt className="text-muted-foreground">{r.label}:</dt>
+            <dd className="font-medium text-foreground">{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
 
 /** مسار أو رابط ملف الفاتورة من الـ API لعرضه في المتصفح */
 function buildInvoiceFileHref(raw: string | null | undefined): string {
@@ -449,6 +499,7 @@ export default function SellOrderDetails() {
                           <p className="whitespace-pre-wrap wrap-break-word break-all">{item.notes}</p>
                         </div>
                       )}
+                      {item.washbasin_spec && <WashbasinSpecView spec={item.washbasin_spec} />}
                     </div>
                   ))}
                 </div>
@@ -484,6 +535,7 @@ export default function SellOrderDetails() {
                               </p>
                             </div>
                           )}
+                          {item.washbasin_spec && <WashbasinSpecView spec={item.washbasin_spec} />}
                         </td>
                         <td className="p-4 text-center">
                           <Badge variant="outline" className="font-mono">

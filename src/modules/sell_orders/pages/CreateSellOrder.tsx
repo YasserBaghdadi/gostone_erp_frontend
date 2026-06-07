@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Trash2, Save, Loader2, ArrowLeft, Search, UserPlus, PackagePlus } from "lucide-react";
@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   useCreateSellOrder,
@@ -36,12 +38,58 @@ import {
   sellOrderHasInvoice,
 } from "@/hooks/useSellOrders";
 import { useCreateCustomer } from "@/hooks/useCustomers";
-import { UNIT_LABELS } from "@/types";
+import { UNIT_LABELS, HOLE_POSITION_LABELS, BOWL_TYPE_LABELS, FAUCET_HOLE_LABELS } from "@/types";
+import type { WashbasinSpec } from "@/types";
 import { parseBackendError, preventNegative, clampToPositive, formatPrice } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
 // import { normalizeSaudiPhone } from "@/components/form";
 
 // --- Schema ---
+// مواصفات تصنيع المغسلة — تُخزَّن في حالة النموذج كنصوص (حقول إدخال) وتُحوَّل عند الإرسال.
+const washbasinSpecFormSchema = z.object({
+  surface_length: z.string().default(""),
+  surface_width: z.string().default(""),
+  has_custom_bowl_size: z.boolean().default(false),
+  bowl_length: z.string().default(""),
+  bowl_width: z.string().default(""),
+  bowl_depth: z.string().default(""),
+  hole_position: z.enum(["right", "center", "left"]).nullable().default(null),
+  bowl_type: z
+    .enum([
+      "porcelain_square",
+      "square_with_tile",
+      "waterfall_pipe",
+      "waterfall_slot",
+      "ceramic_round",
+      "ceramic_oval",
+      "ceramic_square",
+      "special",
+    ])
+    .nullable()
+    .default(null),
+  bowls_count: z.union([z.literal(1), z.literal(2)]).default(1),
+  faucet_hole: z.enum(["wall", "basin"]).nullable().default(null),
+  front_length: z.string().default(""),
+  front_height: z.string().default(""),
+});
+
+type WashbasinSpecForm = z.infer<typeof washbasinSpecFormSchema>;
+
+const emptyWashbasinSpec = (): WashbasinSpecForm => ({
+  surface_length: "",
+  surface_width: "",
+  has_custom_bowl_size: false,
+  bowl_length: "",
+  bowl_width: "",
+  bowl_depth: "",
+  hole_position: null,
+  bowl_type: null,
+  bowls_count: 1,
+  faucet_hole: null,
+  front_length: "",
+  front_height: "",
+});
+
 const itemSchema = z.object({
   item_id: z.number().default(0),
   name: z.string().min(1, "اسم البند مطلوب"),
@@ -50,6 +98,8 @@ const itemSchema = z.object({
   price_after_tax: z.coerce.string().min(1, "السعر مطلوب"),
   dis_percentage: z.coerce.string().default("0"),
   notes: z.string().optional(),
+  production_type: z.enum(["ready", "custom"]).optional(),
+  washbasin_spec: washbasinSpecFormSchema.optional(),
   available_units: z.array(z.object({
     name: z.string(),
     factor: z.string(),
@@ -79,6 +129,200 @@ const customerSchema = z.object({
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
+
+// --- مواصفات تصنيع المغسلة (تظهر للبنود من نوع «تفصيل») ---
+const NONE = "none";
+
+function WashbasinSpecFields({
+  form,
+  index,
+}: {
+  form: UseFormReturn<FormValues>;
+  index: number;
+}) {
+  const base = `sell_order_items.${index}.washbasin_spec` as const;
+  const hasCustomBowl = form.watch(`${base}.has_custom_bowl_size`) ?? false;
+  const holePosition = form.watch(`${base}.hole_position`) ?? null;
+  const bowlType = form.watch(`${base}.bowl_type`) ?? null;
+  const bowlsCount = form.watch(`${base}.bowls_count`) ?? 1;
+  const faucetHole = form.watch(`${base}.faucet_hole`) ?? null;
+
+  const numberInput = (
+    field:
+      | "surface_length"
+      | "surface_width"
+      | "bowl_length"
+      | "bowl_width"
+      | "bowl_depth"
+      | "front_length"
+      | "front_height",
+    label: string,
+  ) => (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Input
+        type="number"
+        min="0"
+        step="any"
+        className="h-9 text-sm"
+        onKeyDown={preventNegative}
+        {...form.register(`${base}.${field}`, {
+          setValueAs: (v) => clampToPositive(v),
+        })}
+      />
+    </div>
+  );
+
+  return (
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-4" dir="rtl">
+      <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary">
+        <PackagePlus className="h-4 w-4" />
+        تفاصيل التصنيع
+      </h4>
+
+      <div className="space-y-4">
+        {/* منظور السطح */}
+        <fieldset className="rounded-md border border-border/50 p-3">
+          <legend className="px-1 text-xs font-medium text-muted-foreground">منظور السطح</legend>
+          <div className="grid grid-cols-2 gap-3">
+            {numberInput("surface_length", "الطول")}
+            {numberInput("surface_width", "العرض")}
+          </div>
+        </fieldset>
+
+        {/* مقاس حوض خاص */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`custom-bowl-${index}`}
+              checked={hasCustomBowl}
+              onCheckedChange={(checked) =>
+                form.setValue(`${base}.has_custom_bowl_size`, checked === true)
+              }
+            />
+            <Label htmlFor={`custom-bowl-${index}`} className="cursor-pointer text-sm">
+              مقاس حوض خاص
+            </Label>
+          </div>
+          {hasCustomBowl && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {numberInput("bowl_length", "طول الحوض")}
+              {numberInput("bowl_width", "عرض الحوض")}
+              {numberInput("bowl_depth", "عمق الحوض")}
+            </div>
+          )}
+        </div>
+
+        {/* القوائم المنسدلة */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">مكان فتحة الحوض</Label>
+            <Select
+              value={holePosition ?? NONE}
+              onValueChange={(val) =>
+                form.setValue(
+                  `${base}.hole_position`,
+                  val === NONE ? null : (val as "right" | "center" | "left"),
+                )
+              }
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>—</SelectItem>
+                {Object.entries(HOLE_POSITION_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">نوع الحوض</Label>
+            <Select
+              value={bowlType ?? NONE}
+              onValueChange={(val) =>
+                form.setValue(
+                  `${base}.bowl_type`,
+                  val === NONE
+                    ? null
+                    : (val as NonNullable<WashbasinSpecForm["bowl_type"]>),
+                )
+              }
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>—</SelectItem>
+                {Object.entries(BOWL_TYPE_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">عدد الأحواض</Label>
+            <Select
+              value={String(bowlsCount)}
+              onValueChange={(val) =>
+                form.setValue(`${base}.bowls_count`, val === "2" ? 2 : 1)
+              }
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">حوض</SelectItem>
+                <SelectItem value="2">حوضين</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">فتحة الخلاط</Label>
+            <Select
+              value={faucetHole ?? NONE}
+              onValueChange={(val) =>
+                form.setValue(
+                  `${base}.faucet_hole`,
+                  val === NONE ? null : (val as "wall" | "basin"),
+                )
+              }
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>—</SelectItem>
+                {Object.entries(FAUCET_HOLE_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* منظور أمامي */}
+        <fieldset className="rounded-md border border-border/50 p-3">
+          <legend className="px-1 text-xs font-medium text-muted-foreground">منظور أمامي</legend>
+          <div className="grid grid-cols-2 gap-3">
+            {numberInput("front_length", "الطول")}
+            {numberInput("front_height", "الارتفاع")}
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  );
+}
 
 export default function CreateSellOrder() {
   const { id } = useParams();
@@ -156,6 +400,29 @@ export default function CreateSellOrder() {
             available_units.push({ name: item.item.unit3_name, factor: item.item.unit3_factor || "1", label: UNIT_LABELS[item.item.unit3_name as keyof typeof UNIT_LABELS] || item.item.unit3_name, price: item.item.unit3_price || item.item.unit_price });
           }
 
+          const isCustom = item.item?.production_type === "custom";
+          const numToStr = (v: number | null | undefined) =>
+            v === null || v === undefined ? "" : String(v);
+          const existingSpec = item.washbasin_spec;
+          const washbasin_spec: WashbasinSpecForm | undefined = isCustom
+            ? existingSpec
+              ? {
+                  surface_length: numToStr(existingSpec.surface_length),
+                  surface_width: numToStr(existingSpec.surface_width),
+                  has_custom_bowl_size: Boolean(existingSpec.has_custom_bowl_size),
+                  bowl_length: numToStr(existingSpec.bowl_length),
+                  bowl_width: numToStr(existingSpec.bowl_width),
+                  bowl_depth: numToStr(existingSpec.bowl_depth),
+                  hole_position: existingSpec.hole_position ?? null,
+                  bowl_type: existingSpec.bowl_type ?? null,
+                  bowls_count: existingSpec.bowls_count === 2 ? 2 : 1,
+                  faucet_hole: existingSpec.faucet_hole ?? null,
+                  front_length: numToStr(existingSpec.front_length),
+                  front_height: numToStr(existingSpec.front_height),
+                }
+              : emptyWashbasinSpec()
+            : undefined;
+
           return {
             item_id: item.item?.id || 0,
             name: item.item?.name || "",
@@ -164,6 +431,8 @@ export default function CreateSellOrder() {
             price_after_tax: formatPrice(item.price_after_tax),
             dis_percentage: item.dis_percentage,
             notes: item.notes,
+            production_type: item.item?.production_type,
+            washbasin_spec,
             available_units
           };
         })
@@ -257,6 +526,7 @@ export default function CreateSellOrder() {
               });
           }
 
+          const isCustom = item.production_type === "custom";
           append({
               item_id: item.id,
               name: item.name,
@@ -265,6 +535,8 @@ export default function CreateSellOrder() {
               price_after_tax: formatPrice(item.unit_price),
               dis_percentage: "0",
               notes: "",
+              production_type: item.production_type,
+              washbasin_spec: isCustom ? emptyWashbasinSpec() : undefined,
               available_units
           });
       });
@@ -280,19 +552,51 @@ export default function CreateSellOrder() {
   const onSubmit = () => {
     if (!pendingFormData) return;
     const values = pendingFormData;
+
+    // تحويل مواصفات التصنيع من حالة النموذج (نصوص) إلى الشكل الذي يتوقعه الباك اند.
+    const strToNum = (v: string | undefined): number | null => {
+      const t = (v ?? "").trim();
+      if (t === "") return null;
+      const n = Number(t);
+      return Number.isFinite(n) ? n : null;
+    };
+    const buildWashbasinSpec = (spec: WashbasinSpecForm): WashbasinSpec => {
+      const hasCustomBowl = Boolean(spec.has_custom_bowl_size);
+      return {
+        surface_length: strToNum(spec.surface_length),
+        surface_width: strToNum(spec.surface_width),
+        has_custom_bowl_size: hasCustomBowl,
+        bowl_length: hasCustomBowl ? strToNum(spec.bowl_length) : null,
+        bowl_width: hasCustomBowl ? strToNum(spec.bowl_width) : null,
+        bowl_depth: hasCustomBowl ? strToNum(spec.bowl_depth) : null,
+        hole_position: spec.hole_position ?? null,
+        bowl_type: spec.bowl_type ?? null,
+        bowls_count: spec.bowls_count === 2 ? 2 : 1,
+        faucet_hole: spec.faucet_hole ?? null,
+        front_length: strToNum(spec.front_length),
+        front_height: strToNum(spec.front_height),
+      };
+    };
+
     const payload: any = {
       customer_phonenumber: values.customer_phonenumber,
       location: values.location,
       notes: values.notes,
       dis_percentage: parseFloat(values.dis_percentage || "0").toFixed(2),
-      sell_order_items: values.sell_order_items.map((item, index) => ({
-        item_id: item.item_id || index + 1,
-        quantity: String(item.quantity),
-        price_after_tax: String(item.price_after_tax),
-        unit_name: item.unit_name,
-        notes: item.notes || "",
-        dis_percentage: parseFloat(item.dis_percentage || "0").toFixed(2)
-      })),
+      sell_order_items: values.sell_order_items.map((item, index) => {
+        const line: Record<string, unknown> = {
+          item_id: item.item_id || index + 1,
+          quantity: String(item.quantity),
+          price_after_tax: String(item.price_after_tax),
+          unit_name: item.unit_name,
+          notes: item.notes || "",
+          dis_percentage: parseFloat(item.dis_percentage || "0").toFixed(2),
+        };
+        if (item.production_type === "custom" && item.washbasin_spec) {
+          line.washbasin_spec = buildWashbasinSpec(item.washbasin_spec);
+        }
+        return line;
+      }),
     };
 
     if (isEditing && id) {
@@ -505,12 +809,14 @@ export default function CreateSellOrder() {
                           const price = parseFloat(form.watch(`sell_order_items.${index}.price_after_tax`) || "0");
                           const discount = parseFloat(form.watch(`sell_order_items.${index}.dis_percentage`) || "0");
                           const itemTotal = qty * price * (1 - discount / 100);
-                          
+                          const isCustomLine = form.watch(`sell_order_items.${index}.production_type`) === "custom";
+
                           return (
-                          <tr key={field.id} className="hover:bg-muted/5 transition-colors">
+                          <Fragment key={field.id}>
+                          <tr className="hover:bg-muted/5 transition-colors">
                             <td className="p-2">
-                              <Input 
-                                placeholder="اسم البند" 
+                              <Input
+                                placeholder="اسم البند"
                                 className="h-9 text-sm bg-muted text-muted-foreground"
                                 readOnly
                                 {...form.register(`sell_order_items.${index}.name`)}
@@ -650,6 +956,14 @@ export default function CreateSellOrder() {
                               </Button>
                             </td>
                           </tr>
+                          {isCustomLine && (
+                            <tr>
+                              <td colSpan={9} className="p-2 pt-0">
+                                <WashbasinSpecFields form={form} index={index} />
+                              </td>
+                            </tr>
+                          )}
+                          </Fragment>
                         )})}
                       </tbody>
                     </table>

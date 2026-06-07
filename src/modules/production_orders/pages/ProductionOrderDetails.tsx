@@ -103,11 +103,11 @@ export default function ProductionOrderDetails() {
       { id: order.id },
       {
         onSuccess: () => {
-          toast.success("تم إقفال أمر التصنيع وإنتاج الصنف في المخزون");
+          toast.success("تم إتمام الإنتاج وترحيل المنتج للمخزون");
           setIsCloseModalOpen(false);
         },
         onError: (error) => {
-          toast.error("فشل إقفال أمر التصنيع", {
+          toast.error("فشل إتمام الإنتاج", {
             description: parseBackendError(error),
           });
         },
@@ -134,7 +134,7 @@ export default function ProductionOrderDetails() {
 
   const statusInfo =
     PRODUCTION_ORDER_STATUS_LABELS[order.status] ?? PRODUCTION_ORDER_STATUS_LABELS.open;
-  const isOpen = order.status === "open";
+  const isActive = order.status === "open" || order.status === "in_progress";
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-12">
@@ -164,18 +164,20 @@ export default function ProductionOrderDetails() {
               العودة
             </Button>
           </Link>
-          <Button
-            className="rounded-xl gap-2"
-            onClick={() => setIsCloseModalOpen(true)}
-            disabled={!isOpen || closeMutation.isPending}
-          >
-            {closeMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4" />
-            )}
-            إقفال أمر التصنيع
-          </Button>
+          {isActive && (
+            <Button
+              className="rounded-xl gap-2"
+              onClick={() => setIsCloseModalOpen(true)}
+              disabled={closeMutation.isPending}
+            >
+              {closeMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
+              تم الإنتاج
+            </Button>
+          )}
         </div>
       </div>
 
@@ -221,8 +223,8 @@ export default function ProductionOrderDetails() {
         </CardContent>
       </Card>
 
-      {/* Add Material Form (only when open) */}
-      {isOpen && (
+      {/* Add Material Form (when open or in progress) */}
+      {isActive && (
         <Card className="shadow-lg border-none ring-1 ring-border/50 overflow-hidden">
           <CardHeader className="bg-muted/5 pb-4 border-b border-border/50">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -364,9 +366,9 @@ export default function ProductionOrderDetails() {
         isOpen={isCloseModalOpen}
         onClose={() => setIsCloseModalOpen(false)}
         onConfirm={confirmCloseOrder}
-        title="إقفال أمر التصنيع"
-        description="سيتم إنتاج الصنف المُصنّع في المخزون ولا يمكن التراجع عن هذا الإجراء. هل أنت متأكد؟"
-        confirmText="إقفال أمر التصنيع"
+        title="تم الإنتاج"
+        description="تأكيد إتمام الإنتاج وترحيل المنتج للمخزون؟ لا يمكن التراجع عن هذا الإجراء."
+        confirmText="تم الإنتاج"
         cancelText="إلغاء"
         variant="success"
         isLoading={closeMutation.isPending}

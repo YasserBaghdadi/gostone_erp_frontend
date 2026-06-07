@@ -466,11 +466,12 @@ export interface Item {
 // Production Orders (أوامر التصنيع)
 // ----------------------------------------------------------------------------
 
-export type ProductionOrderStatus = 'open' | 'closed' | 'canceled';
+export type ProductionOrderStatus = 'open' | 'in_progress' | 'closed' | 'canceled';
 
 export const PRODUCTION_ORDER_STATUS_LABELS: Record<ProductionOrderStatus, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
-  open: { label: 'مفتوح', color: 'info' },
-  closed: { label: 'مقفل', color: 'success' },
+  open: { label: 'جديد', color: 'info' },
+  in_progress: { label: 'تحت التصنيع', color: 'warning' },
+  closed: { label: 'تم الإنتاج', color: 'success' },
   canceled: { label: 'ملغى', color: 'destructive' },
 };
 

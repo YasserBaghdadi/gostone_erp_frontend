@@ -534,15 +534,16 @@ export interface StorageArea {
 }
 
 // Purchase Order Types
-export type PurchaseOrderStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING' | 'APPROVED' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
+export type PurchaseOrderStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING' | 'APPROVED' | 'ACCEPTED' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
 
 export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
   DRAFT: { label: 'مسودة', color: 'secondary' },
   SUBMITTED: { label: 'مُقدم', color: 'info' },
   PENDING: { label: 'قيد الانتظار', color: 'warning' },
   APPROVED: { label: 'تمت الموافقة', color: 'info' },
+  ACCEPTED: { label: 'مقبول', color: 'success' },
   ORDERED: { label: 'تم الطلب', color: 'default' },
-  RECEIVED: { label: 'تم الاستلام', color: 'success' },
+  RECEIVED: { label: 'مُستلَم', color: 'success' },
   CANCELLED: { label: 'ملغي', color: 'destructive' },
 };
 
@@ -606,6 +607,8 @@ export interface PurchaseOrder {
   updated_at?: string;
   created_by?: number;
   accepted_at?: string;
+  /** تاريخ استلام المواد وترحيلها للمخزون */
+  received_at?: string | null;
   /** رابط أو مسار ملف الفاتورة بعد الرفع */
   invoice_file?: string | null;
 

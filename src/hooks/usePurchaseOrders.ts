@@ -144,6 +144,25 @@ export function useDeletePurchaseOrder() {
   });
 }
 
+export function useReceivePurchaseOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string | number) => {
+      const res = await api.post(
+        API_ENDPOINTS.PURCHASE_ORDERS.RECEIVE(id),
+        {},
+      );
+      return res.data as PurchaseOrder;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({
+        queryKey: purchaseOrderKeys.detail(id),
+      });
+      queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.lists() });
+    },
+  });
+}
+
 export function usePrintPurchaseOrder() {
   return useMutation({
     mutationFn: async ({ id }: { id: string | number }): Promise<void> => {

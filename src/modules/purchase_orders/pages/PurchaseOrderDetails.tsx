@@ -17,6 +17,8 @@ import {
   ListOrdered,
   Upload,
   ExternalLink,
+  PackageCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +34,9 @@ import {
   usePurchaseOrderDetails,
   usePrintPurchaseOrder,
   useUploadPurchaseOrderInvoice,
+  useReceivePurchaseOrder,
 } from "@/hooks/usePurchaseOrders";
+import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +74,7 @@ const PO_HISTORY_ACTION_AR: Record<string, string> = {
   ACCEPTED: "تم القبول",
   REJECTED: "تم الرفض",
   VERIFIED: "تم التحقق",
+  RECEIVED: "تم الاستلام",
   STATUS_CHANGED: "تغيير الحالة",
   CANCELLED: "تم الإلغاء",
 };
@@ -145,6 +150,9 @@ export default function PurchaseOrderDetails() {
   } = usePurchaseOrderDetails(id!);
   const printMutation = usePrintPurchaseOrder();
   const uploadInvoiceMutation = useUploadPurchaseOrderInvoice();
+  const receiveMutation = useReceivePurchaseOrder();
+
+  const [receiveConfirmOpen, setReceiveConfirmOpen] = useState(false);
 
   const itemsBySupplier = useMemo(() => {
     if (!purchaseOrder?.items?.length) return [];
@@ -236,6 +244,16 @@ export default function PurchaseOrderDetails() {
     );
   };
 
+  const handleConfirmReceive = (poId: string | number) => {
+    receiveMutation.mutate(poId, {
+      onSuccess: () => {
+        toast.success("تم استلام المواد وترحيلها للمخزون");
+        setReceiveConfirmOpen(false);
+      },
+      onError: (err) => toast.error(parseBackendError(err)),
+    });
+  };
+
   if (isLoading) {
     return (
       <div className='flex flex-col items-center justify-center min-h-[60vh] gap-4'>
@@ -268,6 +286,10 @@ export default function PurchaseOrderDetails() {
     purchaseOrder.status as PurchaseOrderStatus
   ] || { label: purchaseOrder.status, color: "secondary" };
   const totalCost = parseFloat(purchaseOrder.total_cost || "0");
+  const isReceived = purchaseOrder.status === "RECEIVED";
+  const canReceive =
+    purchaseOrder.status === "SUBMITTED" ||
+    purchaseOrder.status === "ACCEPTED";
   const hasInvoice =
     typeof purchaseOrder.invoice_file === "string" &&
     purchaseOrder.invoice_file.trim().length > 0;
@@ -431,8 +453,44 @@ export default function PurchaseOrderDetails() {
             )}
             طباعة طلب الشراء
           </Button>
+          {canReceive && (
+            <Button
+              className='rounded-xl gap-2 bg-success hover:bg-success-dark text-success-foreground border-0'
+              disabled={receiveMutation.isPending}
+              onClick={() => setReceiveConfirmOpen(true)}
+              title='استلام المواد وترحيلها للمخزون'
+            >
+              {receiveMutation.isPending ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <PackageCheck className='h-4 w-4' />
+              )}
+              استلام المواد
+            </Button>
+          )}
+          {isReceived && (
+            <Badge
+              variant='success'
+              className='gap-1.5 rounded-xl px-3 py-1.5 text-sm'
+            >
+              <CheckCircle2 className='h-4 w-4' />
+              مُستلَم
+            </Badge>
+          )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={receiveConfirmOpen}
+        onClose={() => setReceiveConfirmOpen(false)}
+        onConfirm={() => handleConfirmReceive(purchaseOrder.id)}
+        title='استلام المواد'
+        description='تأكيد استلام المواد وترحيلها للمخزون؟'
+        confirmText='تأكيد الاستلام'
+        cancelText='إلغاء'
+        variant='success'
+        isLoading={receiveMutation.isPending}
+      />
 
       <Dialog
         open={invoiceDialogOpen}
@@ -897,6 +955,19 @@ export default function PurchaseOrderDetails() {
                   <span className='text-muted-foreground'>تاريخ الموافقة</span>
                   <span className='text-sm font-mono'>
                     {new Date(purchaseOrder.accepted_at).toLocaleDateString(
+                      "ar-SA",
+                    )}
+                  </span>
+                </div>
+              )}
+              {purchaseOrder.received_at && (
+                <div className='flex items-center justify-between'>
+                  <span className='text-muted-foreground flex items-center gap-2'>
+                    <PackageCheck className='h-4 w-4 text-success' />
+                    تاريخ الاستلام
+                  </span>
+                  <span className='text-sm font-mono'>
+                    {new Date(purchaseOrder.received_at).toLocaleDateString(
                       "ar-SA",
                     )}
                   </span>

@@ -31,6 +31,9 @@ function DeliveryOrderRow({ order }: { order: DeliveryOrder }) {
     >
       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">#{order.id}</td>
       <td className="px-4 py-3">
+        <span className="text-sm">{order.customer_name || "—"}</span>
+      </td>
+      <td className="px-4 py-3">
         <span className="font-semibold text-sm font-mono">#{order.sell_order}</span>
       </td>
       <td className="px-4 py-3 text-center">
@@ -71,7 +74,8 @@ function DeliveryOrderMobileCard({ order }: { order: DeliveryOrder }) {
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
-            <p className="font-bold text-sm truncate font-mono">أمر بيع #{order.sell_order}</p>
+            <p className="font-bold text-sm truncate">{order.customer_name || "—"}</p>
+            <p className="text-xs text-muted-foreground truncate font-mono">أمر بيع #{order.sell_order}</p>
             <p className="text-xs text-muted-foreground font-mono">#{order.id}</p>
           </div>
           <div className="shrink-0">
@@ -163,6 +167,7 @@ export default function DeliveryOrdersList() {
                   <thead>
                     <tr className="border-b bg-muted/30">
                       <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">#</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">العميل</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">أمر البيع</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">التاريخ</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">الحالة</th>

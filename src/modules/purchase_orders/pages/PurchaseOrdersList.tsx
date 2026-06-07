@@ -74,6 +74,9 @@ function PurchaseOrderRow({ order }: { order: any }) {
       <td className="px-4 py-3">
         <span className="font-mono text-sm text-foreground">#{order.id}</span>
       </td>
+      <td className="px-4 py-3">
+        <span className="text-sm text-foreground">{order.customer_name || "—"}</span>
+      </td>
       <td className="px-4 py-3 align-top whitespace-normal">
         <div
           className="flex items-start gap-2"
@@ -248,6 +251,11 @@ function PurchaseOrderMobileCard({ order }: { order: any }) {
       </CardHeader>
       
       <CardContent className="space-y-3 pb-4">
+        <div className="flex items-center justify-between text-sm gap-2 min-w-0">
+          <span className="text-muted-foreground shrink-0">العميل</span>
+          <span className="truncate text-foreground">{order.customer_name || "—"}</span>
+        </div>
+
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">التاريخ</span>
           <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
@@ -471,6 +479,7 @@ export default function PurchaseOrdersList() {
                   <thead>
                     <tr className="bg-muted/50 border-b border-border/50 text-muted-foreground">
                       <th className="px-4 py-3 text-right font-medium">رقم الطلب</th>
+                      <th className="px-4 py-3 text-right font-medium">العميل</th>
                       <th className="px-4 py-3 text-right font-medium">المورد</th>
                       <th className="px-4 py-3 text-center font-medium">أمر بيع</th>
                       <th className="px-4 py-3 text-center font-medium">البنود</th>

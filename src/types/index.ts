@@ -559,6 +559,8 @@ export interface ProductionOrder {
   quantity: string;
   unit_name: string;
   status: ProductionOrderStatus;
+  /** اسم العميل المرتبط بأمر التصنيع (يأتي ضمن عناصر القائمة) */
+  customer_name?: string | null;
   sell_order: number | null;
   sell_order_item: number | null;
   materials: ProductionOrderMaterial[];
@@ -593,6 +595,8 @@ export interface DeliveryOrder {
   id: number;
   sell_order: number;
   customer: number | null;
+  /** اسم العميل المرتبط بأمر التسليم (يأتي ضمن عناصر القائمة) */
+  customer_name?: string | null;
   status: DeliveryOrderStatus;
   items: DeliveryOrderItem[];
   created_at: string | null;
@@ -668,6 +672,8 @@ export interface PurchaseOrder {
   supplier: number;
   supplier_name?: string;
   supplier_list?: PurchaseOrderSupplierSummary[];
+  /** اسم العميل المرتبط بطلب الشراء (يأتي ضمن عناصر القائمة) */
+  customer_name?: string | null;
   sell_order?: number;
   status: PurchaseOrderStatus;
   total_cost?: string;

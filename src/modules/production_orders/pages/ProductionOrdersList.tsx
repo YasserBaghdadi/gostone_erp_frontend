@@ -31,6 +31,9 @@ function ProductionOrderRow({ order }: { order: ProductionOrder }) {
     >
       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">#{order.id}</td>
       <td className="px-4 py-3">
+        <span className="text-sm">{order.customer_name || "—"}</span>
+      </td>
+      <td className="px-4 py-3">
         <span className="font-semibold text-sm">{order.finished_item_name}</span>
       </td>
       <td className="px-4 py-3 text-center font-mono text-sm">
@@ -76,6 +79,7 @@ function ProductionOrderMobileCard({ order }: { order: ProductionOrder }) {
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <p className="font-bold text-sm truncate">{order.finished_item_name}</p>
+            <p className="text-xs text-muted-foreground truncate">العميل: {order.customer_name || "—"}</p>
             <p className="text-xs text-muted-foreground font-mono">#{order.id}</p>
           </div>
           <div className="shrink-0">
@@ -184,6 +188,7 @@ export default function ProductionOrdersList() {
                   <thead>
                     <tr className="border-b bg-muted/30">
                       <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">#</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">العميل</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">الصنف المُصنّع</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">الكمية</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">التاريخ</th>

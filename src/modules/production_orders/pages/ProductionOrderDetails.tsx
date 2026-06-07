@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Calendar,
   Boxes,
+  Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
@@ -32,6 +33,7 @@ import {
   useProductionOrderDetails,
   useAddProductionMaterial,
   useCloseProductionOrder,
+  usePrintProductionOrder,
 } from "@/hooks/useProductionOrders";
 import { PRODUCTION_ORDER_STATUS_LABELS } from "@/types";
 import type { Item } from "@/types";
@@ -44,6 +46,7 @@ export default function ProductionOrderDetails() {
   const { data: order, isLoading, isError } = useProductionOrderDetails(id!);
   const addMaterialMutation = useAddProductionMaterial();
   const closeMutation = useCloseProductionOrder();
+  const printMutation = usePrintProductionOrder();
 
   // Add material form state
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -164,6 +167,27 @@ export default function ProductionOrderDetails() {
               العودة
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            className="rounded-xl gap-2 hover:bg-muted/50 transition-colors"
+            disabled={printMutation.isPending}
+            onClick={() => {
+              printMutation.mutate(
+                { id: order.id },
+                {
+                  onSuccess: () => toast.success("تم فتح أمر التصنيع للطباعة"),
+                  onError: () => toast.error("فشل تحميل أمر التصنيع"),
+                },
+              );
+            }}
+          >
+            {printMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4" />
+            )}
+            طباعة أمر التصنيع
+          </Button>
           {isActive && (
             <Button
               className="rounded-xl gap-2"

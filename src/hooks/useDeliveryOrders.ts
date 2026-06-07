@@ -44,6 +44,31 @@ export function useDeliveryOrderDetails(
   });
 }
 
+// Print Delivery Order (returns PDF)
+export function usePrintDeliveryOrder(): UseMutationResult<
+  void,
+  Error,
+  { id: string | number }
+> {
+  return useMutation({
+    mutationFn: async ({ id }: { id: string | number }): Promise<void> => {
+      const { extractFilenameFromResponse, openPdfInWindow } =
+        await import("@/lib/pdfUtils");
+
+      const response = await api.get(
+        API_ENDPOINTS.DELIVERY_ORDERS.PRINT(id),
+        { responseType: "blob" },
+      );
+
+      const filename = extractFilenameFromResponse(
+        response,
+        `delivery_order_${id}.pdf`,
+      );
+      openPdfInWindow(response.data, filename);
+    },
+  });
+}
+
 // Deliver Delivery Order (issues the goods from stock)
 export function useDeliverDeliveryOrder(): UseMutationResult<
   DeliveryOrder,

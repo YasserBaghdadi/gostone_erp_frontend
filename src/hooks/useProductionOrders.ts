@@ -103,6 +103,31 @@ export function useAddProductionMaterial(): UseMutationResult<
   });
 }
 
+// Print Production Order (returns PDF)
+export function usePrintProductionOrder(): UseMutationResult<
+  void,
+  Error,
+  { id: string | number }
+> {
+  return useMutation({
+    mutationFn: async ({ id }: { id: string | number }): Promise<void> => {
+      const { extractFilenameFromResponse, openPdfInWindow } =
+        await import("@/lib/pdfUtils");
+
+      const response = await api.get(
+        API_ENDPOINTS.PRODUCTION_ORDERS.PRINT(id),
+        { responseType: "blob" },
+      );
+
+      const filename = extractFilenameFromResponse(
+        response,
+        `production_order_${id}.pdf`,
+      );
+      openPdfInWindow(response.data, filename);
+    },
+  });
+}
+
 // Close Production Order (produces finished item into stock)
 export function useCloseProductionOrder(): UseMutationResult<
   ProductionOrder,

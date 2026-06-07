@@ -149,6 +149,8 @@ export const API_ENDPOINTS = {
       `/custom-v1/production-orders/${id}/add-material/`,
     CLOSE: (id: string | number) =>
       `/custom-v1/production-orders/${id}/close/`,
+    PRINT: (id: string | number) =>
+      `/custom-v1/production-orders/${id}/print/`,
   },
 
   // Delivery Orders (أوامر التسليم)
@@ -157,6 +159,8 @@ export const API_ENDPOINTS = {
     DETAILS: (id: string | number) => `/custom-v1/delivery-orders/${id}/`,
     DELIVER: (id: string | number) =>
       `/custom-v1/delivery-orders/${id}/deliver/`,
+    PRINT: (id: string | number) =>
+      `/custom-v1/delivery-orders/${id}/print/`,
   },
 
   // Purchase Orders

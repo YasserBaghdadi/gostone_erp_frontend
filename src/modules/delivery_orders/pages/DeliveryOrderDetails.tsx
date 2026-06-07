@@ -9,6 +9,7 @@ import {
   Calendar,
   Boxes,
   User as UserIcon,
+  Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
@@ -28,6 +29,7 @@ import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import {
   useDeliveryOrderDetails,
   useDeliverDeliveryOrder,
+  usePrintDeliveryOrder,
 } from "@/hooks/useDeliveryOrders";
 import { DELIVERY_ORDER_STATUS_LABELS } from "@/types";
 import { parseBackendError } from "@/lib/utils";
@@ -38,6 +40,7 @@ export default function DeliveryOrderDetails() {
 
   const { data: order, isLoading, isError, refetch } = useDeliveryOrderDetails(id!);
   const deliverMutation = useDeliverDeliveryOrder();
+  const printMutation = usePrintDeliveryOrder();
 
   const [isDeliverModalOpen, setIsDeliverModalOpen] = useState(false);
 
@@ -111,6 +114,27 @@ export default function DeliveryOrderDetails() {
               العودة
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            className="rounded-xl gap-2 hover:bg-muted/50 transition-colors"
+            disabled={printMutation.isPending}
+            onClick={() => {
+              printMutation.mutate(
+                { id: order.id },
+                {
+                  onSuccess: () => toast.success("تم فتح أمر التسليم للطباعة"),
+                  onError: () => toast.error("فشل تحميل أمر التسليم"),
+                },
+              );
+            }}
+          >
+            {printMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4" />
+            )}
+            طباعة أمر التسليم
+          </Button>
           {isPending && (
             <Button
               className="rounded-xl gap-2"

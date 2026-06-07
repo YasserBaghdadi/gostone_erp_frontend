@@ -492,6 +492,9 @@ export interface SellOrder {
   accepted_by?: number | null;
   verified_by?: number | null;
   rejected_by?: number | null;
+
+  /** موعد التنفيذ (YYYY-MM-DD أو null) */
+  execution_date?: string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -601,6 +604,13 @@ export interface DeliveryOrder {
   items: DeliveryOrderItem[];
   created_at: string | null;
   delivered_at: string | null;
+
+  /** موعد التسليم المجدول (ISO datetime أو null) */
+  scheduled_at?: string | null;
+  /** معرّف الموظف المسؤول (أو null) */
+  responsible?: number | null;
+  /** اسم الموظف المسؤول (أو null) */
+  responsible_name?: string | null;
 }
 
 export interface StorageArea {

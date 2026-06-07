@@ -92,3 +92,37 @@ export function useDeliverDeliveryOrder(): UseMutationResult<
     },
   });
 }
+
+// Schedule Delivery Order (موعد التسليم + الشخص المسؤول)
+interface ScheduleDeliveryOrderArgs {
+  id: string | number;
+  scheduled_at: string | null;
+  responsible: number | null;
+}
+
+export function useScheduleDeliveryOrder(): UseMutationResult<
+  DeliveryOrder,
+  Error,
+  ScheduleDeliveryOrderArgs
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      scheduled_at,
+      responsible,
+    }): Promise<DeliveryOrder> => {
+      const { data } = await api.patch<DeliveryOrder>(
+        API_ENDPOINTS.DELIVERY_ORDERS.SCHEDULE(id),
+        { scheduled_at, responsible },
+      );
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: deliveryOrderKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: deliveryOrderKeys.detail(variables.id),
+      });
+    },
+  });
+}

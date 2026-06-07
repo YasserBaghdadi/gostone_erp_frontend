@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -7,9 +7,11 @@ import {
   Package,
   CheckCircle2,
   Calendar,
+  CalendarClock,
   Boxes,
   User as UserIcon,
   Printer,
+  Save,
 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
@@ -17,6 +19,15 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -30,9 +41,30 @@ import {
   useDeliveryOrderDetails,
   useDeliverDeliveryOrder,
   usePrintDeliveryOrder,
+  useScheduleDeliveryOrder,
 } from "@/hooks/useDeliveryOrders";
+import { useEmployeeList } from "@/hooks/useEmployees";
 import { DELIVERY_ORDER_STATUS_LABELS } from "@/types";
 import { parseBackendError } from "@/lib/utils";
+
+const RESPONSIBLE_NONE = "none";
+
+/** ISO datetime → قيمة <input type="datetime-local"> بالتوقيت المحلي (YYYY-MM-DDTHH:mm) */
+function isoToDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** قيمة <input type="datetime-local"> (محلية) → ISO datetime، أو null إذا فارغة */
+function datetimeLocalToIso(value: string): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
 
 export default function DeliveryOrderDetails() {
   const { id } = useParams();
@@ -41,8 +73,47 @@ export default function DeliveryOrderDetails() {
   const { data: order, isLoading, isError, refetch } = useDeliveryOrderDetails(id!);
   const deliverMutation = useDeliverDeliveryOrder();
   const printMutation = usePrintDeliveryOrder();
+  const scheduleMutation = useScheduleDeliveryOrder();
+
+  const { data: employeesPage } = useEmployeeList({ page_size: 200 });
+  const employees = employeesPage?.results ?? [];
 
   const [isDeliverModalOpen, setIsDeliverModalOpen] = useState(false);
+
+  // حقول الجدولة (موعد التسليم + المسؤول) — تُعبّأ من بيانات الأمر.
+  const [scheduledAtInput, setScheduledAtInput] = useState("");
+  const [responsibleInput, setResponsibleInput] = useState<string>(RESPONSIBLE_NONE);
+
+  useEffect(() => {
+    if (!order) return;
+    setScheduledAtInput(isoToDatetimeLocal(order.scheduled_at));
+    setResponsibleInput(
+      order.responsible != null ? String(order.responsible) : RESPONSIBLE_NONE,
+    );
+  }, [order]);
+
+  const handleSaveSchedule = () => {
+    if (!order) return;
+    scheduleMutation.mutate(
+      {
+        id: order.id,
+        scheduled_at: datetimeLocalToIso(scheduledAtInput),
+        responsible:
+          responsibleInput === RESPONSIBLE_NONE ? null : Number(responsibleInput),
+      },
+      {
+        onSuccess: () => {
+          toast.success("تم حفظ الجدولة والمسؤول");
+          refetch();
+        },
+        onError: (error) => {
+          toast.error("فشل حفظ الجدولة", {
+            description: parseBackendError(error),
+          });
+        },
+      },
+    );
+  };
 
   const confirmDeliver = () => {
     if (!order) return;
@@ -204,6 +275,77 @@ export default function DeliveryOrderDetails() {
               </p>
             </div>
           )}
+          <div className="space-y-1.5 p-4 rounded-xl bg-muted/20 border border-border/50">
+            <span className="text-sm text-muted-foreground flex items-center gap-2">
+              <CalendarClock className="h-4 w-4" />
+              موعد التسليم
+            </span>
+            <p className="font-bold text-base">
+              {order.scheduled_at
+                ? format(new Date(order.scheduled_at), "yyyy/MM/dd HH:mm", { locale: arSA })
+                : "—"}
+            </p>
+          </div>
+          <div className="space-y-1.5 p-4 rounded-xl bg-muted/20 border border-border/50">
+            <span className="text-sm text-muted-foreground flex items-center gap-2">
+              <UserIcon className="h-4 w-4" />
+              الشخص المسؤول
+            </span>
+            <p className="font-bold text-base">{order.responsible_name || "—"}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* الجدولة والمسؤول */}
+      <Card className="shadow-lg border-none ring-1 ring-border/50 overflow-hidden">
+        <CardHeader className="bg-muted/5 pb-4 border-b border-border/50">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CalendarClock className="w-5 h-5 text-primary" />
+            الجدولة والمسؤول
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="scheduled_at">موعد التسليم</Label>
+              <Input
+                id="scheduled_at"
+                type="datetime-local"
+                value={scheduledAtInput}
+                onChange={(e) => setScheduledAtInput(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>الشخص المسؤول</Label>
+              <Select value={responsibleInput} onValueChange={setResponsibleInput}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="اختر المسؤول" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={RESPONSIBLE_NONE}>—</SelectItem>
+                  {employees.map((emp) => (
+                    <SelectItem key={emp.id} value={String(emp.id)}>
+                      {`${emp.first_name} ${emp.last_name}`.trim() || `#${emp.id}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              className="rounded-xl gap-2"
+              onClick={handleSaveSchedule}
+              disabled={scheduleMutation.isPending}
+            >
+              {scheduleMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              حفظ
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

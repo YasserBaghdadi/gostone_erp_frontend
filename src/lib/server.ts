@@ -173,6 +173,8 @@ export const API_ENDPOINTS = {
       `/custom-v1/delivery-orders/${id}/deliver/`,
     PRINT: (id: string | number) =>
       `/custom-v1/delivery-orders/${id}/print/`,
+    SCHEDULE: (id: string | number) =>
+      `/custom-v1/delivery-orders/${id}/schedule/`,
   },
 
   // Purchase Orders

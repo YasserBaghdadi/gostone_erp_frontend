@@ -151,6 +151,14 @@ export const API_ENDPOINTS = {
       `/custom-v1/production-orders/${id}/close/`,
   },
 
+  // Delivery Orders (أوامر التسليم)
+  DELIVERY_ORDERS: {
+    LIST: "/custom-v1/delivery-orders/",
+    DETAILS: (id: string | number) => `/custom-v1/delivery-orders/${id}/`,
+    DELIVER: (id: string | number) =>
+      `/custom-v1/delivery-orders/${id}/deliver/`,
+  },
+
   // Purchase Orders
   PURCHASE_ORDERS: {
     LIST: "/custom-v1/purchase-orders/",

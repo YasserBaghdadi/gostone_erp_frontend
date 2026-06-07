@@ -497,6 +497,37 @@ export interface ProductionOrder {
   closed_at: string | null;
 }
 
+// ----------------------------------------------------------------------------
+// Delivery Orders (أوامر التسليم)
+// ----------------------------------------------------------------------------
+
+export type DeliveryOrderStatus = 'pending' | 'delivered' | 'canceled';
+
+export const DELIVERY_ORDER_STATUS_LABELS: Record<DeliveryOrderStatus, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
+  pending: { label: 'معلّق', color: 'info' },
+  delivered: { label: 'مُسلّم', color: 'success' },
+  canceled: { label: 'ملغى', color: 'destructive' },
+};
+
+export interface DeliveryOrderItem {
+  id: number;
+  item: number;
+  item_name: string;
+  quantity: string;
+  unit_name: string | null;
+  sell_order_item: number | null;
+}
+
+export interface DeliveryOrder {
+  id: number;
+  sell_order: number;
+  customer: number | null;
+  status: DeliveryOrderStatus;
+  items: DeliveryOrderItem[];
+  created_at: string | null;
+  delivered_at: string | null;
+}
+
 export interface StorageArea {
   id: number;
   name: string;

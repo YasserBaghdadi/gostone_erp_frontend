@@ -144,17 +144,27 @@ export function useDeletePurchaseOrder() {
   });
 }
 
+interface ReceivePurchaseOrderItemPayload {
+  id: number;
+  received_quantity: number;
+}
+
 export function useReceivePurchaseOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string | number) => {
-      const res = await api.post(
-        API_ENDPOINTS.PURCHASE_ORDERS.RECEIVE(id),
-        {},
-      );
+    mutationFn: async ({
+      id,
+      items,
+    }: {
+      id: string | number;
+      items: ReceivePurchaseOrderItemPayload[];
+    }) => {
+      const res = await api.post(API_ENDPOINTS.PURCHASE_ORDERS.RECEIVE(id), {
+        items,
+      });
       return res.data as PurchaseOrder;
     },
-    onSuccess: (_, id) => {
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({
         queryKey: purchaseOrderKeys.detail(id),
       });

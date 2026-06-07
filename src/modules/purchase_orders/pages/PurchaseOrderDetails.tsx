@@ -21,6 +21,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -36,7 +38,6 @@ import {
   useUploadPurchaseOrderInvoice,
   useReceivePurchaseOrder,
 } from "@/hooks/usePurchaseOrders";
-import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import {
   Dialog,
   DialogContent,
@@ -152,7 +153,11 @@ export default function PurchaseOrderDetails() {
   const uploadInvoiceMutation = useUploadPurchaseOrderInvoice();
   const receiveMutation = useReceivePurchaseOrder();
 
-  const [receiveConfirmOpen, setReceiveConfirmOpen] = useState(false);
+  const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
+  // map: po_item_id -> الكمية المستلمة (كنص لتمكين الإدخال)
+  const [receivedQtyById, setReceivedQtyById] = useState<
+    Record<number, string>
+  >({});
 
   const itemsBySupplier = useMemo(() => {
     if (!purchaseOrder?.items?.length) return [];
@@ -244,14 +249,47 @@ export default function PurchaseOrderDetails() {
     );
   };
 
+  const openReceiveDialog = () => {
+    const initial: Record<number, string> = {};
+    for (const item of purchaseOrder?.items ?? []) {
+      if (item.id != null) initial[item.id] = item.quantity ?? "";
+    }
+    setReceivedQtyById(initial);
+    setReceiveDialogOpen(true);
+  };
+
+  // البنود التي لها معرف صالح فقط يمكن استلامها مع كمية مخصّصة
+  const receivableItems = useMemo(
+    () => (purchaseOrder?.items ?? []).filter((it) => it.id != null),
+    [purchaseOrder],
+  );
+
+  // التحقق: كل القيم أرقام صالحة >= 0
+  const receiveQtyInvalid = useMemo(
+    () =>
+      receivableItems.some((item) => {
+        const raw = receivedQtyById[item.id!];
+        const n = Number(raw);
+        return raw == null || raw.trim() === "" || !Number.isFinite(n) || n < 0;
+      }),
+    [receivableItems, receivedQtyById],
+  );
+
   const handleConfirmReceive = (poId: string | number) => {
-    receiveMutation.mutate(poId, {
-      onSuccess: () => {
-        toast.success("تم استلام المواد وترحيلها للمخزون");
-        setReceiveConfirmOpen(false);
+    const items = receivableItems.map((item) => ({
+      id: item.id!,
+      received_quantity: Number(receivedQtyById[item.id!]),
+    }));
+    receiveMutation.mutate(
+      { id: poId, items },
+      {
+        onSuccess: () => {
+          toast.success("تم استلام المواد وترحيلها للمخزون");
+          setReceiveDialogOpen(false);
+        },
+        onError: (err) => toast.error(parseBackendError(err)),
       },
-      onError: (err) => toast.error(parseBackendError(err)),
-    });
+    );
   };
 
   if (isLoading) {
@@ -457,7 +495,7 @@ export default function PurchaseOrderDetails() {
             <Button
               className='rounded-xl gap-2 bg-success hover:bg-success-dark text-success-foreground border-0'
               disabled={receiveMutation.isPending}
-              onClick={() => setReceiveConfirmOpen(true)}
+              onClick={openReceiveDialog}
               title='استلام المواد وترحيلها للمخزون'
             >
               {receiveMutation.isPending ? (
@@ -480,17 +518,115 @@ export default function PurchaseOrderDetails() {
         </div>
       </div>
 
-      <ConfirmModal
-        isOpen={receiveConfirmOpen}
-        onClose={() => setReceiveConfirmOpen(false)}
-        onConfirm={() => handleConfirmReceive(purchaseOrder.id)}
-        title='استلام المواد'
-        description='تأكيد استلام المواد وترحيلها للمخزون؟'
-        confirmText='تأكيد الاستلام'
-        cancelText='إلغاء'
-        variant='success'
-        isLoading={receiveMutation.isPending}
-      />
+      <Dialog
+        open={receiveDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !receiveMutation.isPending) setReceiveDialogOpen(false);
+        }}
+      >
+        <DialogContent className='max-w-2xl' dir='rtl'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <PackageCheck className='h-5 w-5 text-success' />
+              استلام المواد
+            </DialogTitle>
+            <DialogDescription>
+              راجع الكميات المستلمة فعلياً لكل بند ثم اضغط “تأكيد الاستلام”.
+              الكمية المستلمة هي ما سيُرحَّل للمخزون.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='max-h-[55vh] overflow-y-auto pr-1 space-y-3'>
+            {receivableItems.length > 0 ? (
+              receivableItems.map((item) => {
+                const qtyStr = receivedQtyById[item.id!] ?? "";
+                const n = Number(qtyStr);
+                const invalid =
+                  qtyStr.trim() === "" ||
+                  !Number.isFinite(n) ||
+                  n < 0;
+                return (
+                  <div
+                    key={item.id}
+                    className='flex flex-col gap-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:flex-row sm:items-end sm:justify-between'
+                  >
+                    <div className='min-w-0 flex-1 space-y-1'>
+                      <span className='block font-medium text-foreground'>
+                        {item.item_name || `بند #${item.item}`}
+                      </span>
+                      <div className='flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
+                        <span>
+                          الكمية المطلوبة:{" "}
+                          <span className='font-mono text-foreground'>
+                            {item.quantity}
+                          </span>
+                        </span>
+                        {item.unit_name && <span>· {item.unit_name}</span>}
+                      </div>
+                    </div>
+                    <div className='w-full sm:w-40 space-y-1'>
+                      <Label
+                        htmlFor={`received-qty-${item.id}`}
+                        className='text-xs text-muted-foreground'
+                      >
+                        الكمية المستلمة
+                      </Label>
+                      <Input
+                        id={`received-qty-${item.id}`}
+                        type='number'
+                        inputMode='decimal'
+                        min={0}
+                        step='any'
+                        value={qtyStr}
+                        onChange={(e) =>
+                          setReceivedQtyById((prev) => ({
+                            ...prev,
+                            [item.id!]: e.target.value,
+                          }))
+                        }
+                        className={`font-mono ${
+                          invalid ? "border-destructive" : ""
+                        }`}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className='py-6 text-center text-sm text-muted-foreground'>
+                لا توجد بنود قابلة للاستلام في هذا الطلب.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className='gap-2 sm:gap-0'>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => setReceiveDialogOpen(false)}
+              disabled={receiveMutation.isPending}
+              className='rounded-xl'
+            >
+              إلغاء
+            </Button>
+            <Button
+              type='button'
+              onClick={() => handleConfirmReceive(purchaseOrder.id)}
+              disabled={
+                receiveMutation.isPending ||
+                receivableItems.length === 0 ||
+                receiveQtyInvalid
+              }
+              className='rounded-xl bg-success hover:bg-success-dark text-success-foreground border-0'
+            >
+              {receiveMutation.isPending ? (
+                <Loader2 className='h-4 w-4 animate-spin ml-2' />
+              ) : null}
+              تأكيد الاستلام
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={invoiceDialogOpen}
@@ -668,6 +804,16 @@ export default function PurchaseOrderDetails() {
                                 <span>الوحدة:</span>
                                 <span>{item.unit_name}</span>
                               </div>
+                              {isReceived && (
+                                <div className='flex justify-between bg-success/10 p-2 rounded col-span-2'>
+                                  <span>المستلَم:</span>
+                                  <span className='font-mono text-foreground'>
+                                    {item.received_quantity != null
+                                      ? item.received_quantity
+                                      : "—"}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                             <div className='flex justify-between items-center text-xs text-muted-foreground pt-1'>
                               <span>سعر الشراء:</span>
@@ -712,6 +858,11 @@ export default function PurchaseOrderDetails() {
                           <th className='p-4 font-medium text-muted-foreground text-center whitespace-nowrap'>
                             الكمية
                           </th>
+                          {isReceived && (
+                            <th className='p-4 font-medium text-muted-foreground text-center whitespace-nowrap'>
+                              المستلَم
+                            </th>
+                          )}
                           <th className='p-4 font-medium text-muted-foreground text-center whitespace-nowrap'>
                             الوحدة
                           </th>
@@ -730,7 +881,10 @@ export default function PurchaseOrderDetails() {
                         {itemsBySupplier.map(([sid, group]) => (
                           <Fragment key={sid}>
                             <tr className='border-0'>
-                              <td colSpan={6} className='p-0 border-0'>
+                              <td
+                                colSpan={isReceived ? 7 : 6}
+                                className='p-0 border-0'
+                              >
                                 <div className='flex flex-wrap items-center gap-3 border-y border-primary/25 bg-linear-to-l from-primary/12 to-primary/5 px-4 py-3 border-r-[5px] border-r-primary'>
                                   <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary'>
                                     <Truck className='h-4 w-4' />
@@ -793,6 +947,22 @@ export default function PurchaseOrderDetails() {
                                     {item.quantity}
                                   </Badge>
                                 </td>
+                                {isReceived && (
+                                  <td className='p-4 text-center'>
+                                    {item.received_quantity != null ? (
+                                      <Badge
+                                        variant='success'
+                                        className='font-mono'
+                                      >
+                                        {item.received_quantity}
+                                      </Badge>
+                                    ) : (
+                                      <span className='text-muted-foreground/50'>
+                                        —
+                                      </span>
+                                    )}
+                                  </td>
+                                )}
                                 <td className='p-4 text-center text-muted-foreground'>
                                   {item.unit_name}
                                 </td>

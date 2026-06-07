@@ -554,6 +554,8 @@ export interface PurchaseOrderItem {
   supplier?: number;
   supplier_name?: string;
   quantity: string;
+  /** الكمية المستلمة فعلياً (تظهر بعد الاستلام)؛ null = لم تُحدَّد */
+  received_quantity?: number | null;
   unit_name: string;
   unit_factor?: string;
   normalized_quantity?: string;

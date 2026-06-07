@@ -323,12 +323,16 @@ export default function SellOrdersList() {
                 className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`}
               />
             </Button>
-            <Link to={createOrderHref}>
-              <Button className='rounded-xl shadow-lg shadow-primary/20 gap-2'>
-                <Plus className='h-4 w-4' />
-                <span className='hidden sm:inline'>أمر بيع جديد</span>
-              </Button>
-            </Link>
+            {/* A new order auto-assigns to the active branch, so creation is
+                only offered from a specific branch tab — not from «الكل». */}
+            {activeSelection !== "all" && (
+              <Link to={createOrderHref}>
+                <Button className='rounded-xl shadow-lg shadow-primary/20 gap-2'>
+                  <Plus className='h-4 w-4' />
+                  <span className='hidden sm:inline'>أمر بيع جديد</span>
+                </Button>
+              </Link>
+            )}
           </div>
         }
       />
@@ -435,10 +439,12 @@ export default function SellOrdersList() {
           description={
             searchQuery
               ? "لم يتم العثور على أوامر بيع تطابق بحثك."
-              : "لم يتم إنشاء أوامر بيع حالية. يمكنك إنشاء أمر بيع جديد للبدء."
+              : activeSelection === "all"
+                ? "اختر فرعاً من التبويبات لإنشاء أمر بيع جديد."
+                : "لم يتم إنشاء أوامر بيع حالية. يمكنك إنشاء أمر بيع جديد للبدء."
           }
           action={
-            !searchQuery && (
+            !searchQuery && activeSelection !== "all" && (
               <Link to={createOrderHref}>
                 <Button>
                   <Plus className='h-4 w-4 ml-2' />

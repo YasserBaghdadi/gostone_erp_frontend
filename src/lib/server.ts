@@ -78,6 +78,8 @@ export const API_ENDPOINTS = {
     SYNC_ALL_TO_ODOO: "/custom-v1/customers/sync-all-to-odoo/",
     STATEMENT: (id: string | number) =>
       `/custom-v1/customers/${id}/statement/`,
+    CONVERT_TO_ACTUAL: (id: string | number) =>
+      `/custom-v1/customers/${id}/convert-to-actual/`,
   },
 
   // Work Orders

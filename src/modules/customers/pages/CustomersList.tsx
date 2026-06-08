@@ -63,6 +63,7 @@ export default function CustomersList() {
     search: debouncedTerm, // Use debounced term for API calls
     page,
     page_size: pageSize,
+    is_potential: false, // Show only actual customers; leads live on /potential-customers
   });
 
   const [paymentModal, setPaymentModal] = useState<{

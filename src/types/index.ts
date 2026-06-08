@@ -73,7 +73,9 @@ export interface Customer {
   last_visit?: string | null;
   visit_repetition_days?: number;
   color?: string;
-  salesmen?: Salesman[]; 
+  salesmen?: Salesman[];
+  /** عميل محتمل (lead) أُضيف عبر الفرص ولم يُحوَّل إلى عميل فعلي بعد */
+  is_potential?: boolean;
   
   // Legal & Address Info
   vat_number?: string | null;

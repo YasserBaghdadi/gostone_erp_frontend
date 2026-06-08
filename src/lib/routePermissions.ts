@@ -8,6 +8,7 @@ export const ROUTE_PERMISSIONS = {
   measurements: "dim_management",
   sellOrders: "sell_order_management",
   customers: "customer_management",
+  potentialCustomers: "customer_management",
   
   // Employee Management
   employees: "employee_management",

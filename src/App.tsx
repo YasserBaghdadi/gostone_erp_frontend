@@ -48,6 +48,7 @@ const SessionDetails = lazy(() => import("@/modules/employees/pages/SessionDetai
 
 // Customers
 const CustomersList = lazy(() => import("@/modules/customers/pages/CustomersList"));
+const PotentialCustomersList = lazy(() => import("@/modules/customers/pages/PotentialCustomersList"));
 const CreateCustomer = lazy(() => import("@/modules/customers/pages/CreateCustomer"));
 const CustomerDetails = lazy(() => import("@/modules/customers/pages/CustomerDetails"));
 const EditCustomer = lazy(() => import("@/modules/customers/pages/EditCustomer"));
@@ -235,6 +236,11 @@ function AppContent() {
                     <Route path=":id" element={<LazyRoute component={CustomerDetails} moduleName="تفاصيل العميل" />} />
                     <Route path=":id/edit" element={<LazyRoute component={EditCustomer} moduleName="تعديل العميل" />} />
                 </Route>
+              </Route>
+
+              {/* Potential Customers (Leads) */}
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.potentialCustomers} />}>
+                <Route path="potential-customers" element={<LazyRoute component={PotentialCustomersList} moduleName="العملاء المحتملون" />} />
               </Route>
 
               {/* Items (Products) */}

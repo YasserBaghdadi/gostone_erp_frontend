@@ -22,7 +22,8 @@ import {
   Package,
   Factory,
   Truck,
-  HandCoins
+  HandCoins,
+  UserPlus
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUser } from "@/hooks/useAuth";
@@ -56,6 +57,7 @@ const navigationGroups = [
     title: "إدارة العملاء",
     items: [
       { name: "العملاء", href: "/customers", icon: UserIcon, permission: "customer_management" },
+      { name: "العملاء المحتملون", href: "/potential-customers", icon: UserPlus, permission: "customer_management" },
       { name: "الفرص", href: "/opportunities", icon: Users, permission: "opportunity_management" },
       { name: "المقاسات", href: "/measurements", icon: Ruler, permission: "dim_management" },
       { name: "أوامر البيع", href: "/sell-orders", icon: FileCheck, permission: "sell_order_management" },

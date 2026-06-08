@@ -21,6 +21,7 @@ import { useCustomers, useConvertToActual } from "@/hooks/useCustomers";
 import { usePagination } from "@/hooks/usePagination";
 import { useSearch } from "@/hooks/useSearch";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { parseBackendError } from "@/lib/utils";
 import type { Customer } from "@/types";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ function customerName(customer: Customer): string {
 }
 
 export default function PotentialCustomersList() {
+  const navigate = useNavigate();
   const { page, pageSize, setPage, setPageSize, reset: resetPage } = usePagination();
   const { searchTerm, debouncedTerm, setSearchTerm } = useSearch({ debounceMs: 300 });
 
@@ -55,6 +57,13 @@ export default function PotentialCustomersList() {
   };
 
   const handleConvert = (customer: Customer) => {
+    // عميل شركة: لا نُحوّل مباشرة — نوجّه لصفحة التعديل لإكمال بيانات الشركة ثم التحويل.
+    if (customer.customer_type === "company") {
+      navigate(`/customers/${customer.id}/edit?convert=1`);
+      return;
+    }
+
+    // عميل فرد: التحويل المباشر كما كان.
     setConvertingId(customer.id);
     convertToActual.mutate(customer.id, {
       onSuccess: () => {

@@ -76,7 +76,9 @@ export interface Customer {
   salesmen?: Salesman[];
   /** عميل محتمل (lead) أُضيف عبر الفرص ولم يُحوَّل إلى عميل فعلي بعد */
   is_potential?: boolean;
-  
+  /** نوع العميل: فرد (individual) أو شركة (company). الافتراضي فرد. */
+  customer_type?: "individual" | "company";
+
   // Legal & Address Info
   vat_number?: string | null;
   vat_number_file?: string | null;

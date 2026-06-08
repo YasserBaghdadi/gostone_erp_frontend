@@ -62,6 +62,8 @@ const itemSchema = z.object({
 const formSchema = z.object({
   customer_phonenumber: z.string().min(9, "رقم الهاتف مطلوب"),
   clientName: z.string().optional(), // Read-only for display
+  // نوع العميل: فرد (individual) أو شركة (company). الافتراضي فرد.
+  customer_type: z.enum(["individual", "company"]).default("individual"),
   location: z.string().min(1, "الموقع مطلوب"),
   interest_level: z.string().min(1, "مستوى الاهتمام مطلوب"),
   notes: z.string().optional(),
@@ -110,6 +112,7 @@ export default function CreateOpportunity() {
     defaultValues: {
       customer_phonenumber: "",
       clientName: "",
+      customer_type: "individual",
       location: "",
       interest_level: "interested",
       notes: "",
@@ -255,6 +258,10 @@ export default function CreateOpportunity() {
                     clientName: customer
                       ? formatCustomerWithBalance(customer)
                       : "",
+                    customer_type:
+                      customer?.customer_type === "company"
+                        ? "company"
+                        : "individual",
                     location: existingOpportunity.location || "",
                     interest_level: existingOpportunity.interest_level || "interested",
                     notes: existingOpportunity.notes || "",
@@ -510,6 +517,28 @@ export default function CreateOpportunity() {
                         <FormControl>
                           <Input readOnly className="bg-muted" placeholder="سيظهر الاسم هنا عند التحقق" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="customer_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نوع العميل</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر نوع العميل" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="individual">فرد</SelectItem>
+                            <SelectItem value="company">شركة</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

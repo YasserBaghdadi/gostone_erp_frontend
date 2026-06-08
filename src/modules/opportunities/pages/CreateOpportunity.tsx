@@ -77,11 +77,19 @@ type FormValues = z.infer<typeof formSchema>;
 
 const customerSchema = z.object({
     phone_number: z.string().min(9, "رقم الهاتف مطلوب"),
-    first_name: z.string().min(2, "الاسم الأول مطلوب"),
-    last_name: z.string().min(2, "اسم العائلة مطلوب"),
+    first_name: z.string().min(2, "الاسم مطلوب"),
+    last_name: z.string().optional().or(z.literal("")),
     email: z.string().email("البريد الإلكتروني غير صحيح").optional().or(z.literal("")),
     phone_number2: z.string().optional(),
     phone_number3: z.string().optional(),
+    // فرد: اسم أول + عائلة. شركة: اسم واحد فقط (في first_name).
+    customer_type: z.enum(["individual", "company"]),
+}).superRefine((data, ctx) => {
+    if (data.customer_type !== "company") {
+        if (!data.last_name || String(data.last_name).trim().length < 2) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["last_name"], message: "اسم العائلة مطلوب" });
+        }
+    }
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
@@ -137,8 +145,21 @@ export default function CreateOpportunity() {
           email: "",
           phone_number2: "",
           phone_number3: "",
+          customer_type: "individual",
       }
   });
+
+  // نافذة «إضافة عميل»: لو الاسم فيه شركة/مؤسسة افرض النوع شركة (اسم واحد).
+  const modalFirst = customerForm.watch("first_name");
+  const modalLast = customerForm.watch("last_name");
+  const modalType = customerForm.watch("customer_type");
+  const modalIsCompany = modalType === "company";
+  const modalLockCompany = nameImpliesCompany(`${modalFirst ?? ""} ${modalLast ?? ""}`);
+  useEffect(() => {
+    if (modalLockCompany && modalType !== "company") {
+      customerForm.setValue("customer_type", "company");
+    }
+  }, [modalLockCompany, modalType, customerForm]);
 
 
   // --- Calculations ---
@@ -293,19 +314,21 @@ export default function CreateOpportunity() {
     // A customer added from the opportunity flow is a potential (lead), not actual.
     // If the name mentions شركة/مؤسسة, force the company type (mirrors the backend).
     const impliesCompany = nameImpliesCompany(
-      `${values.first_name} ${values.last_name}`,
+      `${values.first_name ?? ""} ${values.last_name ?? ""}`,
     );
+    const isCompany = values.customer_type === "company" || impliesCompany;
     createCustomerMutation.mutate(
       {
         ...values,
         is_potential: true,
-        customer_type: impliesCompany ? "company" : "individual",
+        customer_type: isCompany ? "company" : "individual",
+        last_name: isCompany ? "" : (values.last_name || ""),
       },
       {
       onSuccess: (data) => {
         toast.success("تم إضافة العميل بنجاح");
         setIsCustomerModalOpen(false);
-        if (impliesCompany) {
+        if (isCompany) {
           form.setValue("customer_type", "company");
         }
         handleSelectCustomer(data);
@@ -951,6 +974,40 @@ export default function CreateOpportunity() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={customerForm.control}
+                    name="customer_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نوع العميل <span className="text-destructive">*</span></FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={modalLockCompany}>
+                          <FormControl>
+                            <SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="individual">فرد</SelectItem>
+                            <SelectItem value="company">شركة</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  {modalIsCompany ? (
+                    <FormField
+                      control={customerForm.control}
+                      name="first_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>اسم الشركة / المؤسسة <span className="text-destructive">*</span></FormLabel>
+                          <FormControl>
+                            <Input placeholder="الاسم الكامل للشركة أو المؤسسة" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
                   <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={customerForm.control}
@@ -972,19 +1029,13 @@ export default function CreateOpportunity() {
                           <FormItem>
                             <FormLabel>اسم العائلة <span className="text-destructive">*</span></FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input {...field} value={field.value ?? ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                   </div>
-                  {nameImpliesCompany(
-                    `${customerForm.watch("first_name") ?? ""} ${customerForm.watch("last_name") ?? ""}`,
-                  ) && (
-                    <p className="text-xs text-muted-foreground">
-                      سيُحفظ هذا العميل كنوع «شركة» لأن الاسم يذكر «شركة/مؤسسة».
-                    </p>
                   )}
                   <FormField
                     control={customerForm.control}

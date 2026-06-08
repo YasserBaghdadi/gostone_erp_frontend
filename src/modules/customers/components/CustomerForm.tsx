@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm, useWatch, type UseFormReturn, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -43,8 +43,8 @@ const customerSchema = z
       .refine((val) => saudiPhoneRegex.test(val.replace(/\s/g, '')), {
         message: "رقم الهاتف غير صحيح (مثال: 05xxxxxxxx)",
       }),
-    first_name: z.string().min(2, "الاسم الأول مطلوب"),
-    last_name: z.string().min(2, "اسم العائلة مطلوب"),
+    first_name: z.string().min(2, "الاسم مطلوب"),
+    last_name: z.string().optional().or(z.literal("")),
     email: z.string().email("البريد الإلكتروني غير صحيح").optional().or(z.literal("")),
     phone_number2: z.string().optional(),
     phone_number3: z.string().optional(),
@@ -101,7 +101,17 @@ const customerSchema = z
   // نتحقق من حقول الإدخال (na_*) التي تُحوَّل لاحقاً إلى مفككات العنوان للباك اند،
   // بالإضافة إلى الرقم الضريبي والسجل التجاري.
   .superRefine((data, ctx) => {
-    if (data.customer_type !== "company") return;
+    // الفرد يحتاج اسماً أول + عائلة؛ الشركة تحتاج اسماً واحداً فقط (في first_name).
+    if (data.customer_type !== "company") {
+      if (!data.last_name || String(data.last_name).trim().length < 2) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["last_name"],
+          message: "اسم العائلة مطلوب",
+        });
+      }
+      return;
+    }
 
     const requiredCompanyFields: Array<keyof typeof data> = [
       "vat_number",
@@ -276,6 +286,8 @@ export default function CustomerForm({
     // ملاحظة: لا نرسل `address` كنص لضمان توافق الـ backend.
     const payload = {
       ...values,
+      // شركة → اسم واحد في first_name و last_name فارغ.
+      last_name: values.customer_type === "company" ? "" : (values.last_name || ""),
       street: values.na_street || "",
       building_number: values.na_building || "",
       district: values.na_district || "",
@@ -330,6 +342,20 @@ export default function CustomerForm({
   const crFile = useWatch({ control: form.control, name: "cr_file" });
 
   const isCompany = customerType === "company";
+
+  // عند التحويل إلى "شركة": اسم واحد فقط — ندمج الاسمين ونفرّغ خانة العائلة.
+  const wasCompany = useRef(false);
+  useEffect(() => {
+    if (isCompany && !wasCompany.current) {
+      const f = (form.getValues("first_name") || "").trim();
+      const l = (form.getValues("last_name") || "").trim();
+      if (l) {
+        form.setValue("first_name", `${f} ${l}`.trim());
+        form.setValue("last_name", "");
+      }
+    }
+    wasCompany.current = isCompany;
+  }, [isCompany, form]);
 
   const hasExistingFile = (v: unknown): boolean => {
     if (typeof v === "string") return v.trim().length > 0;
@@ -405,6 +431,23 @@ export default function CustomerForm({
             )}
             />
 
+            {isCompany ? (
+            /* شركة/مؤسسة: اسم واحد فقط */
+            <FormField
+            control={form.control}
+            name="first_name"
+            render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                <FormLabel>اسم الشركة / المؤسسة <span className="text-destructive">*</span></FormLabel>
+                <FormControl>
+                    <Input placeholder="الاسم الكامل للشركة أو المؤسسة" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            ) : (
+            <>
             {/* First Name */}
             <FormField
             control={form.control}
@@ -428,12 +471,14 @@ export default function CustomerForm({
                 <FormItem>
                 <FormLabel>اسم العائلة <span className="text-destructive">*</span></FormLabel>
                 <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
             )}
             />
+            </>
+            )}
 
             {/* Phone 2 */}
             <FormField

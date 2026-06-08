@@ -228,3 +228,29 @@ export function usePrintQuotation(): UseMutationResult<void, Error, { id: string
     },
   });
 }
+
+// Open an attached measurements file (يفتح ملف المقاسات في تبويب جديد).
+// Fetched as an authenticated blob — the direct /media link is not served by
+// the SPA host, so it would never open.
+export function useOpenDimensionFile(): UseMutationResult<void, Error, string | number> {
+  return useMutation({
+    mutationFn: async (id): Promise<void> => {
+      const response = await api.get(API_ENDPOINTS.OPPORTUNITY_DIMENSIONS.FILE(id), {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(response.data as Blob);
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        // popup blocked → fall back to a programmatic click
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      setTimeout(() => window.URL.revokeObjectURL(url), 300000);
+    },
+  });
+}

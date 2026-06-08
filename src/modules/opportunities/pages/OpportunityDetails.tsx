@@ -2,10 +2,11 @@ import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowRight, FileText, Calendar, Phone, MapPin, Edit, Calculator, User, Loader2, Printer } from "lucide-react";
 import { 
-  useOpportunityDetails, 
-  useRequestMeasurements, 
+  useOpportunityDetails,
+  useRequestMeasurements,
   useCreateSellOrder,
-  usePrintQuotation
+  usePrintQuotation,
+  useOpenDimensionFile
 } from "@/hooks/useOpportunities";
 import { useItems } from "@/hooks/useItems";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ export default function OpportunityDetails() {
   const requestMeasurementsMutation = useRequestMeasurements();
   const createSellOrderMutation = useCreateSellOrder();
   const printQuotationMutation = usePrintQuotation();
+  const openDimensionFileMutation = useOpenDimensionFile();
   const [confirmAction, setConfirmAction] = useState<"measurements" | "sellOrder" | null>(null);
 
   const itemNameMap = useMemo(() => {
@@ -437,15 +439,15 @@ export default function OpportunityDetails() {
                                          {dim.notes}
                                      </p>
                                  )}
-                                 <a 
-                                     href={dim.file} 
-                                     target="_blank" 
-                                     rel="noopener noreferrer"
-                                     className="flex items-center gap-2 text-xs text-primary hover:underline mt-1"
+                                 <button
+                                     type="button"
+                                     onClick={() => openDimensionFileMutation.mutate(dim.id)}
+                                     disabled={openDimensionFileMutation.isPending}
+                                     className="flex items-center gap-2 text-xs text-primary hover:underline mt-1 disabled:opacity-50"
                                  >
                                      <FileText className="h-3 w-3" />
-                                     عرض الملف
-                                 </a>
+                                     {openDimensionFileMutation.isPending ? "جارٍ الفتح..." : "عرض الملف"}
+                                 </button>
                              </div>
                          ))}
                      </CardContent>

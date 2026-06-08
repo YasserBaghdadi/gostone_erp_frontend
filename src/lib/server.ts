@@ -56,6 +56,7 @@ export const API_ENDPOINTS = {
   // Opportunity Dimensions
   OPPORTUNITY_DIMENSIONS: {
     CREATE: "/opportunity-dimensions/",
+    FILE: (id: string | number) => `/opportunity-dimensions/${id}/file/`,
   },
 
   // Payments / Collections (قبض) — flat list across all customers

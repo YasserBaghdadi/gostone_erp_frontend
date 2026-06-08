@@ -41,6 +41,7 @@ import {
   usePrintProductionOrder,
   useScheduleProductionOrder,
 } from "@/hooks/useProductionOrders";
+import { useItemDetails } from "@/hooks/useItems";
 import { PRODUCTION_ORDER_STATUS_LABELS } from "@/types";
 import type { Item } from "@/types";
 import { parseBackendError, preventNegative, clampToPositive } from "@/lib/utils";
@@ -67,6 +68,9 @@ export default function ProductionOrderDetails() {
   const navigate = useNavigate();
 
   const { data: order, isLoading, isError, refetch } = useProductionOrderDetails(id!);
+  // Materials are restricted to the finished item's linked purchasable materials.
+  const { data: finishedItem } = useItemDetails(order?.finished_item ?? 0);
+  const allowedMaterialIds = finishedItem?.linked_purchasable_items ?? [];
   const addMaterialMutation = useAddProductionMaterial();
   const closeMutation = useCloseProductionOrder();
   const printMutation = usePrintProductionOrder();
@@ -403,6 +407,11 @@ export default function ProductionOrderDetails() {
                     اختر المادة
                   </Button>
                 )}
+                {finishedItem && allowedMaterialIds.length === 0 && (
+                  <p className="text-xs text-amber-600">
+                    لا توجد مواد مرتبطة بهذا الصنف. اربط المواد القابلة للشراء من صفحة المنتج أولاً.
+                  </p>
+                )}
               </div>
               <div className="lg:col-span-3 space-y-2">
                 <label className="text-sm font-medium">الكمية</label>
@@ -500,6 +509,7 @@ export default function ProductionOrderDetails() {
         onClose={() => setIsItemModalOpen(false)}
         onSelect={handleSelectItem}
         filterPurchable={true}
+        restrictToIds={allowedMaterialIds}
       />
 
       <ConfirmModal

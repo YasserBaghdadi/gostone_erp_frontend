@@ -15,6 +15,8 @@ interface UseItemsParams {
   supplier?: number;
   /** تصفية حسب نوع الإنتاج: 'ready' (جاهزة) أو 'custom' (تفصيل) */
   production_type?: string;
+  /** قصر النتائج على مجموعة معرّفات (CSV)، مثل "1,2" */
+  id__in?: string;
 }
 
 export function useItems(params: UseItemsParams = {}) {

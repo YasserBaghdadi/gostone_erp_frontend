@@ -98,6 +98,11 @@ export const API_ENDPOINTS = {
     CREATE: "/custom-v1/branches/",
   },
 
+  DELIVERY_RESPONSIBLES: {
+    LIST: "/custom-v1/delivery-responsibles/",
+    CREATE: "/custom-v1/delivery-responsibles/",
+  },
+
   // Sell Orders (Sales Orders API)
   SELL_ORDERS: {
     LIST: "/custom-v1/sell_orders/",

@@ -62,6 +62,12 @@ export const branchKeys = {
   list: (filters?: object) => filters ? [...branchKeys.lists(), filters] as const : branchKeys.lists(),
 };
 
+export const deliveryResponsibleKeys = {
+  all: ['deliveryResponsibles'] as const,
+  lists: () => [...deliveryResponsibleKeys.all, 'list'] as const,
+  list: () => [...deliveryResponsibleKeys.lists()] as const,
+};
+
 // =====================
 // Sell Orders
 // =====================

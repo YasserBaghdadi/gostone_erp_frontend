@@ -474,6 +474,13 @@ export interface Branch {
   sell_orders_count: number;
 }
 
+export interface DeliveryResponsible {
+  id: number;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
 export interface SellOrder {
   id: number;
   opportunity_id?: number;

@@ -12,6 +12,7 @@ import {
   User as UserIcon,
   Printer,
   Save,
+  Plus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
@@ -43,7 +44,7 @@ import {
   usePrintDeliveryOrder,
   useScheduleDeliveryOrder,
 } from "@/hooks/useDeliveryOrders";
-import { useEmployeeList } from "@/hooks/useEmployees";
+import { useDeliveryResponsibles, useCreateDeliveryResponsible } from "@/hooks/useDeliveryResponsibles";
 import { DELIVERY_ORDER_STATUS_LABELS } from "@/types";
 import { parseBackendError } from "@/lib/utils";
 
@@ -75,14 +76,17 @@ export default function DeliveryOrderDetails() {
   const printMutation = usePrintDeliveryOrder();
   const scheduleMutation = useScheduleDeliveryOrder();
 
-  const { data: employeesPage } = useEmployeeList({ page_size: 200 });
-  const employees = employeesPage?.results ?? [];
+  const { data: responsibles } = useDeliveryResponsibles();
+  const createResponsible = useCreateDeliveryResponsible();
 
   const [isDeliverModalOpen, setIsDeliverModalOpen] = useState(false);
 
   // حقول الجدولة (موعد العميل + المسؤول) — تُعبّأ من بيانات الأمر.
   const [scheduledAtInput, setScheduledAtInput] = useState("");
   const [responsibleInput, setResponsibleInput] = useState<string>(RESPONSIBLE_NONE);
+  // وضع إضافة مسؤول جديد للقائمة المخصّصة.
+  const [addingResponsible, setAddingResponsible] = useState(false);
+  const [newResponsibleName, setNewResponsibleName] = useState("");
 
   useEffect(() => {
     if (!order) return;
@@ -91,6 +95,24 @@ export default function DeliveryOrderDetails() {
       order.responsible != null ? String(order.responsible) : RESPONSIBLE_NONE,
     );
   }, [order]);
+
+  const handleAddResponsible = () => {
+    const name = newResponsibleName.trim();
+    if (!name) return;
+    createResponsible.mutate(
+      { name },
+      {
+        onSuccess: (created) => {
+          setResponsibleInput(String(created.id));
+          setNewResponsibleName("");
+          setAddingResponsible(false);
+          toast.success("تمت إضافة المسؤول");
+        },
+        onError: (e) =>
+          toast.error("فشل إضافة المسؤول", { description: parseBackendError(e) }),
+      },
+    );
+  };
 
   const handleSaveSchedule = () => {
     if (!order) return;
@@ -317,19 +339,70 @@ export default function DeliveryOrderDetails() {
             </div>
             <div className="space-y-1.5">
               <Label>الشخص المسؤول</Label>
-              <Select value={responsibleInput} onValueChange={setResponsibleInput}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="اختر المسؤول" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={RESPONSIBLE_NONE}>—</SelectItem>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={String(emp.id)}>
-                      {`${emp.first_name} ${emp.last_name}`.trim() || `#${emp.id}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {addingResponsible ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    autoFocus
+                    placeholder="اسم المسؤول"
+                    value={newResponsibleName}
+                    onChange={(e) => setNewResponsibleName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddResponsible();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddResponsible}
+                    disabled={createResponsible.isPending}
+                  >
+                    {createResponsible.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "إضافة"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setAddingResponsible(false);
+                      setNewResponsibleName("");
+                    }}
+                  >
+                    إلغاء
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Select value={responsibleInput} onValueChange={setResponsibleInput}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="اختر المسؤول" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={RESPONSIBLE_NONE}>—</SelectItem>
+                      {(responsibles ?? []).map((r) => (
+                        <SelectItem key={r.id} value={String(r.id)}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    title="إضافة مسؤول جديد"
+                    onClick={() => setAddingResponsible(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex justify-end">

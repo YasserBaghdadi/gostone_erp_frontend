@@ -49,7 +49,7 @@ import { formatCustomerWithBalance } from "@/lib/partyDisplay";
 
 // --- Schema ---
 // مواصفات تصنيع المغسلة — تُخزَّن في حالة النموذج كنصوص (حقول إدخال) وتُحوَّل عند الإرسال.
-const washbasinSpecFormSchema = z.object({
+export const washbasinSpecFormSchema = z.object({
   surface_length: z.string().default(""),
   surface_width: z.string().default(""),
   has_custom_bowl_size: z.boolean().default(false),
@@ -78,9 +78,9 @@ const washbasinSpecFormSchema = z.object({
   supplier_company: z.string().default(""),
 });
 
-type WashbasinSpecForm = z.infer<typeof washbasinSpecFormSchema>;
+export type WashbasinSpecForm = z.infer<typeof washbasinSpecFormSchema>;
 
-const emptyWashbasinSpec = (): WashbasinSpecForm => ({
+export const emptyWashbasinSpec = (): WashbasinSpecForm => ({
   surface_length: "",
   surface_width: "",
   has_custom_bowl_size: false,
@@ -161,11 +161,11 @@ type CustomerFormValues = z.infer<typeof customerSchema>;
 // --- مواصفات تصنيع المغسلة (تظهر للبنود من نوع «تفصيل») ---
 const NONE = "none";
 
-function WashbasinSpecFields({
+export function WashbasinSpecFields({
   form,
   index,
 }: {
-  form: UseFormReturn<FormValues>;
+  form: UseFormReturn<any>;
   index: number;
 }) {
   const base = `sell_order_items.${index}.washbasin_spec` as const;

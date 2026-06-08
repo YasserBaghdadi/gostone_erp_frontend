@@ -19,6 +19,7 @@ import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
 import { parseBackendError } from "@/lib/utils";
 import CompleteCompanyDataModal from "@/modules/customers/components/CompleteCompanyDataModal";
+import IssueWorkOrderSpecsModal, { type SpecItem } from "@/modules/opportunities/components/IssueWorkOrderSpecsModal";
 
 export default function OpportunityDetails() {
   const { id } = useParams();
@@ -33,6 +34,8 @@ export default function OpportunityDetails() {
   const [confirmAction, setConfirmAction] = useState<"measurements" | "sellOrder" | null>(null);
   // العميل الذي يجب إكمال بياناته (شركة) قبل إصدار الأمر — يفتح نافذة البيانات.
   const [companyDataCustomerId, setCompanyDataCustomerId] = useState<number | null>(null);
+  // بنود تفصيل تحتاج تفاصيل تصنيع قبل الإصدار — تفتح نافذة المواصفات.
+  const [specsItems, setSpecsItems] = useState<SpecItem[] | null>(null);
 
   const itemNameMap = useMemo(() => {
     const map = new Map<number, string>();
@@ -80,10 +83,11 @@ export default function OpportunityDetails() {
       setConfirmAction(null);
   };
 
-  const handleCreateSellOrder = () => {
-      createSellOrderMutation.mutate({ id: opportunity.id.toString() }, {
+  const handleCreateSellOrder = (specs?: Record<string, unknown>) => {
+      createSellOrderMutation.mutate({ id: opportunity.id.toString(), specs }, {
           onSuccess: (data: unknown) => {
               toast.success("تم إنشاء أمر البيع بنجاح");
+              setSpecsItems(null);
               // بعد التحويل ننتقل لأمر البيع ونغادر صفحة الفرصة.
               const sellOrderId = (data as { sell_order_id?: number | string })?.sell_order_id;
               if (sellOrderId) {
@@ -91,10 +95,15 @@ export default function OpportunityDetails() {
               }
           },
           onError: (error: unknown) => {
-              const data = (error as { response?: { data?: { company_data_required?: boolean; customer_id?: number } } })?.response?.data;
+              const data = (error as { response?: { data?: { company_data_required?: boolean; customer_id?: number; specs_required?: boolean; items?: SpecItem[] } } })?.response?.data;
               // عميل شركة ناقص بياناته → افتح نافذة إكمال البيانات بدل رسالة فقط.
               if (data?.company_data_required && data?.customer_id) {
                   setCompanyDataCustomerId(data.customer_id);
+                  return;
+              }
+              // مغاسل تفصيل تحتاج تفاصيل تصنيع → افتح نافذة المواصفات.
+              if (data?.specs_required && Array.isArray(data?.items)) {
+                  setSpecsItems(data.items);
                   return;
               }
               toast.error(parseBackendError(error) || "فشل إنشاء أمر البيع");
@@ -525,7 +534,7 @@ export default function OpportunityDetails() {
       <ConfirmModal
         isOpen={confirmAction === "sellOrder"}
         onClose={() => setConfirmAction(null)}
-        onConfirm={handleCreateSellOrder}
+        onConfirm={() => handleCreateSellOrder()}
         title="تأكيد إنشاء أمر بيع"
         description="هل أنت متأكد من إنشاء أمر بيع من هذه الفرصة؟"
         confirmText="إنشاء أمر بيع"
@@ -541,6 +550,13 @@ export default function OpportunityDetails() {
           setCompanyDataCustomerId(null);
           handleCreateSellOrder();
         }}
+      />
+      <IssueWorkOrderSpecsModal
+        items={specsItems ?? []}
+        open={specsItems !== null}
+        onClose={() => setSpecsItems(null)}
+        onSubmit={(specs) => handleCreateSellOrder(specs)}
+        isSubmitting={createSellOrderMutation.isPending}
       />
     </>
   );

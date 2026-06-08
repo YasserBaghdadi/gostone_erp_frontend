@@ -191,14 +191,21 @@ export function useRequestWorkOrder(): UseMutationResult<Opportunity, Error, { i
   });
 }
 
-// Create Sell Order from Opportunity
-export function useCreateSellOrder(): UseMutationResult<Opportunity, Error, { id: string }> {
+// Create Sell Order from Opportunity. `specs` carries the manufacturing details
+// (تفاصيل التصنيع) per custom item, keyed by opportunity-item id, when required.
+export function useCreateSellOrder(): UseMutationResult<
+  Opportunity,
+  Error,
+  { id: string; specs?: Record<string, unknown> }
+> {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ id }): Promise<Opportunity> => {
-      // POST with empty body as requested
-      const response = await api.post(API_ENDPOINTS.OPPORTUNITIES.CREATE_SELL_ORDER(id), {});
+    mutationFn: async ({ id, specs }): Promise<Opportunity> => {
+      const response = await api.post(
+        API_ENDPOINTS.OPPORTUNITIES.CREATE_SELL_ORDER(id),
+        specs ? { specs } : {},
+      );
       return response.data;
     },
     onSuccess: (_, variables) => {

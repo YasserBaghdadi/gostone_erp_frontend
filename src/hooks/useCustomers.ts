@@ -23,6 +23,8 @@ interface CreateCustomerRequest {
   cr_file?: File | null;
   address?: string;
   address_file?: File | null;
+  customer_type?: "individual" | "company";
+  is_potential?: boolean;
 }
 
 interface CustomersListFilters {

@@ -290,7 +290,8 @@ export default function CreateOpportunity() {
   };
  
   const handleCreateCustomer = (values: CustomerFormValues) => {
-    createCustomerMutation.mutate(values, {
+    // A customer added from the opportunity flow is a potential (lead), not actual.
+    createCustomerMutation.mutate({ ...values, is_potential: true }, {
       onSuccess: (data) => {
         toast.success("تم إضافة العميل بنجاح");
         setIsCustomerModalOpen(false);

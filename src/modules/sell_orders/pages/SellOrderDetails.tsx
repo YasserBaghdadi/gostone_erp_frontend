@@ -59,7 +59,7 @@ function washbasinSpecRows(spec: WashbasinSpec): { label: string; value: string 
   };
 
   add("طول السطح", num(spec.surface_length));
-  add("عرض السطح", num(spec.surface_width));
+  add("عمق السطح", num(spec.surface_width));
   if (spec.has_custom_bowl_size) {
     add("طول الحوض", num(spec.bowl_length));
     add("عرض الحوض", num(spec.bowl_width));
@@ -71,6 +71,8 @@ function washbasinSpecRows(spec: WashbasinSpec): { label: string; value: string 
   if (spec.faucet_hole) add("فتحة الخلاط", FAUCET_HOLE_LABELS[spec.faucet_hole]);
   add("طول المنظور الأمامي", num(spec.front_length));
   add("ارتفاع المنظور الأمامي", num(spec.front_height));
+  add("رقم اللون المعتمد", spec.approved_color_number ?? "");
+  add("الشركة الموردة", spec.supplier_company ?? "");
 
   return rows;
 }

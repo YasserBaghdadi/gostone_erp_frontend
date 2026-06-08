@@ -74,6 +74,8 @@ const washbasinSpecFormSchema = z.object({
   faucet_hole: z.enum(["wall", "basin"]).nullable().default(null),
   front_length: z.string().default(""),
   front_height: z.string().default(""),
+  approved_color_number: z.string().default(""),
+  supplier_company: z.string().default(""),
 });
 
 type WashbasinSpecForm = z.infer<typeof washbasinSpecFormSchema>;
@@ -91,6 +93,8 @@ const emptyWashbasinSpec = (): WashbasinSpecForm => ({
   faucet_hole: null,
   front_length: "",
   front_height: "",
+  approved_color_number: "",
+  supplier_company: "",
 });
 
 /** ISO datetime → قيمة <input type="datetime-local"> بالتوقيت المحلي (YYYY-MM-DDTHH:mm) */
@@ -197,6 +201,20 @@ function WashbasinSpecFields({
     </div>
   );
 
+  const textInput = (
+    field: "approved_color_number" | "supplier_company",
+    label: string,
+  ) => (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Input
+        type="text"
+        className="h-9 text-sm"
+        {...form.register(`${base}.${field}`)}
+      />
+    </div>
+  );
+
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 p-4" dir="rtl">
       <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary">
@@ -210,7 +228,7 @@ function WashbasinSpecFields({
           <legend className="px-1 text-xs font-medium text-muted-foreground">منظور السطح</legend>
           <div className="grid grid-cols-2 gap-3">
             {numberInput("surface_length", "الطول")}
-            {numberInput("surface_width", "العرض")}
+            {numberInput("surface_width", "العمق")}
           </div>
         </fieldset>
 
@@ -343,6 +361,15 @@ function WashbasinSpecFields({
             {numberInput("front_height", "الارتفاع")}
           </div>
         </fieldset>
+
+        {/* المواد المطلوبة */}
+        <fieldset className="rounded-md border border-border/50 p-3">
+          <legend className="px-1 text-xs font-medium text-muted-foreground">المواد المطلوبة</legend>
+          <div className="grid grid-cols-2 gap-3">
+            {textInput("approved_color_number", "رقم اللون المعتمد")}
+            {textInput("supplier_company", "الشركة الموردة")}
+          </div>
+        </fieldset>
       </div>
     </div>
   );
@@ -459,6 +486,8 @@ export default function CreateSellOrder() {
                   faucet_hole: existingSpec.faucet_hole ?? null,
                   front_length: numToStr(existingSpec.front_length),
                   front_height: numToStr(existingSpec.front_height),
+                  approved_color_number: existingSpec.approved_color_number ?? "",
+                  supplier_company: existingSpec.supplier_company ?? "",
                 }
               : emptyWashbasinSpec()
             : undefined;
@@ -615,6 +644,8 @@ export default function CreateSellOrder() {
         faucet_hole: spec.faucet_hole ?? null,
         front_length: strToNum(spec.front_length),
         front_height: strToNum(spec.front_height),
+        approved_color_number: spec.approved_color_number?.trim() || null,
+        supplier_company: spec.supplier_company?.trim() || null,
       };
     };
 

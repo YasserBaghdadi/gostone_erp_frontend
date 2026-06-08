@@ -407,6 +407,8 @@ export interface WashbasinSpec {
   faucet_hole: WashbasinFaucetHole | null;
   front_length: number | null;
   front_height: number | null;
+  approved_color_number: string | null;
+  supplier_company: string | null;
 }
 
 export const HOLE_POSITION_LABELS: Record<WashbasinHolePosition, string> = {

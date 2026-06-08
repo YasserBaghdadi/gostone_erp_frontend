@@ -166,6 +166,14 @@ export function WashbasinDrawing({ spec }: { spec: WashbasinSpec }) {
       label: "منظور أمامي",
       value: `${dash(spec.front_length)} × ${dash(spec.front_height)}`,
     },
+    {
+      label: "رقم اللون المعتمد",
+      value: spec.approved_color_number?.trim() || "—",
+    },
+    {
+      label: "الشركة الموردة",
+      value: spec.supplier_company?.trim() || "—",
+    },
   ];
 
   const chipX = 700;
@@ -376,7 +384,7 @@ export function WashbasinDrawing({ spec }: { spec: WashbasinSpec }) {
         fontWeight="600"
         transform={`rotate(-45 ${(frX + brX) / 2 + 14} ${(frY + brY) / 2 - 8})`}
       >
-        العرض {dash(spec.surface_width)}
+        العمق {dash(spec.surface_width)}
       </text>
 
       {/* خط أبعاد السُمك */}

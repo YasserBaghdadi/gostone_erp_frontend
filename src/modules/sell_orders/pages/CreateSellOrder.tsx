@@ -134,8 +134,6 @@ const formSchema = z.object({
   location: z.string().min(1, "الموقع مطلوب"),
   notes: z.string().optional(),
   dis_percentage: z.string().default("0"),
-  /** موعد التنفيذ (YYYY-MM-DD) — اختياري */
-  execution_date: z.string().optional().nullable(),
   /** موعد العميل (قيمة datetime-local المحلية) — اختياري */
   delivery_date: z.string().optional().nullable(),
   /** الفرع — يُستخدم في وضع التعديل فقط (null = بدون فرع). */
@@ -388,7 +386,6 @@ export default function CreateSellOrder() {
       location: "",
       notes: "",
       dis_percentage: "0",
-      execution_date: null,
       delivery_date: null,
       branch: null,
       sell_order_items: [],
@@ -429,7 +426,6 @@ export default function CreateSellOrder() {
         location: existingSellOrder.location || "",
         notes: existingSellOrder.notes || "",
         dis_percentage: existingSellOrder.dis_percentage || "0",
-        execution_date: existingSellOrder.execution_date ?? null,
         delivery_date: isoToDatetimeLocal(existingSellOrder.delivery_date),
         branch: existingSellOrder.branch ?? null,
         sell_order_items: existingSellOrder.sell_order_items.map(item => {
@@ -621,7 +617,6 @@ export default function CreateSellOrder() {
       };
     };
 
-    const executionDate = values.execution_date?.trim() ? values.execution_date.trim() : null;
     const deliveryDate = datetimeLocalToIso(values.delivery_date);
 
     const payload: any = {
@@ -629,7 +624,6 @@ export default function CreateSellOrder() {
       location: values.location,
       notes: values.notes,
       dis_percentage: parseFloat(values.dis_percentage || "0").toFixed(2),
-      execution_date: executionDate,
       delivery_date: deliveryDate,
       sell_order_items: values.sell_order_items.map((item, index) => {
         const line: Record<string, unknown> = {
@@ -850,29 +844,6 @@ export default function CreateSellOrder() {
                             {...field} 
                             onKeyDown={preventNegative}
                             onChange={(e) => field.onChange(clampToPositive(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="execution_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>موعد التنفيذ</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            value={field.value ?? ""}
-                            onChange={(e) =>
-                              field.onChange(e.target.value || null)
-                            }
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
                           />
                         </FormControl>
                         <FormMessage />

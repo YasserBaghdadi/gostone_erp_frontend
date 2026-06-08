@@ -17,6 +17,8 @@ import { INTEREST_LEVELS, STATUS_LABELS } from "@/types";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
+import { parseBackendError } from "@/lib/utils";
+import CompleteCompanyDataModal from "@/modules/customers/components/CompleteCompanyDataModal";
 
 export default function OpportunityDetails() {
   const { id } = useParams();
@@ -29,6 +31,8 @@ export default function OpportunityDetails() {
   const printQuotationMutation = usePrintQuotation();
   const openDimensionFileMutation = useOpenDimensionFile();
   const [confirmAction, setConfirmAction] = useState<"measurements" | "sellOrder" | null>(null);
+  // العميل الذي يجب إكمال بياناته (شركة) قبل إصدار الأمر — يفتح نافذة البيانات.
+  const [companyDataCustomerId, setCompanyDataCustomerId] = useState<number | null>(null);
 
   const itemNameMap = useMemo(() => {
     const map = new Map<number, string>();
@@ -81,8 +85,14 @@ export default function OpportunityDetails() {
           onSuccess: () => {
               toast.success("تم إنشاء أمر البيع بنجاح");
           },
-          onError: () => {
-              toast.error("فشل إنشاء أمر البيع");
+          onError: (error: unknown) => {
+              const data = (error as { response?: { data?: { company_data_required?: boolean; customer_id?: number } } })?.response?.data;
+              // عميل شركة ناقص بياناته → افتح نافذة إكمال البيانات بدل رسالة فقط.
+              if (data?.company_data_required && data?.customer_id) {
+                  setCompanyDataCustomerId(data.customer_id);
+                  return;
+              }
+              toast.error(parseBackendError(error) || "فشل إنشاء أمر البيع");
           }
       });
       setConfirmAction(null);
@@ -516,6 +526,16 @@ export default function OpportunityDetails() {
         confirmText="إنشاء أمر بيع"
         variant="success"
         isLoading={createSellOrderMutation.isPending}
+      />
+      <CompleteCompanyDataModal
+        customerId={companyDataCustomerId}
+        open={companyDataCustomerId !== null}
+        onClose={() => setCompanyDataCustomerId(null)}
+        onCompleted={() => {
+          // بعد حفظ بيانات الشركة، أغلق النافذة وأعد إصدار الأمر تلقائياً.
+          setCompanyDataCustomerId(null);
+          handleCreateSellOrder();
+        }}
       />
     </>
   );

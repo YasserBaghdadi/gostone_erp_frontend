@@ -1,14 +1,24 @@
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Truck, RefreshCw, AlertCircle, ArrowRight } from "lucide-react";
+import { Truck, RefreshCw, AlertCircle, ArrowRight, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { useDeliveryOrders } from "@/hooks/useDeliveryOrders";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useDeliveryOrders, usePrintDeliveryOrdersList } from "@/hooks/useDeliveryOrders";
+import type { DeliveryListPrintParams } from "@/hooks/useDeliveryOrders";
+import { useDeliveryResponsibles } from "@/hooks/useDeliveryResponsibles";
 import { usePagination } from "@/hooks/usePagination";
 import { DELIVERY_ORDER_STATUS_LABELS } from "@/types";
-import type { DeliveryOrder } from "@/types";
+import type { DeliveryOrder, DeliveryOrderStatus } from "@/types";
 import { PageHeader, Pagination, LoadingState, EmptyState } from "@/components/shared";
 
 function StatusBadge({ status }: { status: DeliveryOrder["status"] }) {
@@ -45,6 +55,9 @@ function DeliveryOrderRow({ order }: { order: DeliveryOrder }) {
         <span className="text-xs text-muted-foreground">
           {order.scheduled_at ? format(new Date(order.scheduled_at), "yyyy/MM/dd", { locale: arSA }) : "—"}
         </span>
+      </td>
+      <td className="px-4 py-3 text-center">
+        <span className="text-sm">{order.responsible_name || "—"}</span>
       </td>
       <td className="px-4 py-3 text-center">
         <StatusBadge status={order.status} />
@@ -91,6 +104,7 @@ function DeliveryOrderMobileCard({ order }: { order: DeliveryOrder }) {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
           <span>{format(new Date(createdDate), "yyyy/MM/dd", { locale: arSA })}</span>
           <span>موعد العميل: {order.scheduled_at ? format(new Date(order.scheduled_at), "yyyy/MM/dd", { locale: arSA }) : "—"}</span>
+          <span>المسؤول: {order.responsible_name || "—"}</span>
         </div>
 
         <div className="flex items-center justify-end pt-2 border-t border-border/40">
@@ -112,12 +126,29 @@ function DeliveryOrderMobileCard({ order }: { order: DeliveryOrder }) {
   );
 }
 
+const STATUS_OPTIONS: DeliveryOrderStatus[] = ["pending", "delivered", "canceled"];
+
 export default function DeliveryOrdersList() {
   const { page, pageSize, setPage, setPageSize } = usePagination();
+  const [responsibleFilter, setResponsibleFilter] = useState<string>("all"); // "all" | "unassigned" | "<id>"
+  const [statusFilter, setStatusFilter] = useState<string>("all"); // "all" | DeliveryOrderStatus
+
+  const { data: responsibles = [] } = useDeliveryResponsibles();
+  const printList = usePrintDeliveryOrdersList();
+
+  // Translate the dropdown selections into API query params (shared by list + print).
+  const filterParams = useMemo<DeliveryListPrintParams>(() => {
+    const p: DeliveryListPrintParams = {};
+    if (responsibleFilter === "unassigned") p.unassigned = true;
+    else if (responsibleFilter !== "all") p.responsible = Number(responsibleFilter);
+    if (statusFilter !== "all") p.status = statusFilter;
+    return p;
+  }, [responsibleFilter, statusFilter]);
 
   const { data, isLoading, isError, refetch, isRefetching } = useDeliveryOrders({
     page,
     page_size: pageSize,
+    ...filterParams,
   });
 
   const orders = data?.results || [];
@@ -146,6 +177,67 @@ export default function DeliveryOrdersList() {
         }
       />
 
+      {/* Filters: responsible + status, with a print button for the filtered list */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">المسؤول</label>
+          <Select
+            value={responsibleFilter}
+            onValueChange={(v) => {
+              setResponsibleFilter(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="المسؤول" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">الكل</SelectItem>
+              <SelectItem value="unassigned">غير مُسند</SelectItem>
+              {responsibles.map((r) => (
+                <SelectItem key={r.id} value={String(r.id)}>
+                  {r.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">الحالة</label>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="الحالة" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الحالات</SelectItem>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {DELIVERY_ORDER_STATUS_LABELS[s].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => printList.mutate(filterParams)}
+          disabled={printList.isPending}
+          title="طباعة القائمة الحالية كـ PDF"
+        >
+          <Printer className={`h-4 w-4 ${printList.isPending ? "animate-pulse" : ""}`} />
+          طباعة القائمة
+        </Button>
+      </div>
+
       {isLoading ? (
         <LoadingState message="جاري تحميل أوامر التسليم..." />
       ) : isError ? (
@@ -161,7 +253,7 @@ export default function DeliveryOrdersList() {
         <EmptyState
           icon={Truck}
           title="لا يوجد أوامر تسليم"
-          description="لم يتم إنشاء أوامر تسليم حالياً."
+          description="لا توجد أوامر تسليم مطابقة للتصفية الحالية."
         />
       ) : (
         <>
@@ -177,6 +269,7 @@ export default function DeliveryOrdersList() {
                       <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">أمر البيع</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">التاريخ</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">موعد العميل</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">المسؤول</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">الحالة</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground w-[120px]">إجراءات</th>
                     </tr>

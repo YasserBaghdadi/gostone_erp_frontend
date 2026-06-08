@@ -10,6 +10,15 @@ interface DeliveryOrdersFilters {
   page_size?: number;
   search?: string;
   status?: string;
+  responsible?: number;
+  unassigned?: boolean;
+}
+
+// Params for the printable, filtered delivery-orders list (by responsible/status)
+export interface DeliveryListPrintParams {
+  responsible?: number;
+  unassigned?: boolean;
+  status?: string;
 }
 
 // List Delivery Orders
@@ -63,6 +72,31 @@ export function usePrintDeliveryOrder(): UseMutationResult<
       const filename = extractFilenameFromResponse(
         response,
         `delivery_order_${id}.pdf`,
+      );
+      openPdfInWindow(response.data, filename);
+    },
+  });
+}
+
+// Print the filtered delivery-orders list (by responsible / status) as a PDF
+export function usePrintDeliveryOrdersList(): UseMutationResult<
+  void,
+  Error,
+  DeliveryListPrintParams
+> {
+  return useMutation({
+    mutationFn: async (params: DeliveryListPrintParams): Promise<void> => {
+      const { extractFilenameFromResponse, openPdfInWindow } =
+        await import("@/lib/pdfUtils");
+
+      const response = await api.get(API_ENDPOINTS.DELIVERY_ORDERS.PRINT_LIST, {
+        params,
+        responseType: "blob",
+      });
+
+      const filename = extractFilenameFromResponse(
+        response,
+        "delivery_orders_list.pdf",
       );
       openPdfInWindow(response.data, filename);
     },

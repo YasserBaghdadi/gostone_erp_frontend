@@ -38,6 +38,7 @@ import {
   useUploadSellOrderInvoice,
   sellOrderHasInvoice,
   usePushSellOrderToOdoo,
+  useUpdateSellOrder,
 } from "@/hooks/useSellOrders";
 import { parseBackendError } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
@@ -50,6 +51,23 @@ import type { WashbasinSpec } from "@/types";
 import { toast } from "sonner";
 
 /** صفوف عرض مواصفات تصنيع المغسلة (قراءة فقط) للبنود من نوع «تفصيل» */
+/** ISO datetime → قيمة <input type="datetime-local"> بالتوقيت المحلي */
+function isoToDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** قيمة <input type="datetime-local"> → ISO datetime، أو null إذا فارغة */
+function datetimeLocalToIso(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
 function washbasinSpecRows(spec: WashbasinSpec): { label: string; value: string }[] {
   const rows: { label: string; value: string }[] = [];
   const num = (v: number | null | undefined) =>
@@ -122,6 +140,27 @@ export default function SellOrderDetails() {
   const [odooConfirmOpen, setOdooConfirmOpen] = useState(false);
 
   const { data: sellOrder, isLoading, isError } = useSellOrderDetails(id || "");
+  const updateSellOrder = useUpdateSellOrder();
+  const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
+  const [deliveryDateInput, setDeliveryDateInput] = useState("");
+
+  const handleSaveDeliveryDate = () => {
+    if (!sellOrder) return;
+    updateSellOrder.mutate(
+      {
+        id: sellOrder.id,
+        data: { delivery_date: datetimeLocalToIso(deliveryDateInput) } as never,
+      },
+      {
+        onSuccess: () => {
+          toast.success("تم تحديث موعد العميل");
+          setEditingDeliveryDate(false);
+        },
+        onError: (e) =>
+          toast.error("فشل تحديث الموعد", { description: parseBackendError(e) }),
+      },
+    );
+  };
   const printMutation = usePrintSellOrder();
   const uploadInvoiceMutation = useUploadSellOrderInvoice();
   const pushToOdooMutation = usePushSellOrderToOdoo();
@@ -673,13 +712,43 @@ export default function SellOrderDetails() {
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                   <CalendarClock className="h-5 w-5" />
                 </div>
-                <div className="overflow-hidden">
+                <div className="overflow-hidden flex-1">
                   <p className="text-xs text-muted-foreground mb-0.5">موعد العميل</p>
-                  <p className="font-semibold text-sm font-mono">
-                    {sellOrder.delivery_date
-                      ? format(new Date(sellOrder.delivery_date), "yyyy/MM/dd HH:mm", { locale: arSA })
-                      : "—"}
-                  </p>
+                  {editingDeliveryDate ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="datetime-local"
+                        value={deliveryDateInput}
+                        onChange={(e) => setDeliveryDateInput(e.target.value)}
+                        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                      />
+                      <Button size="sm" onClick={handleSaveDeliveryDate} disabled={updateSellOrder.isPending}>
+                        {updateSellOrder.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "حفظ"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingDeliveryDate(false)}>
+                        إلغاء
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-sm font-mono">
+                        {sellOrder.delivery_date
+                          ? format(new Date(sellOrder.delivery_date), "yyyy/MM/dd HH:mm", { locale: arSA })
+                          : "—"}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeliveryDateInput(isoToDatetimeLocal(sellOrder.delivery_date));
+                          setEditingDeliveryDate(true);
+                        }}
+                        className="text-primary hover:text-primary/80"
+                        title="تعديل موعد العميل"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

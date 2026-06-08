@@ -82,8 +82,13 @@ export default function OpportunityDetails() {
 
   const handleCreateSellOrder = () => {
       createSellOrderMutation.mutate({ id: opportunity.id.toString() }, {
-          onSuccess: () => {
+          onSuccess: (data: unknown) => {
               toast.success("تم إنشاء أمر البيع بنجاح");
+              // بعد التحويل ننتقل لأمر البيع ونغادر صفحة الفرصة.
+              const sellOrderId = (data as { sell_order_id?: number | string })?.sell_order_id;
+              if (sellOrderId) {
+                  navigate(`/sell-orders/${sellOrderId}`);
+              }
           },
           onError: (error: unknown) => {
               const data = (error as { response?: { data?: { company_data_required?: boolean; customer_id?: number } } })?.response?.data;

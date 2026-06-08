@@ -80,7 +80,7 @@ export default function DeliveryOrderDetails() {
 
   const [isDeliverModalOpen, setIsDeliverModalOpen] = useState(false);
 
-  // حقول الجدولة (موعد التسليم + المسؤول) — تُعبّأ من بيانات الأمر.
+  // حقول الجدولة (موعد العميل + المسؤول) — تُعبّأ من بيانات الأمر.
   const [scheduledAtInput, setScheduledAtInput] = useState("");
   const [responsibleInput, setResponsibleInput] = useState<string>(RESPONSIBLE_NONE);
 
@@ -278,7 +278,7 @@ export default function DeliveryOrderDetails() {
           <div className="space-y-1.5 p-4 rounded-xl bg-muted/20 border border-border/50">
             <span className="text-sm text-muted-foreground flex items-center gap-2">
               <CalendarClock className="h-4 w-4" />
-              موعد التسليم
+              موعد العميل
             </span>
             <p className="font-bold text-base">
               {order.scheduled_at
@@ -307,7 +307,7 @@ export default function DeliveryOrderDetails() {
         <CardContent className="p-6 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="scheduled_at">موعد التسليم</Label>
+              <Label htmlFor="scheduled_at">موعد العميل</Label>
               <Input
                 id="scheduled_at"
                 type="datetime-local"

@@ -685,7 +685,7 @@ export default function SellOrderDetails() {
                   <CalendarClock className="h-5 w-5" />
                 </div>
                 <div className="overflow-hidden">
-                  <p className="text-xs text-muted-foreground mb-0.5">موعد التسليم</p>
+                  <p className="text-xs text-muted-foreground mb-0.5">موعد العميل</p>
                   <p className="font-semibold text-sm font-mono">
                     {sellOrder.delivery_date
                       ? format(new Date(sellOrder.delivery_date), "yyyy/MM/dd HH:mm", { locale: arSA })

@@ -93,7 +93,7 @@ export function useDeliverDeliveryOrder(): UseMutationResult<
   });
 }
 
-// Schedule Delivery Order (موعد التسليم + الشخص المسؤول)
+// Schedule Delivery Order (موعد العميل + الشخص المسؤول)
 interface ScheduleDeliveryOrderArgs {
   id: string | number;
   scheduled_at: string | null;

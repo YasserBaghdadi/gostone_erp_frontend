@@ -128,7 +128,7 @@ export function usePrintProductionOrder(): UseMutationResult<
   });
 }
 
-// Schedule Production Order (موعد التسليم)
+// Schedule Production Order (موعد العميل)
 interface ScheduleProductionOrderArgs {
   id: string | number;
   scheduled_at: string | null;

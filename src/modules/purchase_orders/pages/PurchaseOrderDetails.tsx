@@ -176,7 +176,7 @@ export default function PurchaseOrderDetails() {
   const receiveMutation = useReceivePurchaseOrder();
   const scheduleMutation = useSchedulePurchaseOrder();
 
-  // حقل الجدولة (موعد التسليم) — يُعبّأ من بيانات الطلب.
+  // حقل الجدولة (موعد العميل) — يُعبّأ من بيانات الطلب.
   const [scheduledAtInput, setScheduledAtInput] = useState("");
 
   useEffect(() => {
@@ -191,9 +191,9 @@ export default function PurchaseOrderDetails() {
         scheduled_at: datetimeLocalToIso(scheduledAtInput),
       },
       {
-        onSuccess: () => toast.success("تم حفظ موعد التسليم"),
+        onSuccess: () => toast.success("تم حفظ موعد العميل"),
         onError: (err) =>
-          toast.error("فشل حفظ موعد التسليم", {
+          toast.error("فشل حفظ موعد العميل", {
             description: parseBackendError(err),
           }),
       },
@@ -1193,7 +1193,7 @@ export default function PurchaseOrderDetails() {
               <div className='flex items-center justify-between'>
                 <span className='text-muted-foreground flex items-center gap-2'>
                   <CalendarClock className='h-4 w-4' />
-                  موعد التسليم
+                  موعد العميل
                 </span>
                 <span className='text-sm font-mono'>
                   {purchaseOrder.scheduled_at
@@ -1205,7 +1205,7 @@ export default function PurchaseOrderDetails() {
               </div>
               <Separator />
               <div className='space-y-2'>
-                <Label htmlFor='scheduled_at'>تعديل موعد التسليم</Label>
+                <Label htmlFor='scheduled_at'>تعديل موعد العميل</Label>
                 <div className='flex items-center gap-2'>
                   <Input
                     id='scheduled_at'

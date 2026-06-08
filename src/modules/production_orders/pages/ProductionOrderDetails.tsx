@@ -80,7 +80,7 @@ export default function ProductionOrderDetails() {
 
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
 
-  // حقل الجدولة (موعد التسليم) — يُعبّأ من بيانات الأمر.
+  // حقل الجدولة (موعد العميل) — يُعبّأ من بيانات الأمر.
   const [scheduledAtInput, setScheduledAtInput] = useState("");
 
   useEffect(() => {
@@ -97,11 +97,11 @@ export default function ProductionOrderDetails() {
       },
       {
         onSuccess: () => {
-          toast.success("تم حفظ موعد التسليم");
+          toast.success("تم حفظ موعد العميل");
           refetch();
         },
         onError: (error) => {
-          toast.error("فشل حفظ موعد التسليم", {
+          toast.error("فشل حفظ موعد العميل", {
             description: parseBackendError(error),
           });
         },
@@ -300,7 +300,7 @@ export default function ProductionOrderDetails() {
           <div className="space-y-1.5 p-4 rounded-xl bg-muted/20 border border-border/50">
             <span className="text-sm text-muted-foreground flex items-center gap-2">
               <CalendarClock className="h-4 w-4" />
-              موعد التسليم
+              موعد العميل
             </span>
             <p className="font-bold text-base">
               {order.scheduled_at
@@ -311,18 +311,18 @@ export default function ProductionOrderDetails() {
         </CardContent>
       </Card>
 
-      {/* الجدولة (موعد التسليم) */}
+      {/* الجدولة (موعد العميل) */}
       <Card className="shadow-lg border-none ring-1 ring-border/50 overflow-hidden">
         <CardHeader className="bg-muted/5 pb-4 border-b border-border/50">
           <CardTitle className="text-lg flex items-center gap-2">
             <CalendarClock className="w-5 h-5 text-primary" />
-            موعد التسليم
+            موعد العميل
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="scheduled_at">موعد التسليم</Label>
+              <Label htmlFor="scheduled_at">موعد العميل</Label>
               <Input
                 id="scheduled_at"
                 type="datetime-local"

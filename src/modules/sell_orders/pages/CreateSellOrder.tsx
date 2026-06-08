@@ -136,7 +136,7 @@ const formSchema = z.object({
   dis_percentage: z.string().default("0"),
   /** موعد التنفيذ (YYYY-MM-DD) — اختياري */
   execution_date: z.string().optional().nullable(),
-  /** موعد التسليم (قيمة datetime-local المحلية) — اختياري */
+  /** موعد العميل (قيمة datetime-local المحلية) — اختياري */
   delivery_date: z.string().optional().nullable(),
   /** الفرع — يُستخدم في وضع التعديل فقط (null = بدون فرع). */
   branch: z.number().nullable().default(null),
@@ -885,7 +885,7 @@ export default function CreateSellOrder() {
                     name="delivery_date"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>موعد التسليم</FormLabel>
+                        <FormLabel>موعد العميل</FormLabel>
                         <FormControl>
                           <Input
                             type="datetime-local"

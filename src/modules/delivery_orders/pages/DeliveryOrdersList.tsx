@@ -42,6 +42,11 @@ function DeliveryOrderRow({ order }: { order: DeliveryOrder }) {
         </span>
       </td>
       <td className="px-4 py-3 text-center">
+        <span className="text-xs text-muted-foreground">
+          {order.scheduled_at ? format(new Date(order.scheduled_at), "yyyy/MM/dd", { locale: arSA }) : "—"}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-center">
         <StatusBadge status={order.status} />
       </td>
       <td className="px-4 py-3 text-center">
@@ -85,6 +90,7 @@ function DeliveryOrderMobileCard({ order }: { order: DeliveryOrder }) {
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
           <span>{format(new Date(createdDate), "yyyy/MM/dd", { locale: arSA })}</span>
+          <span>التركيب: {order.scheduled_at ? format(new Date(order.scheduled_at), "yyyy/MM/dd", { locale: arSA }) : "—"}</span>
         </div>
 
         <div className="flex items-center justify-end pt-2 border-t border-border/40">
@@ -170,6 +176,7 @@ export default function DeliveryOrdersList() {
                       <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">العميل</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">أمر البيع</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">التاريخ</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">موعد التركيب</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">الحالة</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground w-[120px]">إجراءات</th>
                     </tr>

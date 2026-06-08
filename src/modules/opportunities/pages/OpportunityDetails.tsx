@@ -168,16 +168,17 @@ export default function OpportunityDetails() {
                              </Button>
                          </Link>
 
-                        {!opportunity.need_dim_order && (!opportunity.status || opportunity.status === 'new') && (
-                             <Button 
-                                variant="secondary" 
-                                size="sm" 
-                                className="gap-2 rounded-lg" 
+                        {/* متاح دائماً ما لم يوجد طلب مقاسات مفتوح — لإعادة طلب المقاس */}
+                        {!opportunity.need_dim_order && (
+                             <Button
+                                variant="secondary"
+                                size="sm"
+                                className="gap-2 rounded-lg"
                                 onClick={() => setConfirmAction("measurements")}
                                 disabled={requestMeasurementsMutation.isPending}
                              >
                                 {requestMeasurementsMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                                طلب مقاسات
+                                {opportunity.dimensions && opportunity.dimensions.length > 0 ? "طلب مقاسات جديد" : "طلب مقاسات"}
                              </Button>
                         )}
                         

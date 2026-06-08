@@ -87,12 +87,23 @@ export const preventNegative = (e: React.KeyboardEvent<HTMLInputElement>) => {
 };
 
 /**
- * Clamps a numeric value to be zero or positive. 
+ * Sanitizes a numeric text-input value to a NON-NEGATIVE number while the user
+ * is still typing — without breaking partial input. It keeps only digits and a
+ * single decimal point (so a leading "-" / negatives are dropped), and preserves
+ * in-progress values like "" (cleared), "5." and "0.5". Do NOT parseFloat here:
+ * doing so on every keystroke strips the decimal point and forces "0", which
+ * makes it impossible to type decimals or clear the field.
  */
 export const clampToPositive = (value: string | number): string => {
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(num) || num < 0) return "0";
-  return String(num);
+  let str = String(value ?? "");
+  // keep only digits and dots (drops minus sign, letters, "e", "+", spaces…)
+  str = str.replace(/[^\d.]/g, "");
+  // collapse to a single decimal point (keep the first, drop the rest)
+  const firstDot = str.indexOf(".");
+  if (firstDot !== -1) {
+    str = str.slice(0, firstDot + 1) + str.slice(firstDot + 1).replace(/\./g, "");
+  }
+  return str;
 };
 
 /**

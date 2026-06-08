@@ -97,7 +97,7 @@ function ProductionOrderMobileCard({ order }: { order: ProductionOrder }) {
             الكمية: {order.quantity} {order.unit_name}
           </span>
           <span>{format(new Date(createdDate), "yyyy/MM/dd", { locale: arSA })}</span>
-          <span>التركيب: {order.scheduled_at ? format(new Date(order.scheduled_at), "yyyy/MM/dd", { locale: arSA }) : "—"}</span>
+          <span>موعد العميل: {order.scheduled_at ? format(new Date(order.scheduled_at), "yyyy/MM/dd", { locale: arSA }) : "—"}</span>
         </div>
 
         <div className="flex items-center justify-end pt-2 border-t border-border/40">
@@ -198,7 +198,7 @@ export default function ProductionOrdersList() {
                       <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">الصنف المُصنّع</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">الكمية</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">التاريخ</th>
-                      <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">موعد التركيب</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">موعد العميل</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">الحالة</th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground w-[120px]">إجراءات</th>
                     </tr>

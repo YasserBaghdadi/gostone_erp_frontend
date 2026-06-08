@@ -200,7 +200,7 @@ function SellOrderMobileCard({ order }: { order: SellOrderRowData }) {
         </div>
 
         <div className='flex items-center justify-between text-sm'>
-          <span className='text-muted-foreground'>موعد التركيب</span>
+          <span className='text-muted-foreground'>موعد العميل</span>
           <span className='text-muted-foreground flex items-center gap-1.5 text-xs'>
             <Calendar className='h-3.5 w-3.5' />
             {order.delivery_date ? format(new Date(order.delivery_date), "yyyy/MM/dd", { locale: arSA }) : "—"}
@@ -488,7 +488,7 @@ export default function SellOrdersList() {
                     <th className='px-4 py-3 text-center font-medium'>
                       تاريخ الإنشاء
                     </th>
-                    <th className='px-4 py-3 text-center font-medium'>موعد التركيب</th>
+                    <th className='px-4 py-3 text-center font-medium'>موعد العميل</th>
                     <th className='px-4 py-3 text-center font-medium'>الحالة</th>
                     <th className='px-4 py-3 text-center font-medium w-28'>
                       الإجراءات

@@ -35,7 +35,7 @@ import { useCreateOpportunity, useUpdateOpportunity, useOpportunityDetails } fro
 import { useCreateCustomer } from "@/hooks/useCustomers";
 import { INTEREST_LEVELS, UNIT_LABELS } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { parseBackendError, preventNegative, clampToPositive } from "@/lib/utils";
+import { parseBackendError, preventNegative, clampToPositive, nameImpliesCompany } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
 // import { normalizeSaudiPhone } from "@/components/form";
 
@@ -291,10 +291,23 @@ export default function CreateOpportunity() {
  
   const handleCreateCustomer = (values: CustomerFormValues) => {
     // A customer added from the opportunity flow is a potential (lead), not actual.
-    createCustomerMutation.mutate({ ...values, is_potential: true }, {
+    // If the name mentions شركة/مؤسسة, force the company type (mirrors the backend).
+    const impliesCompany = nameImpliesCompany(
+      `${values.first_name} ${values.last_name}`,
+    );
+    createCustomerMutation.mutate(
+      {
+        ...values,
+        is_potential: true,
+        customer_type: impliesCompany ? "company" : "individual",
+      },
+      {
       onSuccess: (data) => {
         toast.success("تم إضافة العميل بنجاح");
         setIsCustomerModalOpen(false);
+        if (impliesCompany) {
+          form.setValue("customer_type", "company");
+        }
         handleSelectCustomer(data);
         customerForm.reset();
       },
@@ -966,6 +979,13 @@ export default function CreateOpportunity() {
                         )}
                       />
                   </div>
+                  {nameImpliesCompany(
+                    `${customerForm.watch("first_name") ?? ""} ${customerForm.watch("last_name") ?? ""}`,
+                  ) && (
+                    <p className="text-xs text-muted-foreground">
+                      سيُحفظ هذا العميل كنوع «شركة» لأن الاسم يذكر «شركة/مؤسسة».
+                    </p>
+                  )}
                   <FormField
                     control={customerForm.control}
                     name="email"

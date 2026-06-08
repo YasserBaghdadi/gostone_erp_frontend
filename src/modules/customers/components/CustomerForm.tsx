@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { normalizeSaudiPhone, formatPhoneForDisplay } from "@/components/form";
+import { nameImpliesCompany } from "@/lib/utils";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { CustomerNationalAddressFields } from "@/modules/customers/components/CustomerNationalAddressFields";
 import {
@@ -311,6 +312,18 @@ export default function CustomerForm({
 
   // Watch fields to conditionally show file uploads
   const customerType = useWatch({ control: form.control, name: "customer_type" });
+  const firstName = useWatch({ control: form.control, name: "first_name" });
+  const lastName = useWatch({ control: form.control, name: "last_name" });
+
+  // عند ذكر "شركة"/"مؤسسة" في الاسم: نفرض النوع "شركة" ونمنع اختيار "فرد".
+  const lockCompanyByName = nameImpliesCompany(`${firstName ?? ""} ${lastName ?? ""}`);
+
+  useEffect(() => {
+    if (lockCompanyByName && form.getValues("customer_type") !== "company") {
+      form.setValue("customer_type", "company", { shouldValidate: true });
+    }
+  }, [lockCompanyByName, form]);
+
   const vatNumber = useWatch({ control: form.control, name: "vat_number" });
   const crNumber = useWatch({ control: form.control, name: "cr_number" });
   const vatFile = useWatch({ control: form.control, name: "vat_number_file" });
@@ -338,7 +351,7 @@ export default function CustomerForm({
                 <Select
                   onValueChange={field.onChange}
                   value={field.value}
-                  disabled={forceCompany}
+                  disabled={forceCompany || lockCompanyByName}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -350,6 +363,11 @@ export default function CustomerForm({
                     <SelectItem value="company">شركة</SelectItem>
                   </SelectContent>
                 </Select>
+                {lockCompanyByName && !forceCompany && (
+                  <p className="text-xs text-muted-foreground">
+                    تم ضبط النوع على «شركة» تلقائياً لأن الاسم يذكر «شركة/مؤسسة».
+                  </p>
+                )}
                 <FormMessage />
                 </FormItem>
             )}

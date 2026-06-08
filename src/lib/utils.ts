@@ -118,6 +118,18 @@ export const formatPrice = (value: string | number | undefined | null): string =
   return String(Number(num));
 };
 
+/**
+ * يحدّد ما إذا كان اسم العميل يشير إلى شركة/مؤسسة. عند التطابق يُفرض نوع العميل
+ * "شركة" ولا يُقبل كـ"فرد". الواجهة تعكس هذا، والباك اند هو مصدر الحقيقة.
+ * نغطّي إملائي التاء (ة/ه) و"موسس" بدون همزة.
+ */
+const COMPANY_NAME_KEYWORDS = ["شركة", "شركه", "مؤسس", "موسس"];
+
+export function nameImpliesCompany(name?: string | null): boolean {
+  const text = (name ?? "").toString();
+  return COMPANY_NAME_KEYWORDS.some((keyword) => text.includes(keyword));
+}
+
 /** لون تمييز العميل من الـ API (مثل #8D50BD) */
 export function customerAccentColor(color?: string | null): string {
   const c = color?.trim();

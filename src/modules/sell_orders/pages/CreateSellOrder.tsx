@@ -386,7 +386,8 @@ export default function CreateSellOrder() {
       location: "",
       notes: "",
       dis_percentage: "0",
-      delivery_date: null,
+      // موعد العميل الافتراضي: 10 أيام من اليوم (قابل للتعديل)
+      delivery_date: isoToDatetimeLocal(new Date(Date.now() + 10 * 86400000).toISOString()),
       branch: null,
       sell_order_items: [],
     },

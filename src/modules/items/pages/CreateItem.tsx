@@ -321,7 +321,14 @@ export default function CreateItem() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>نوع المنتج</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={(v) => {
+                          field.onChange(v);
+                          // «مخزون تفصيل» يُغذّى من أوامر التصنيع فقط — لا يُشترى
+                          if (v === "custom_stock") form.setValue("is_purchable", false);
+                        }}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="اختر نوع المنتج" />
@@ -385,14 +392,24 @@ export default function CreateItem() {
                   <FormField
                     control={form.control}
                     name="is_purchable"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-2">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="!mt-0 cursor-pointer">قابل للشراء</FormLabel>
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const isCustomStock = form.watch("production_type") === "custom_stock";
+                      return (
+                        <FormItem className="flex items-center gap-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={isCustomStock ? false : field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isCustomStock}
+                            />
+                          </FormControl>
+                          <FormLabel className="!mt-0 cursor-pointer">قابل للشراء</FormLabel>
+                          {isCustomStock && (
+                            <span className="text-xs text-muted-foreground">(مخزون تفصيل يُغذّى من أوامر التصنيع فقط)</span>
+                          )}
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
               </CardContent>

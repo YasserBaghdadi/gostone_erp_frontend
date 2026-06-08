@@ -320,11 +320,11 @@ export default function CreateItem() {
                   name="production_type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>نوع الإنتاج</FormLabel>
+                      <FormLabel>نوع المنتج</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="اختر نوع الإنتاج" />
+                            <SelectValue placeholder="اختر نوع المنتج" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>

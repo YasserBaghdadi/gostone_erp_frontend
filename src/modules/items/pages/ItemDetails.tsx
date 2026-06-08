@@ -88,7 +88,7 @@ export default function ItemDetails() {
               <Badge variant="outline">{item.default_unit_name}</Badge>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-muted-foreground">نوع الإنتاج</span>
+              <span className="text-muted-foreground">نوع المنتج</span>
               <Badge variant="secondary">
                 {PRODUCTION_TYPE_LABELS[item.production_type ?? "ready"]}
               </Badge>

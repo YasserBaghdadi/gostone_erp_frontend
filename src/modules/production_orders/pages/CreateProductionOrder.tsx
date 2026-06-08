@@ -161,7 +161,7 @@ export default function CreateProductionOrder() {
                       </Button>
                     )}
                     <FormDescription>
-                      اختر الصنف الذي سيتم تصنيعه (أصناف نوع «تفصيل»)
+                      اختر الصنف الذي سيتم تصنيعه (أصناف نوع «مخزون تفصيل» — تُنتَج وتُخزَّن ثم تُباع من المخزون)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -222,7 +222,7 @@ export default function CreateProductionOrder() {
         isOpen={isItemModalOpen}
         onClose={() => setIsItemModalOpen(false)}
         onSelect={handleSelectItem}
-        filterProductionType="custom"
+        filterProductionType="custom_stock"
       />
 
       <ConfirmModal

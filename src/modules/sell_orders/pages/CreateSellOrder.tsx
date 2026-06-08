@@ -122,7 +122,7 @@ const itemSchema = z.object({
   price_after_tax: z.coerce.string().min(1, "السعر مطلوب"),
   dis_percentage: z.coerce.string().default("0"),
   notes: z.string().optional(),
-  production_type: z.enum(["ready", "custom"]).optional(),
+  production_type: z.enum(["ready", "custom", "custom_stock"]).optional(),
   washbasin_spec: washbasinSpecFormSchema.optional(),
   available_units: z.array(z.object({
     name: z.string(),

@@ -519,12 +519,13 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
-/** نوع الإنتاج للصنف: جاهزة أو تفصيل */
-export type ProductionType = 'ready' | 'custom';
+/** نوع المنتج: جاهزة، تفصيل، أو مخزون تفصيل */
+export type ProductionType = 'ready' | 'custom' | 'custom_stock';
 
 export const PRODUCTION_TYPE_LABELS: Record<ProductionType, string> = {
   ready: 'جاهزة',
   custom: 'تفصيل',
+  custom_stock: 'مخزون تفصيل',
 };
 
 export interface Item {

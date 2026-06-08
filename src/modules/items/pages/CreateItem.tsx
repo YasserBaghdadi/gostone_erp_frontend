@@ -46,7 +46,7 @@ const formSchema = z.object({
   linked_purchasable_items: z.array(z.number()).optional().default([]),
   linked_sellable_items: z.array(z.number()).optional().default([]),
   thickness: z.string().optional().nullable(),
-  production_type: z.enum(["ready", "custom"]).default("ready"),
+  production_type: z.enum(["ready", "custom", "custom_stock"]).default("ready"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -330,10 +330,11 @@ export default function CreateItem() {
                         <SelectContent>
                           <SelectItem value="ready">جاهزة</SelectItem>
                           <SelectItem value="custom">تفصيل</SelectItem>
+                          <SelectItem value="custom_stock">مخزون تفصيل</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        «جاهزة» للأصناف الجاهزة و«تفصيل» للأصناف التي تُصنّع حسب الطلب
+                        «جاهزة» للأصناف الجاهزة، و«تفصيل» للأصناف التي تُصنّع حسب الطلب، و«مخزون تفصيل» لأصناف التفصيل المُجهَّزة مسبقاً وتُباع من المخزون مثل الجاهز
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

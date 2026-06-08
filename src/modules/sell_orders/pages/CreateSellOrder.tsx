@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -175,6 +175,66 @@ function WashbasinSpecFields({
   const bowlsCount = form.watch(`${base}.bowls_count`) ?? 1;
   const faucetHole = form.watch(`${base}.faucet_hole`) ?? null;
 
+  // ——— الأبعاد تُكتب على الرسم مباشرة (معاينة حيّة) ———
+  // «الطول» واحد يُطبَّق على منظور السطح والمنظور الأمامي معاً.
+  const sLen = form.watch(`${base}.surface_length`);
+  const sWid = form.watch(`${base}.surface_width`);
+  const fHgt = form.watch(`${base}.front_height`);
+
+  const gClamp = (v: number, min: number, max: number) =>
+    !Number.isFinite(v) ? min : Math.min(max, Math.max(min, v));
+  const posNum = (v: unknown, d: number) => {
+    const n = parseFloat(String(v ?? ""));
+    return Number.isFinite(n) && n > 0 ? n : d;
+  };
+  const L = posNum(sLen, 120); // الطول
+  const D = posNum(sWid, 55); // العمق
+  const H = posNum(fHgt, 20); // الارتفاع
+
+  // إسقاط مائل مبسّط داخل مسرح 560×360 (نفس مبدأ رسم المغسلة)
+  const VW = 560;
+  const VH = 360;
+  const OX = 155;
+  const OY = 250;
+  const gScale = gClamp(230 / L, 1.2, 4.0);
+  const recede = gClamp(D * gScale * 0.5, 12, 92);
+  const thick = gClamp(H * gScale, 14, 70);
+  const lengthPx = gClamp(L * gScale, 80, 300);
+  const flX = OX;
+  const flY = OY;
+  const frX = OX + lengthPx;
+  const frY = OY;
+  const blX = OX + recede;
+  const blY = OY - recede;
+  const brX = OX + lengthPx + recede;
+  const brY = OY - recede;
+  const fblY = OY + thick;
+  const fbrY = OY + thick;
+  const rbrY = brY + thick;
+  const topPoly = `${flX},${flY} ${frX},${frY} ${brX},${brY} ${blX},${blY}`;
+  const frontPoly = `${flX},${flY} ${frX},${frY} ${frX},${fbrY} ${flX},${fblY}`;
+  const rightPoly = `${frX},${frY} ${brX},${brY} ${brX},${rbrY} ${frX},${fbrY}`;
+  const matrix = `matrix(${gScale},0,${recede / D},${-recede / D},${OX},${OY})`;
+  const bowlRx = Math.min(L * 0.3, D * 0.36);
+  const bowlRy = D * 0.34;
+  const bowlCenters =
+    bowlsCount === 2
+      ? [
+          { cx: L * 0.3, cy: D / 2 },
+          { cx: L * 0.7, cy: D / 2 },
+        ]
+      : [{ cx: L / 2, cy: D / 2 }];
+
+  // مدخل رقمي يُوضَع فوق الرسم عند نسبة (left%,top%) من المسرح
+  const dimInputClass =
+    "h-8 w-16 rounded-md border-[1.5px] border-primary bg-white text-center text-sm font-semibold text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
+  const onDim =
+    (field: "surface_width" | "front_height") =>
+    (e: ChangeEvent<HTMLInputElement>) =>
+      form.setValue(`${base}.${field}`, clampToPositive(e.target.value), {
+        shouldDirty: true,
+      });
+
   const numberInput = (
     field:
       | "surface_length"
@@ -223,13 +283,108 @@ function WashbasinSpecFields({
       </h4>
 
       <div className="space-y-4">
-        {/* منظور السطح */}
+        {/* المقاسات — تُكتب على الرسم مباشرة */}
         <fieldset className="rounded-md border border-border/50 p-3">
-          <legend className="px-1 text-xs font-medium text-muted-foreground">منظور السطح</legend>
-          <div className="grid grid-cols-2 gap-3">
-            {numberInput("surface_length", "الطول")}
-            {numberInput("surface_width", "العمق")}
+          <legend className="px-1 text-xs font-medium text-muted-foreground">
+            المقاسات (اكتبها على الرسم)
+          </legend>
+          <div
+            className="relative mx-auto w-full"
+            style={{ aspectRatio: `${VW} / ${VH}`, maxWidth: 560 }}
+          >
+            <svg viewBox={`0 0 ${VW} ${VH}`} className="absolute inset-0 h-full w-full">
+              <defs>
+                <linearGradient id="wbe-top" x1="0" y1="0" x2="0.4" y2="1">
+                  <stop offset="0" stopColor="#fafaf8" />
+                  <stop offset="1" stopColor="#eceae5" />
+                </linearGradient>
+                <linearGradient id="wbe-front" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor="#f0eee9" />
+                  <stop offset="1" stopColor="#e0ddd6" />
+                </linearGradient>
+                <radialGradient id="wbe-basin" cx="0.5" cy="0.42" r="0.62">
+                  <stop offset="0" stopColor="#ffffff" />
+                  <stop offset="1" stopColor="#c4c8cd" />
+                </radialGradient>
+                <clipPath id="wbe-clip">
+                  <polygon points={topPoly} />
+                </clipPath>
+              </defs>
+              <polygon points={rightPoly} fill="#d6d3cc" stroke="#8a8980" strokeWidth="1.1" />
+              <polygon points={frontPoly} fill="url(#wbe-front)" stroke="#8a8980" strokeWidth="1.1" />
+              <polygon points={topPoly} fill="url(#wbe-top)" stroke="#8a8980" strokeWidth="1.1" />
+              <g clipPath="url(#wbe-clip)">
+                <g transform={matrix}>
+                  {bowlCenters.map((b, i) => (
+                    <g key={i}>
+                      <ellipse cx={b.cx} cy={b.cy} rx={bowlRx} ry={bowlRy} fill="#b9b2a2" />
+                      <ellipse
+                        cx={b.cx}
+                        cy={b.cy}
+                        rx={bowlRx * 0.9}
+                        ry={bowlRy * 0.9}
+                        fill="url(#wbe-basin)"
+                        stroke="#8d9095"
+                        strokeWidth="1"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    </g>
+                  ))}
+                </g>
+              </g>
+              {/* خطوط الأبعاد */}
+              <line x1={flX} y1={fblY + 16} x2={frX} y2={fbrY + 16} stroke="#9a8f86" strokeWidth="0.9" />
+              <line x1={frX + 10} y1={frY} x2={brX + 10} y2={brY} stroke="#9a8f86" strokeWidth="0.9" />
+              <line x1={flX - 16} y1={flY} x2={flX - 16} y2={fblY} stroke="#9a8f86" strokeWidth="0.9" />
+            </svg>
+
+            {/* الطول — يُطبَّق على المنظورين */}
+            <div
+              className="absolute flex flex-col items-center gap-0.5"
+              style={{ left: "50%", top: "90%", transform: "translate(-50%,-50%)" }}
+            >
+              <input
+                inputMode="decimal"
+                value={sLen ?? ""}
+                onChange={(e) => {
+                  const v = clampToPositive(e.target.value);
+                  form.setValue(`${base}.surface_length`, v, { shouldDirty: true });
+                  form.setValue(`${base}.front_length`, v, { shouldDirty: true });
+                }}
+                className={dimInputClass}
+              />
+              <span className="text-[10px] text-muted-foreground">الطول (سم)</span>
+            </div>
+            {/* العمق */}
+            <div
+              className="absolute flex flex-col items-center gap-0.5"
+              style={{ left: "84%", top: "33%", transform: "translate(-50%,-50%)" }}
+            >
+              <input
+                inputMode="decimal"
+                value={sWid ?? ""}
+                onChange={onDim("surface_width")}
+                className={dimInputClass}
+              />
+              <span className="text-[10px] text-muted-foreground">العمق</span>
+            </div>
+            {/* الارتفاع */}
+            <div
+              className="absolute flex flex-col items-center gap-0.5"
+              style={{ left: "15%", top: "74%", transform: "translate(-50%,-50%)" }}
+            >
+              <input
+                inputMode="decimal"
+                value={fHgt ?? ""}
+                onChange={onDim("front_height")}
+                className={dimInputClass}
+              />
+              <span className="text-[10px] text-muted-foreground">الارتفاع</span>
+            </div>
           </div>
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">
+            اكتب المقاسات في الخانات على الرسم — يتحدّث المجسّم لحظياً
+          </p>
         </fieldset>
 
         {/* مقاس حوض خاص */}
@@ -352,15 +507,6 @@ function WashbasinSpecFields({
             </Select>
           </div>
         </div>
-
-        {/* منظور أمامي */}
-        <fieldset className="rounded-md border border-border/50 p-3">
-          <legend className="px-1 text-xs font-medium text-muted-foreground">منظور أمامي</legend>
-          <div className="grid grid-cols-2 gap-3">
-            {numberInput("front_length", "الطول")}
-            {numberInput("front_height", "الارتفاع")}
-          </div>
-        </fieldset>
 
         {/* المواد المطلوبة */}
         <fieldset className="rounded-md border border-border/50 p-3">

@@ -680,6 +680,19 @@ export default function SellOrderDetails() {
                   </p>
                 </div>
               </div>
+              <div className="p-4 flex items-center gap-3 hover:bg-muted/5 transition-colors">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                  <CalendarClock className="h-5 w-5" />
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-xs text-muted-foreground mb-0.5">موعد التسليم</p>
+                  <p className="font-semibold text-sm font-mono">
+                    {sellOrder.delivery_date
+                      ? format(new Date(sellOrder.delivery_date), "yyyy/MM/dd HH:mm", { locale: arSA })
+                      : "—"}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

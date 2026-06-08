@@ -128,6 +128,35 @@ export function usePrintProductionOrder(): UseMutationResult<
   });
 }
 
+// Schedule Production Order (موعد التسليم)
+interface ScheduleProductionOrderArgs {
+  id: string | number;
+  scheduled_at: string | null;
+}
+
+export function useScheduleProductionOrder(): UseMutationResult<
+  ProductionOrder,
+  Error,
+  ScheduleProductionOrderArgs
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, scheduled_at }): Promise<ProductionOrder> => {
+      const { data } = await api.patch<ProductionOrder>(
+        API_ENDPOINTS.PRODUCTION_ORDERS.SCHEDULE(id),
+        { scheduled_at },
+      );
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: productionOrderKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: productionOrderKeys.detail(variables.id),
+      });
+    },
+  });
+}
+
 // Close Production Order (produces finished item into stock)
 export function useCloseProductionOrder(): UseMutationResult<
   ProductionOrder,

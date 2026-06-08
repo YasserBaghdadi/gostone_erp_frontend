@@ -495,6 +495,8 @@ export interface SellOrder {
 
   /** موعد التنفيذ (YYYY-MM-DD أو null) */
   execution_date?: string | null;
+  /** موعد التسليم الرئيسي (ISO datetime أو null) */
+  delivery_date?: string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -569,6 +571,8 @@ export interface ProductionOrder {
   materials: ProductionOrderMaterial[];
   created_at: string;
   closed_at: string | null;
+  /** موعد التسليم المجدول (ISO datetime أو null) */
+  scheduled_at?: string | null;
   /** مواصفات تصنيع المغسلة الفعّالة (للبنود من نوع تفصيل)؛ متوفّر في تفاصيل الأمر فقط */
   washbasin_spec?: WashbasinSpec | null;
 }
@@ -696,6 +700,8 @@ export interface PurchaseOrder {
   updated_at?: string;
   created_by?: number;
   accepted_at?: string;
+  /** موعد التسليم المجدول (ISO datetime أو null) */
+  scheduled_at?: string | null;
   /** تاريخ استلام المواد وترحيلها للمخزون */
   received_at?: string | null;
   /** رابط أو مسار ملف الفاتورة بعد الرفع */

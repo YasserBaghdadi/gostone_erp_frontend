@@ -163,6 +163,8 @@ export const API_ENDPOINTS = {
       `/custom-v1/production-orders/${id}/close/`,
     PRINT: (id: string | number) =>
       `/custom-v1/production-orders/${id}/print/`,
+    SCHEDULE: (id: string | number) =>
+      `/custom-v1/production-orders/${id}/schedule/`,
   },
 
   // Delivery Orders (أوامر التسليم)
@@ -192,6 +194,8 @@ export const API_ENDPOINTS = {
     PRINT: (id: string | number) => `/custom-v1/purchase-orders/${id}/print/`,
     UPLOAD_INVOICE: (id: string | number) =>
       `/custom-v1/purchase-orders/${id}/upload-invoice/`,
+    SCHEDULE: (id: string | number) =>
+      `/custom-v1/purchase-orders/${id}/schedule/`,
   },
 
   // Suppliers

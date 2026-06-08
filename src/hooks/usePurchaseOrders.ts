@@ -173,6 +173,29 @@ export function useReceivePurchaseOrder() {
   });
 }
 
+interface SchedulePurchaseOrderArgs {
+  id: string | number;
+  scheduled_at: string | null;
+}
+
+export function useSchedulePurchaseOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, scheduled_at }: SchedulePurchaseOrderArgs) => {
+      const res = await api.patch(API_ENDPOINTS.PURCHASE_ORDERS.SCHEDULE(id), {
+        scheduled_at,
+      });
+      return res.data as PurchaseOrder;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({
+        queryKey: purchaseOrderKeys.detail(id),
+      });
+      queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.lists() });
+    },
+  });
+}
+
 export function usePrintPurchaseOrder() {
   return useMutation({
     mutationFn: async ({ id }: { id: string | number }): Promise<void> => {

@@ -93,6 +93,23 @@ const emptyWashbasinSpec = (): WashbasinSpecForm => ({
   front_height: "",
 });
 
+/** ISO datetime → قيمة <input type="datetime-local"> بالتوقيت المحلي (YYYY-MM-DDTHH:mm) */
+function isoToDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** قيمة <input type="datetime-local"> (محلية) → ISO datetime، أو null إذا فارغة */
+function datetimeLocalToIso(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
 const itemSchema = z.object({
   item_id: z.number().default(0),
   name: z.string().min(1, "اسم البند مطلوب"),
@@ -119,6 +136,8 @@ const formSchema = z.object({
   dis_percentage: z.string().default("0"),
   /** موعد التنفيذ (YYYY-MM-DD) — اختياري */
   execution_date: z.string().optional().nullable(),
+  /** موعد التسليم (قيمة datetime-local المحلية) — اختياري */
+  delivery_date: z.string().optional().nullable(),
   /** الفرع — يُستخدم في وضع التعديل فقط (null = بدون فرع). */
   branch: z.number().nullable().default(null),
   sell_order_items: z.array(itemSchema),
@@ -370,6 +389,7 @@ export default function CreateSellOrder() {
       notes: "",
       dis_percentage: "0",
       execution_date: null,
+      delivery_date: null,
       branch: null,
       sell_order_items: [],
     },
@@ -410,6 +430,7 @@ export default function CreateSellOrder() {
         notes: existingSellOrder.notes || "",
         dis_percentage: existingSellOrder.dis_percentage || "0",
         execution_date: existingSellOrder.execution_date ?? null,
+        delivery_date: isoToDatetimeLocal(existingSellOrder.delivery_date),
         branch: existingSellOrder.branch ?? null,
         sell_order_items: existingSellOrder.sell_order_items.map(item => {
           const available_units = [
@@ -601,6 +622,7 @@ export default function CreateSellOrder() {
     };
 
     const executionDate = values.execution_date?.trim() ? values.execution_date.trim() : null;
+    const deliveryDate = datetimeLocalToIso(values.delivery_date);
 
     const payload: any = {
       customer_phonenumber: values.customer_phonenumber,
@@ -608,6 +630,7 @@ export default function CreateSellOrder() {
       notes: values.notes,
       dis_percentage: parseFloat(values.dis_percentage || "0").toFixed(2),
       execution_date: executionDate,
+      delivery_date: deliveryDate,
       sell_order_items: values.sell_order_items.map((item, index) => {
         const line: Record<string, unknown> = {
           item_id: item.item_id || index + 1,
@@ -843,6 +866,29 @@ export default function CreateSellOrder() {
                         <FormControl>
                           <Input
                             type="date"
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(e.target.value || null)
+                            }
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="delivery_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>موعد التسليم</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
                             value={field.value ?? ""}
                             onChange={(e) =>
                               field.onChange(e.target.value || null)

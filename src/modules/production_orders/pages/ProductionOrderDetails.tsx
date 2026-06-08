@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -9,15 +9,18 @@ import {
   X,
   CheckCircle2,
   Calendar,
+  CalendarClock,
   Boxes,
   Printer,
   Box,
+  Save,
 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -36,19 +39,38 @@ import {
   useAddProductionMaterial,
   useCloseProductionOrder,
   usePrintProductionOrder,
+  useScheduleProductionOrder,
 } from "@/hooks/useProductionOrders";
 import { PRODUCTION_ORDER_STATUS_LABELS } from "@/types";
 import type { Item } from "@/types";
 import { parseBackendError, preventNegative, clampToPositive } from "@/lib/utils";
 
+/** ISO datetime → قيمة <input type="datetime-local"> بالتوقيت المحلي (YYYY-MM-DDTHH:mm) */
+function isoToDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** قيمة <input type="datetime-local"> (محلية) → ISO datetime، أو null إذا فارغة */
+function datetimeLocalToIso(value: string): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
 export default function ProductionOrderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { data: order, isLoading, isError } = useProductionOrderDetails(id!);
+  const { data: order, isLoading, isError, refetch } = useProductionOrderDetails(id!);
   const addMaterialMutation = useAddProductionMaterial();
   const closeMutation = useCloseProductionOrder();
   const printMutation = usePrintProductionOrder();
+  const scheduleMutation = useScheduleProductionOrder();
 
   // Add material form state
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -57,6 +79,35 @@ export default function ProductionOrderDetails() {
   const [materialUnit, setMaterialUnit] = useState("");
 
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+
+  // حقل الجدولة (موعد التسليم) — يُعبّأ من بيانات الأمر.
+  const [scheduledAtInput, setScheduledAtInput] = useState("");
+
+  useEffect(() => {
+    if (!order) return;
+    setScheduledAtInput(isoToDatetimeLocal(order.scheduled_at));
+  }, [order]);
+
+  const handleSaveSchedule = () => {
+    if (!order) return;
+    scheduleMutation.mutate(
+      {
+        id: order.id,
+        scheduled_at: datetimeLocalToIso(scheduledAtInput),
+      },
+      {
+        onSuccess: () => {
+          toast.success("تم حفظ موعد التسليم");
+          refetch();
+        },
+        onError: (error) => {
+          toast.error("فشل حفظ موعد التسليم", {
+            description: parseBackendError(error),
+          });
+        },
+      },
+    );
+  };
 
   const handleSelectItem = (items: Item[]) => {
     const item = items[0];
@@ -246,6 +297,54 @@ export default function ProductionOrderDetails() {
               </p>
             </div>
           )}
+          <div className="space-y-1.5 p-4 rounded-xl bg-muted/20 border border-border/50">
+            <span className="text-sm text-muted-foreground flex items-center gap-2">
+              <CalendarClock className="h-4 w-4" />
+              موعد التسليم
+            </span>
+            <p className="font-bold text-base">
+              {order.scheduled_at
+                ? format(new Date(order.scheduled_at), "yyyy/MM/dd HH:mm", { locale: arSA })
+                : "—"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* الجدولة (موعد التسليم) */}
+      <Card className="shadow-lg border-none ring-1 ring-border/50 overflow-hidden">
+        <CardHeader className="bg-muted/5 pb-4 border-b border-border/50">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CalendarClock className="w-5 h-5 text-primary" />
+            موعد التسليم
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="scheduled_at">موعد التسليم</Label>
+              <Input
+                id="scheduled_at"
+                type="datetime-local"
+                value={scheduledAtInput}
+                onChange={(e) => setScheduledAtInput(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              className="rounded-xl gap-2"
+              onClick={handleSaveSchedule}
+              disabled={scheduleMutation.isPending}
+            >
+              {scheduleMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              حفظ
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

@@ -19,7 +19,11 @@ import {
   ExternalLink,
   PackageCheck,
   CheckCircle2,
+  CalendarClock,
+  Save,
 } from "lucide-react";
+import { format } from "date-fns";
+import { arSA } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +41,7 @@ import {
   usePrintPurchaseOrder,
   useUploadPurchaseOrderInvoice,
   useReceivePurchaseOrder,
+  useSchedulePurchaseOrder,
 } from "@/hooks/usePurchaseOrders";
 import {
   Dialog,
@@ -64,6 +69,23 @@ import { parseBackendError } from "@/lib/utils";
 function formatLineNotes(notes?: string | null): string | null {
   const t = notes?.trim();
   return t && t.length > 0 ? t : null;
+}
+
+/** ISO datetime → قيمة <input type="datetime-local"> بالتوقيت المحلي (YYYY-MM-DDTHH:mm) */
+function isoToDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** قيمة <input type="datetime-local"> (محلية) → ISO datetime، أو null إذا فارغة */
+function datetimeLocalToIso(value: string): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
 }
 
 /** ترجمة رموز الإجراء القادمة من الباك إند (سجل طلب الشراء) */
@@ -152,6 +174,31 @@ export default function PurchaseOrderDetails() {
   const printMutation = usePrintPurchaseOrder();
   const uploadInvoiceMutation = useUploadPurchaseOrderInvoice();
   const receiveMutation = useReceivePurchaseOrder();
+  const scheduleMutation = useSchedulePurchaseOrder();
+
+  // حقل الجدولة (موعد التسليم) — يُعبّأ من بيانات الطلب.
+  const [scheduledAtInput, setScheduledAtInput] = useState("");
+
+  useEffect(() => {
+    setScheduledAtInput(isoToDatetimeLocal(purchaseOrder?.scheduled_at));
+  }, [purchaseOrder?.scheduled_at]);
+
+  const handleSaveSchedule = () => {
+    if (!purchaseOrder) return;
+    scheduleMutation.mutate(
+      {
+        id: purchaseOrder.id,
+        scheduled_at: datetimeLocalToIso(scheduledAtInput),
+      },
+      {
+        onSuccess: () => toast.success("تم حفظ موعد التسليم"),
+        onError: (err) =>
+          toast.error("فشل حفظ موعد التسليم", {
+            description: parseBackendError(err),
+          }),
+      },
+    );
+  };
 
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   // map: po_item_id -> الكمية المستلمة (كنص لتمكين الإدخال)
@@ -1143,6 +1190,45 @@ export default function PurchaseOrderDetails() {
                   </span>
                 </div>
               )}
+              <div className='flex items-center justify-between'>
+                <span className='text-muted-foreground flex items-center gap-2'>
+                  <CalendarClock className='h-4 w-4' />
+                  موعد التسليم
+                </span>
+                <span className='text-sm font-mono'>
+                  {purchaseOrder.scheduled_at
+                    ? format(new Date(purchaseOrder.scheduled_at), "yyyy/MM/dd HH:mm", {
+                        locale: arSA,
+                      })
+                    : "—"}
+                </span>
+              </div>
+              <Separator />
+              <div className='space-y-2'>
+                <Label htmlFor='scheduled_at'>تعديل موعد التسليم</Label>
+                <div className='flex items-center gap-2'>
+                  <Input
+                    id='scheduled_at'
+                    type='datetime-local'
+                    value={scheduledAtInput}
+                    onChange={(e) => setScheduledAtInput(e.target.value)}
+                    className='flex-1'
+                  />
+                  <Button
+                    type='button'
+                    className='rounded-xl gap-2 shrink-0'
+                    onClick={handleSaveSchedule}
+                    disabled={scheduleMutation.isPending}
+                  >
+                    {scheduleMutation.isPending ? (
+                      <Loader2 className='h-4 w-4 animate-spin' />
+                    ) : (
+                      <Save className='h-4 w-4' />
+                    )}
+                    حفظ
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

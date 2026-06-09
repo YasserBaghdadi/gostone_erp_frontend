@@ -203,14 +203,10 @@ export default function CreateCustomerReturn() {
       return;
     }
     for (const item of selected) {
-      const qty = Number.parseInt(item.quantity || "0", 10);
-      const originalQty = Math.floor(parseFloat(item.original_quantity || "0"));
+      const qty = parseFloat(item.quantity || "0");
+      const originalQty = parseFloat(item.original_quantity || "0");
       if (!Number.isFinite(qty) || qty <= 0) {
         toast.error(`الكمية يجب أن تكون أكبر من صفر للبند: ${item.item_name}`);
-        return;
-      }
-      if (qty.toString() !== String(item.quantity).trim()) {
-        toast.error(`الكمية يجب أن تكون عدد صحيح للبند: ${item.item_name}`);
         return;
       }
       if (qty > originalQty) {
@@ -552,10 +548,9 @@ export default function CreateCustomerReturn() {
                                       field.onChange("");
                                       return;
                                     }
-                                    const n = Number.parseInt(raw, 10);
-                                    if (!Number.isFinite(n)) return;
-                                    if (n < 1) {
-                                      field.onChange("1");
+                                    const n = parseFloat(raw);
+                                    if (!Number.isFinite(n) || n <= 0) {
+                                      field.onChange("");
                                       return;
                                     }
                                     if (
@@ -573,28 +568,23 @@ export default function CreateCustomerReturn() {
                                       <FormControl>
                                         <Input
                                           type='number'
-                                          inputMode='numeric'
-                                          min={1}
+                                          inputMode='decimal'
+                                          min={0.01}
                                           max={maxQty}
-                                          step={1}
+                                          step='any'
                                           className='h-9 text-sm min-w-[80px] text-center'
                                           disabled={!isSelected}
                                           name={field.name}
                                           ref={field.ref}
                                           value={field.value ?? ""}
-                                          onKeyDown={(e) => {
-                                            preventNegative(e);
-                                            if (
-                                              [".", ",", "Decimal"].includes(
-                                                e.key,
-                                              )
-                                            ) {
-                                              e.preventDefault();
-                                            }
-                                          }}
+                                          onKeyDown={preventNegative}
                                           onChange={(e) => {
                                             if (!isSelected) return;
-                                            commitQty(e.currentTarget.value);
+                                            // allow free decimal typing (digits + a single dot); normalize on blur
+                                            const raw = e.currentTarget.value
+                                              .replace(/[^\d.]/g, "")
+                                              .replace(/(\..*)\./g, "$1");
+                                            field.onChange(raw);
                                           }}
                                           onBlur={(e) => {
                                             field.onBlur();

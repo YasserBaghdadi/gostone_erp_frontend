@@ -12,8 +12,10 @@ import {
   useTrialBalanceExcel,
   useVatSummaryExcel,
   useIncomeStatementExcel,
+  useBalanceSheetExcel,
 } from "@/hooks/useAccounts";
 import { ReportPeriodDialog } from "../components/ReportPeriodDialog";
+import { InventoryAdjustmentDialog } from "../components/InventoryAdjustmentDialog";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import type { Account } from "@/types";
 import { cn } from "@/lib/utils";
@@ -278,7 +280,11 @@ export default function AccountsPage() {
   const trialBalance = useTrialBalanceExcel();
   const vatSummary = useVatSummaryExcel();
   const incomeStatement = useIncomeStatementExcel();
-  const [reportDialog, setReportDialog] = useState<null | "vat" | "income">(null);
+  const balanceSheet = useBalanceSheetExcel();
+  const [reportDialog, setReportDialog] = useState<
+    null | "vat" | "income" | "balance"
+  >(null);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
 
   const isSearching = search.length > 0;
 
@@ -367,6 +373,23 @@ export default function AccountsPage() {
           >
             <FileText className="h-4 w-4" />
             ملخص الضريبة
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={balanceSheet.isPending}
+            onClick={() => setReportDialog("balance")}
+          >
+            <FileText className="h-4 w-4" />
+            الميزانية العمومية
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setInventoryOpen(true)}
+          >
+            <Wallet className="h-4 w-4" />
+            تسوية الجرد
           </Button>
           <Button
             variant="outline"
@@ -602,6 +625,21 @@ export default function AccountsPage() {
           incomeStatement.mutate(p, { onSuccess: () => setReportDialog(null) })
         }
       />
+      <ReportPeriodDialog
+        open={reportDialog === "balance"}
+        onOpenChange={(o) => setReportDialog(o ? "balance" : null)}
+        title="الميزانية العمومية"
+        description="اختر التاريخ لتصدير الميزانية العمومية."
+        singleDate
+        isPending={balanceSheet.isPending}
+        onGenerate={(p) =>
+          balanceSheet.mutate(
+            { as_of: p.date_to },
+            { onSuccess: () => setReportDialog(null) },
+          )
+        }
+      />
+      <InventoryAdjustmentDialog open={inventoryOpen} onOpenChange={setInventoryOpen} />
     </div>
   );
 }

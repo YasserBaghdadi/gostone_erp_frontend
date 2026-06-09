@@ -232,6 +232,53 @@ export const useIncomeStatementExcel = () => {
   });
 };
 
+/** Downloads the «الميزانية العمومية» (balance sheet) Excel as of a date. */
+export const useBalanceSheetExcel = () => {
+  return useMutation({
+    mutationFn: async (params: { as_of: string }) => {
+      const res = await api.get("/custom-v1/accounts/balance-sheet/", {
+        params,
+        responseType: "blob",
+      });
+      downloadBlob(res.data, "الميزانية_العمومية.xlsx");
+    },
+    onError: () => toast.error("تعذّر تصدير الميزانية العمومية"),
+  });
+};
+
+/** Posts the period-end inventory adjustment (تسوية جرد آخر المدة). */
+export const useInventoryAdjustment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (closing_inventory: string) => {
+      const res = await api.post("/custom-v1/accounts/inventory-adjustment/", {
+        closing_inventory,
+      });
+      return res.data as {
+        previous_inventory: string;
+        closing_inventory: string;
+        adjustment: string;
+        message: string;
+      };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [ACCOUNTS_QUERY_KEY] });
+      toast.success(data.message || "تمت تسوية الجرد", {
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
+    },
+    onError: (error: any) => {
+      let msg = "فشلت تسوية الجرد";
+      const data = error.response?.data;
+      if (data && typeof data === "object") {
+        const vals = Object.values(data).flat();
+        if (vals.length && typeof vals[0] === "string") msg = vals[0] as string;
+      }
+      toast.error("خطأ", { description: msg });
+    },
+  });
+};
+
 /** Downloads the branded «ميزان المراجعة» (trial balance) Excel (.xlsx). */
 export const useTrialBalanceExcel = () => {
   return useMutation({

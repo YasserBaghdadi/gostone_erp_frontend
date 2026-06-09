@@ -34,6 +34,8 @@ interface ReportPeriodDialogProps {
   description?: string;
   /** Show opening/closing inventory inputs (for the income statement). */
   showInventory?: boolean;
+  /** Show a single "as of" date instead of a from/to range (balance sheet). */
+  singleDate?: boolean;
   isPending?: boolean;
   onGenerate: (params: ReportPeriodParams) => void;
 }
@@ -44,6 +46,7 @@ export function ReportPeriodDialog({
   title,
   description,
   showInventory = false,
+  singleDate = false,
   isPending = false,
   onGenerate,
 }: ReportPeriodDialogProps) {
@@ -71,16 +74,23 @@ export function ReportPeriodDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          {singleDate ? (
             <div className="space-y-2">
-              <label className="text-sm font-medium">من تاريخ</label>
-              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">إلى تاريخ</label>
+              <label className="text-sm font-medium">كما في تاريخ</label>
               <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">من تاريخ</label>
+                <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">إلى تاريخ</label>
+                <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              </div>
+            </div>
+          )}
 
           {showInventory && (
             <div className="grid grid-cols-2 gap-3">

@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAllAccounts, useExportAccountsExcel, useTrialBalanceExcel } from "@/hooks/useAccounts";
+import {
+  useAllAccounts,
+  useExportAccountsExcel,
+  useTrialBalanceExcel,
+  useVatSummaryExcel,
+  useIncomeStatementExcel,
+} from "@/hooks/useAccounts";
+import { ReportPeriodDialog } from "../components/ReportPeriodDialog";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import type { Account } from "@/types";
 import { cn } from "@/lib/utils";
@@ -269,6 +276,9 @@ export default function AccountsPage() {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const exportExcel = useExportAccountsExcel();
   const trialBalance = useTrialBalanceExcel();
+  const vatSummary = useVatSummaryExcel();
+  const incomeStatement = useIncomeStatementExcel();
+  const [reportDialog, setReportDialog] = useState<null | "vat" | "income">(null);
 
   const isSearching = search.length > 0;
 
@@ -339,6 +349,24 @@ export default function AccountsPage() {
               <FileSpreadsheet className="h-4 w-4" />
             )}
             ميزان المراجعة
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={incomeStatement.isPending}
+            onClick={() => setReportDialog("income")}
+          >
+            <FileText className="h-4 w-4" />
+            قائمة الدخل
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={vatSummary.isPending}
+            onClick={() => setReportDialog("vat")}
+          >
+            <FileText className="h-4 w-4" />
+            ملخص الضريبة
           </Button>
           <Button
             variant="outline"
@@ -549,6 +577,31 @@ export default function AccountsPage() {
       </Card>
 
       <CreateAccountDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
+
+      <ReportPeriodDialog
+        open={reportDialog === "vat"}
+        onOpenChange={(o) => setReportDialog(o ? "vat" : null)}
+        title="ملخص ضريبة القيمة المضافة"
+        description="اختر الفترة لتصدير ملخص الضريبة."
+        isPending={vatSummary.isPending}
+        onGenerate={(p) =>
+          vatSummary.mutate(
+            { date_from: p.date_from, date_to: p.date_to },
+            { onSuccess: () => setReportDialog(null) },
+          )
+        }
+      />
+      <ReportPeriodDialog
+        open={reportDialog === "income"}
+        onOpenChange={(o) => setReportDialog(o ? "income" : null)}
+        title="قائمة الدخل"
+        description="اختر الفترة (والمخزون اختيارياً) لتصدير قائمة الدخل."
+        showInventory
+        isPending={incomeStatement.isPending}
+        onGenerate={(p) =>
+          incomeStatement.mutate(p, { onSuccess: () => setReportDialog(null) })
+        }
+      />
     </div>
   );
 }

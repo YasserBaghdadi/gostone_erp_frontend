@@ -188,6 +188,50 @@ export const useExportAccountsExcel = () => {
   });
 };
 
+function downloadBlob(data: BlobPart, filename: string) {
+  const url = window.URL.createObjectURL(new Blob([data]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+/** Downloads the «ملخص ضريبة القيمة المضافة» Excel for a period. */
+export const useVatSummaryExcel = () => {
+  return useMutation({
+    mutationFn: async (params: { date_from: string; date_to: string }) => {
+      const res = await api.get("/custom-v1/accounts/vat-summary/", {
+        params,
+        responseType: "blob",
+      });
+      downloadBlob(res.data, "ملخص_الضريبة.xlsx");
+    },
+    onError: () => toast.error("تعذّر تصدير ملخص الضريبة"),
+  });
+};
+
+/** Downloads the «قائمة الدخل» Excel for a period (optional inventory values). */
+export const useIncomeStatementExcel = () => {
+  return useMutation({
+    mutationFn: async (params: {
+      date_from: string;
+      date_to: string;
+      opening_inventory?: string;
+      closing_inventory?: string;
+    }) => {
+      const res = await api.get("/custom-v1/accounts/income-statement/", {
+        params,
+        responseType: "blob",
+      });
+      downloadBlob(res.data, "قائمة_الدخل.xlsx");
+    },
+    onError: () => toast.error("تعذّر تصدير قائمة الدخل"),
+  });
+};
+
 /** Downloads the branded «ميزان المراجعة» (trial balance) Excel (.xlsx). */
 export const useTrialBalanceExcel = () => {
   return useMutation({

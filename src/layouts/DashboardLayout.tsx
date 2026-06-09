@@ -78,6 +78,7 @@ const navigationGroups = [
     title: "إدارة الحسابات",
     items: [
       { name: "الحسابات", href: "/accounts", icon: DollarSign, permission: "accounts_management" },
+      { name: "تسجيل المصروفات", href: "/expenses", icon: Receipt, permission: "accounts_management" },
       { name: "سندات القيد", href: "/journal-entries", icon: FileText, permission: "journal_entries_management" },
       { name: "بوابات الدفع", href: "/accounts/payment-gateways", icon: CreditCard, permission: "payment_gateways_management" },
       { name: "بوابات القبض", href: "/collections", icon: HandCoins, permission: "payment_gateways_management" },

@@ -87,6 +87,7 @@ const CustomerReturnDetails = lazy(() => import("@/modules/customer_returns/page
 
 // Accounts
 const AccountsPage = lazy(() => import("@/modules/accounts/pages/AccountsPage"));
+const ExpensesEntryPage = lazy(() => import("@/modules/expenses/pages/ExpensesPage"));
 const AccountDetails = lazy(() => import("@/modules/accounts/pages/AccountDetails"));
 const PaymentGatewaysPage = lazy(() => import("@/modules/accounts/pages/PaymentGatewaysPage"));
 
@@ -310,6 +311,7 @@ function AppContent() {
                     <Route path=":id" element={<LazyRoute component={AccountDetails} moduleName="تفاصيل الحساب" />} />
                     <Route path="payment-gateways" element={<LazyRoute component={PaymentGatewaysPage} moduleName="إدارة بوابات الدفع" />} />
                 </Route>
+                <Route path="expenses" element={<LazyRoute component={ExpensesEntryPage} moduleName="تسجيل المصروفات" />} />
                 <Route path="payment-requests">
                     <Route index element={<LazyRoute component={PaymentRequestsPage} moduleName="طلبات الدفع" />} />
                     <Route path="cr/:id" element={<LazyRoute component={CRPaymentRequestDetails} moduleName="تفاصيل طلب دفع مرتجع" />} />

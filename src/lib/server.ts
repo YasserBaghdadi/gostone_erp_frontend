@@ -329,6 +329,7 @@ export const API_ENDPOINTS = {
     DETAILS: (id: string | number) => `/custom-v1/customer-returns/${id}/`,
     CREATE: "/custom-v1/customer-returns/",
     UPDATE: (id: string | number) => `/custom-v1/customer-returns/${id}/`,
+    ACCEPT: (id: string | number) => `/custom-v1/customer-returns/${id}/accept/`,
   },
 
   // Payment Requests — Customer Returns

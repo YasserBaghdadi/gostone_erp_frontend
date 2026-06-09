@@ -77,6 +77,21 @@ export function useCreateCustomerReturn() {
   });
 }
 
+// Accept (approve) a draft return — returns the goods to stock + posts the credit.
+export function useAcceptCustomerReturn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string | number) => {
+      const res = await api.post(API_ENDPOINTS.CUSTOMER_RETURNS.ACCEPT(id), {});
+      return res.data;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: customerReturnKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: customerReturnKeys.lists() });
+    },
+  });
+}
+
 export function useUpdateCustomerReturn() {
   const queryClient = useQueryClient();
   return useMutation({

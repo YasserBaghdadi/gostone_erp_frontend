@@ -33,6 +33,7 @@ interface AddMaterialRequest {
   item: number;
   quantity: string;
   unit_name: string;
+  storage_area?: number;
 }
 
 // List Production Orders

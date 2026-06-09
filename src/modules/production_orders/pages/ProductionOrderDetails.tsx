@@ -49,6 +49,7 @@ import {
   useScheduleProductionOrder,
 } from "@/hooks/useProductionOrders";
 import { useItemDetails } from "@/hooks/useItems";
+import { useStorageAreas } from "@/hooks/useStorageAreas";
 import {
   useProductionResponsibles,
   useCreateProductionResponsible,
@@ -97,6 +98,10 @@ export default function ProductionOrderDetails() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [materialQuantity, setMaterialQuantity] = useState("");
   const [materialUnit, setMaterialUnit] = useState("");
+  // Source warehouse for the material (defaults to the main warehouse, changeable).
+  const { data: warehousesData } = useStorageAreas({ page_size: 200 });
+  const warehouses = warehousesData?.results ?? [];
+  const [materialStorageArea, setMaterialStorageArea] = useState<string>("");
 
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
 
@@ -114,6 +119,14 @@ export default function ProductionOrderDetails() {
       order.responsible != null ? String(order.responsible) : RESPONSIBLE_NONE,
     );
   }, [order]);
+
+  // Default the material source warehouse to «المخزن الرئيسي» (or the first).
+  useEffect(() => {
+    if (materialStorageArea || warehouses.length === 0) return;
+    const def = warehouses.find((w) => w.is_default) ?? warehouses[0];
+    if (def) setMaterialStorageArea(String(def.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouses.length]);
 
   const handleAddResponsible = () => {
     const name = newResponsibleName.trim();
@@ -182,6 +195,7 @@ export default function ProductionOrderDetails() {
           item: selectedItem.id,
           quantity: materialQuantity,
           unit_name: materialUnit,
+          storage_area: materialStorageArea ? Number(materialStorageArea) : undefined,
         },
       },
       {
@@ -488,7 +502,7 @@ export default function ProductionOrderDetails() {
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             <div className="grid gap-4 lg:grid-cols-12 lg:items-end">
-              <div className="lg:col-span-5 space-y-2">
+              <div className="lg:col-span-4 space-y-2">
                 <label className="text-sm font-medium">المادة الخام</label>
                 {selectedItem ? (
                   <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border bg-primary/5 border-primary/20">
@@ -523,7 +537,7 @@ export default function ProductionOrderDetails() {
                   </p>
                 )}
               </div>
-              <div className="lg:col-span-3 space-y-2">
+              <div className="lg:col-span-2 space-y-2">
                 <label className="text-sm font-medium">الكمية</label>
                 <Input
                   type="number"
@@ -544,6 +558,24 @@ export default function ProductionOrderDetails() {
                   onChange={(e) => setMaterialUnit(e.target.value)}
                   className="h-10"
                 />
+              </div>
+              <div className="lg:col-span-2 space-y-2">
+                <label className="text-sm font-medium">المخزن (المصدر)</label>
+                <Select
+                  value={materialStorageArea || undefined}
+                  onValueChange={setMaterialStorageArea}
+                >
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue placeholder="اختر المخزن" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {warehouses.map((w) => (
+                      <SelectItem key={w.id} value={String(w.id)}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="lg:col-span-2">
                 <Button

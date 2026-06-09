@@ -94,9 +94,20 @@ export default function ItemDetails() {
               </Badge>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-muted-foreground">المخزون</span>
+              <span className="text-muted-foreground">المخزون (الإجمالي)</span>
               <span className="font-mono font-medium">{item.inventory ?? 0}</span>
             </div>
+            {item.stocks && item.stocks.length > 0 && (
+              <div className="py-2 border-b space-y-1.5">
+                <span className="text-xs text-muted-foreground">المخزون حسب المخزن</span>
+                {item.stocks.map((s) => (
+                  <div key={s.storage_area} className="flex justify-between items-center text-sm pr-3">
+                    <span className="text-muted-foreground">{s.storage_area_name}</span>
+                    <span className="font-mono">{s.quantity}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-muted-foreground">قابل للبيع</span>
               {item.is_sellable ? (

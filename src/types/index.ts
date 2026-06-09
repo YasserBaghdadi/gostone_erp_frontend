@@ -547,6 +547,15 @@ export interface Item {
   thickness?: string | null;
   /** نوع الإنتاج: 'ready' (جاهزة) أو 'custom' (تفصيل) — الافتراضي 'ready' */
   production_type?: ProductionType;
+  /** رصيد المخزون لكل مخزن (يُرجَع في تفاصيل الصنف) */
+  stocks?: ItemStockBreakdown[];
+}
+
+/** رصيد صنف في مخزن محدد */
+export interface ItemStockBreakdown {
+  storage_area: number;
+  storage_area_name: string;
+  quantity: string;
 }
 
 // ----------------------------------------------------------------------------

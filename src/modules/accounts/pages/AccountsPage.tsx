@@ -32,6 +32,15 @@ function buildTree(accounts: Account[]): AccountTreeNode[] {
     }
   }
 
+  // Order every level by account number (the natural chart-of-accounts order).
+  const sortByNumber = (nodes: AccountTreeNode[]) => {
+    nodes.sort((a, b) =>
+      (a.number || "").localeCompare(b.number || "", undefined, { numeric: true }),
+    );
+    for (const node of nodes) sortByNumber(node.children);
+  };
+  sortByNumber(roots);
+
   return roots;
 }
 
@@ -268,11 +277,15 @@ export default function AccountsPage() {
     if (!allAccounts) return [];
     if (!search) return [];
     const term = search.toLowerCase();
-    return allAccounts.filter(
-      (a) =>
-        (a.name && a.name.toLowerCase().includes(term)) ||
-        (a.number && a.number.includes(term))
-    );
+    return allAccounts
+      .filter(
+        (a) =>
+          (a.name && a.name.toLowerCase().includes(term)) ||
+          (a.number && a.number.includes(term))
+      )
+      .sort((a, b) =>
+        (a.number || "").localeCompare(b.number || "", undefined, { numeric: true })
+      );
   }, [allAccounts, search]);
 
   const tree = useMemo(() => {

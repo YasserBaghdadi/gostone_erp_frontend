@@ -102,6 +102,50 @@ export const useCreateAccount = () => {
   });
 };
 
+// Update Account (edit name/note — number & parent are immutable server-side)
+export const useUpdateAccount = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string | number;
+      data: { name?: string; note?: string };
+    }) => {
+      const { data: response } = await api.patch<Account>(
+        `/custom-v1/accounts/${id}/`,
+        data,
+      );
+      return response;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [ACCOUNTS_QUERY_KEY] });
+      queryClient.invalidateQueries({
+        queryKey: [ACCOUNTS_QUERY_KEY, "detail", variables.id],
+      });
+      toast.success("تم تعديل الحساب بنجاح", {
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
+    },
+    onError: (error: any) => {
+      let msg = "حدث خطأ أثناء تعديل الحساب";
+      if (error.response?.data) {
+        if (typeof error.response.data.detail === "string") {
+          msg = error.response.data.detail;
+        } else if (typeof error.response.data === "object") {
+          const vals = Object.values(error.response.data).flat();
+          if (vals.length > 0 && typeof vals[0] === "string") {
+            msg = vals[0] as string;
+          }
+        }
+      }
+      toast.error("خطأ", { description: msg });
+    },
+  });
+};
+
 // Get Next Account Number (Suggestion)
 export const useNextAccountNumber = (parentId: string | number | null) => {
   return useQuery({

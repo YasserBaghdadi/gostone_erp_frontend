@@ -10,6 +10,7 @@ import {
   Eye,
   EyeOff,
   Printer,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import {
   useAccountDetails,
   usePrintAccountStatement,
 } from "@/hooks/useAccounts";
+import { EditAccountDialog } from "../components/EditAccountDialog";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 import {
@@ -36,6 +38,7 @@ export default function AccountDetails() {
   const { data: account, isLoading, isError } = useAccountDetails(id!);
   const [showAllAccounts, setShowAllAccounts] = useState(false);
   const printStatement = usePrintAccountStatement();
+  const [editOpen, setEditOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -90,6 +93,14 @@ export default function AccountDetails() {
             </div>
          </div>
          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+            <Button
+              variant="outline"
+              className="gap-2 shrink-0"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="h-4 w-4" />
+              تعديل
+            </Button>
             <Button
               variant="outline"
               className="gap-2 shrink-0"
@@ -255,6 +266,12 @@ export default function AccountDetails() {
                  </Card>
             </div>
         </div>
+
+      <EditAccountDialog
+        account={account}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
     </div>
   );
 }

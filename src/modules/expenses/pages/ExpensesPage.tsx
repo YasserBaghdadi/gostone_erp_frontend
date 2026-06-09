@@ -70,6 +70,7 @@ export default function ExpensesPage() {
   const [paymentAccount, setPaymentAccount] = useState("");
   const [amount, setAmount] = useState("");
   const [includesVat, setIncludesVat] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [date, setDate] = useState(todayStr());
   const [description, setDescription] = useState("");
 
@@ -80,7 +81,11 @@ export default function ExpensesPage() {
 
   const amountNum = parseFloat(amount);
   const canSubmit =
-    !!expenseAccount && !!paymentAccount && amountNum > 0 && !record.isPending;
+    !!expenseAccount &&
+    !!paymentAccount &&
+    amountNum > 0 &&
+    (!includesVat || !!attachment) &&
+    !record.isPending;
 
   const submit = () => {
     if (!canSubmit) return;
@@ -92,11 +97,13 @@ export default function ExpensesPage() {
         includes_vat: includesVat,
         date,
         description: description.trim(),
+        attachment: includesVat ? attachment : null,
       },
       {
         onSuccess: () => {
           setAmount("");
           setDescription("");
+          setAttachment(null);
         },
       },
     );
@@ -214,7 +221,11 @@ export default function ExpensesPage() {
             <Checkbox
               id="includes-vat"
               checked={includesVat}
-              onCheckedChange={(c) => setIncludesVat(c === true)}
+              onCheckedChange={(c) => {
+                const on = c === true;
+                setIncludesVat(on);
+                if (!on) setAttachment(null);
+              }}
             />
             <Label htmlFor="includes-vat" className="cursor-pointer font-normal">
               المبلغ شامل ضريبة القيمة المضافة 15% (يُحتسب لاسترداد ضريبة المدخلات)
@@ -224,6 +235,23 @@ export default function ExpensesPage() {
           {includesVat && amountNum > 0 && (
             <div className="rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
               صافي المصروف: <b>{fmt(net)}</b> ر.س · الضريبة: <b>{fmt(vat)}</b> ر.س
+            </div>
+          )}
+
+          {includesVat && (
+            <div className="space-y-2 rounded-md border border-dashed p-3">
+              <Label>
+                الفاتورة الضريبية <span className="text-destructive">(مرفق إلزامي)</span>
+              </Label>
+              <Input
+                type="file"
+                accept=".pdf,image/*"
+                onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
+              />
+              <p className="text-xs text-muted-foreground">
+                PDF أو صورة، ويجب أن تحتوي على رمز QR متوافق مع ZATCA — تُراجَع تلقائياً
+                وتبقى «بانتظار التأكد» حتى اعتمادها.
+              </p>
             </div>
           )}
 

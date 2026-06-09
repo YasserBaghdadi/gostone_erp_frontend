@@ -9,6 +9,7 @@ export interface RecordExpensePayload {
   includes_vat: boolean;
   date?: string;
   description?: string;
+  attachment?: File | null;
 }
 
 export interface RecentExpense {
@@ -40,11 +41,26 @@ export const useRecordExpense = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: RecordExpensePayload) => {
+      const fd = new FormData();
+      fd.append("expense_account", String(payload.expense_account));
+      fd.append("payment_account", String(payload.payment_account));
+      fd.append("amount", payload.amount);
+      fd.append("includes_vat", String(payload.includes_vat));
+      if (payload.date) fd.append("date", payload.date);
+      if (payload.description) fd.append("description", payload.description);
+      if (payload.attachment) fd.append("attachment", payload.attachment);
       const { data } = await api.post(
         "/custom-v1/accounts/record-expense/",
-        payload,
+        fd,
+        { headers: { "Content-Type": "multipart/form-data" } },
       );
-      return data as { id: number; amount: string; net: string; vat: string; message: string };
+      return data as {
+        id: number;
+        amount: string;
+        net: string;
+        vat: string;
+        message: string;
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [RECENT_EXPENSES_KEY] });

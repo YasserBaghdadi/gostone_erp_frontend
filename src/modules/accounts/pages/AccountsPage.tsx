@@ -1,12 +1,12 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Plus, Search, FileText, Wallet, ChevronDown, ChevronLeft, Loader2, CornerDownLeft } from "lucide-react";
+import { Plus, Search, FileText, Wallet, ChevronDown, ChevronLeft, Loader2, CornerDownLeft, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAllAccounts } from "@/hooks/useAccounts";
+import { useAllAccounts, useExportAccountsExcel } from "@/hooks/useAccounts";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import type { Account } from "@/types";
 import { cn } from "@/lib/utils";
@@ -267,6 +267,7 @@ export default function AccountsPage() {
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const exportExcel = useExportAccountsExcel();
 
   const isSearching = search.length > 0;
 
@@ -324,10 +325,25 @@ export default function AccountsPage() {
           </h1>
           <p className="text-muted-foreground mt-1">إدارة الحسابات المالية وقيود اليومية</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          حساب جديد
-        </Button>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={exportExcel.isPending}
+            onClick={() => exportExcel.mutate()}
+          >
+            {exportExcel.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            تصدير Excel
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            حساب جديد
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}

@@ -168,6 +168,26 @@ export const useNextAccountNumber = (parentId: string | number | null) => {
   });
 };
 
+/** Downloads the branded chart-of-accounts Excel (.xlsx). */
+export const useExportAccountsExcel = () => {
+  return useMutation({
+    mutationFn: async (): Promise<void> => {
+      const response = await api.get("/custom-v1/accounts/export-excel/", {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "شجرة_الحسابات.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    },
+    onError: () => toast.error("تعذّر تصدير شجرة الحسابات"),
+  });
+};
+
 /** Fetches account statement PDF and opens it in a print-ready window. */
 export const usePrintAccountStatement = () => {
   return useMutation({

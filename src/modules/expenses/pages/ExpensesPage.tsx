@@ -8,9 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -40,31 +38,35 @@ export default function ExpensesPage() {
   const record = useRecordExpense();
   const { data: recent = [] } = useRecentExpenses();
 
-  const { expenseGroups, paymentOptions } = useMemo(() => {
+  const { mainOptions, subsByMain, paymentOptions } = useMemo(() => {
     const parentIds = new Set(
       accounts.map((a) => a.parent).filter((x): x is number => x != null),
     );
     const isLeaf = (a: Account) => !parentIds.has(a.id);
     const byNum = (a: Account, b: Account) => a.number.localeCompare(b.number);
 
-    const expenseParents = accounts
+    // Main expense accounts = level-1 children of «5» (excluding COGS «501»).
+    const mainOptions = accounts
       .filter((a) => a.number.length === 3 && a.number.startsWith("5") && a.number !== "501")
       .sort(byNum);
-    const expenseGroups = expenseParents
-      .map((p) => ({
-        parent: p,
-        items: accounts.filter((a) => a.parent === p.id && isLeaf(a)).sort(byNum),
-      }))
-      .filter((g) => g.items.length > 0);
+    // Sub accounts = leaf children per main.
+    const subsByMain: Record<number, Account[]> = {};
+    for (const m of mainOptions) {
+      subsByMain[m.id] = accounts
+        .filter((a) => a.parent === m.id && isLeaf(a))
+        .sort(byNum);
+    }
 
     const paymentOptions = accounts
       .filter((a) => a.number.startsWith("101") && isLeaf(a))
       .sort(byNum);
 
-    return { expenseGroups, paymentOptions };
+    return { mainOptions, subsByMain, paymentOptions };
   }, [accounts]);
 
+  const [mainAccount, setMainAccount] = useState("");
   const [expenseAccount, setExpenseAccount] = useState("");
+  const subOptions = mainAccount ? subsByMain[Number(mainAccount)] ?? [] : [];
   const [paymentAccount, setPaymentAccount] = useState("");
   const [amount, setAmount] = useState("");
   const [includesVat, setIncludesVat] = useState(false);
@@ -122,21 +124,44 @@ export default function ExpensesPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>نوع المصروف</Label>
-              <Select value={expenseAccount} onValueChange={setExpenseAccount}>
+              <Label>المصروف الرئيسي</Label>
+              <Select
+                value={mainAccount}
+                onValueChange={(v) => {
+                  setMainAccount(v);
+                  setExpenseAccount("");
+                }}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر بند المصروف" />
+                  <SelectValue placeholder="اختر البند الرئيسي" />
                 </SelectTrigger>
                 <SelectContent>
-                  {expenseGroups.map((g) => (
-                    <SelectGroup key={g.parent.id}>
-                      <SelectLabel>{g.parent.name}</SelectLabel>
-                      {g.items.map((a) => (
-                        <SelectItem key={a.id} value={String(a.id)}>
-                          {a.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
+                  {mainOptions.map((a) => (
+                    <SelectItem key={a.id} value={String(a.id)}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>المصروف الفرعي</Label>
+              <Select
+                value={expenseAccount}
+                onValueChange={setExpenseAccount}
+                disabled={!mainAccount}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={mainAccount ? "اختر البند الفرعي" : "اختر الرئيسي أولاً"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {subOptions.map((a) => (
+                    <SelectItem key={a.id} value={String(a.id)}>
+                      {a.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

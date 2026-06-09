@@ -286,16 +286,6 @@ export default function SellOrderDetails() {
           <Badge variant="success" className="text-sm px-4 py-1.5 rounded-lg shadow-sm">
             أمر بيع
           </Badge>
-          <Link to={`/purchase-orders/${sellOrder.id}`}>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-lg gap-2 text-primary hover:text-primary hover:bg-primary/10 border-primary/20"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              طلب الشراء المرتبط
-            </Button>
-          </Link>
           <Link to={`/customer-returns/new?sell_order=${sellOrder.id}`}>
             <Button
               variant="outline"
@@ -360,14 +350,14 @@ export default function SellOrderDetails() {
                 printMutation.mutate(
                   { id: sellOrder.id },
                   {
-                    onSuccess: () => toast.success("تم فتح عرض السعر للطباعة"),
-                    onError: () => toast.error("فشل تحميل عرض السعر"),
+                    onSuccess: () => toast.success("تم فتح أمر البيع للطباعة"),
+                    onError: () => toast.error("فشل تحميل أمر البيع"),
                   }
                 );
               }}
             >
               {printMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-              طباعة عرض السعر
+              طباعة أمر البيع
             </Button>
         </div>
       </div>

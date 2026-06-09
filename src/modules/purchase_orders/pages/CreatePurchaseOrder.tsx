@@ -103,7 +103,7 @@ const formSchema = z
     sell_order: z.coerce.number().optional(),
     sell_order_display: z.string().optional(),
     notes: z.string().optional(),
-    storage_area: z.coerce.number().optional(),
+    storage_area: z.coerce.number().min(1, "يجب اختيار المخزن (المستودع)"),
     items: z.array(itemSchema).min(1, "يجب إضافة بند واحد على الأقل"),
   })
   .superRefine((data, ctx) => {
@@ -193,14 +193,7 @@ export default function CreatePurchaseOrder() {
     },
   });
 
-  // Default the receiving warehouse to «المخزن الرئيسي».
-  useEffect(() => {
-    if (!form.getValues("storage_area") && warehouses.length) {
-      const def = warehouses.find((w) => w.is_default) ?? warehouses[0];
-      if (def) form.setValue("storage_area", def.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [warehouses.length]);
+  // Warehouse is now mandatory — no silent default; the user must pick it consciously.
 
   const { fields, append, remove, update } = useFieldArray({
     control: form.control,
@@ -910,7 +903,10 @@ export default function CreatePurchaseOrder() {
                     name='storage_area'
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>المخزن (يُستلَم فيه)</FormLabel>
+                        <FormLabel>
+                          المخزن (يُستلَم فيه){" "}
+                          <span className="text-destructive">*</span>
+                        </FormLabel>
                         <Select
                           value={field.value ? String(field.value) : undefined}
                           onValueChange={(v) => field.onChange(Number(v))}

@@ -43,6 +43,14 @@ import {
   useUpdateCustomerReturn,
   useCustomerReturnDetails,
 } from "@/hooks/useCustomerReturns";
+import { useStorageAreas } from "@/hooks/useStorageAreas";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { parseBackendError, preventNegative } from "@/lib/utils";
 import type { SellOrder } from "@/types";
 
@@ -62,6 +70,7 @@ const formSchema = z.object({
   sell_order_display: z.string().optional(),
   return_date: z.string().min(1, "تاريخ المرتجع مطلوب"),
   notes: z.string().optional(),
+  storage_area: z.number().optional(),
   items: z.array(returnItemSchema),
 });
 
@@ -86,6 +95,8 @@ export default function CreateCustomerReturn() {
 
   const createMutation = useCreateCustomerReturn();
   const updateMutation = useUpdateCustomerReturn();
+  const { data: warehousesData } = useStorageAreas({ page_size: 200 });
+  const warehouses = warehousesData?.results ?? [];
 
   const { data: existingReturn, isLoading: isLoadingDetails } =
     useCustomerReturnDetails(id!);
@@ -102,6 +113,15 @@ export default function CreateCustomerReturn() {
       items: [],
     },
   });
+
+  // Default the return warehouse to «المخزن الرئيسي».
+  useEffect(() => {
+    if (!form.getValues("storage_area") && warehouses.length) {
+      const def = warehouses.find((w) => w.is_default) ?? warehouses[0];
+      if (def) form.setValue("storage_area", def.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouses.length]);
 
   const { fields, replace } = useFieldArray({
     control: form.control,
@@ -236,6 +256,7 @@ export default function CreateCustomerReturn() {
       sell_order: values.sell_order,
       return_date: values.return_date,
       notes: values.notes || "",
+      storage_area: values.storage_area,
       items: selectedReturnItems,
     };
 
@@ -399,6 +420,34 @@ export default function CreateCustomerReturn() {
                       <FormControl>
                         <Input type='date' {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='storage_area'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>المخزن (يُرجَع إليه)</FormLabel>
+                      <Select
+                        value={field.value ? String(field.value) : undefined}
+                        onValueChange={(v) => field.onChange(Number(v))}
+                      >
+                        <FormControl>
+                          <SelectTrigger className='w-full'>
+                            <SelectValue placeholder='اختر المخزن' />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {warehouses.map((w) => (
+                            <SelectItem key={w.id} value={String(w.id)}>
+                              {w.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

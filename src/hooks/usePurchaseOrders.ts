@@ -29,6 +29,7 @@ interface CreatePurchaseOrderData {
   sell_order?: number;
   status?: string;
   notes?: string;
+  storage_area?: number;
   items: CreatePurchaseOrderItemData[];
 }
 

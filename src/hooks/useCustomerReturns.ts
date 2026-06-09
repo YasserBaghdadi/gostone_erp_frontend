@@ -26,6 +26,7 @@ interface CreateCustomerReturnData {
   sell_order: number;
   return_date: string;
   notes?: string;
+  storage_area?: number;
   items: {
     sell_order_item: number;
     quantity: string;

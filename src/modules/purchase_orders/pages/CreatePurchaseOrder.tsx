@@ -61,6 +61,7 @@ import {
   usePurchaseOrderDetails,
 } from "@/hooks/usePurchaseOrders";
 import { useSellOrders } from "@/hooks/useSellOrders";
+import { useStorageAreas } from "@/hooks/useStorageAreas";
 import { UNIT_LABELS } from "@/types";
 import {
   parseBackendError,
@@ -102,6 +103,7 @@ const formSchema = z
     sell_order: z.coerce.number().optional(),
     sell_order_display: z.string().optional(),
     notes: z.string().optional(),
+    storage_area: z.coerce.number().optional(),
     items: z.array(itemSchema).min(1, "يجب إضافة بند واحد على الأقل"),
   })
   .superRefine((data, ctx) => {
@@ -168,6 +170,8 @@ export default function CreatePurchaseOrder() {
 
   const createMutation = useCreatePurchaseOrder();
   const updateMutation = useUpdatePurchaseOrder();
+  const { data: warehousesData } = useStorageAreas({ page_size: 200 });
+  const warehouses = warehousesData?.results ?? [];
 
   const { data: existingOrder, isLoading: isLoadingDetails } =
     usePurchaseOrderDetails(id!);
@@ -188,6 +192,15 @@ export default function CreatePurchaseOrder() {
       items: [],
     },
   });
+
+  // Default the receiving warehouse to «المخزن الرئيسي».
+  useEffect(() => {
+    if (!form.getValues("storage_area") && warehouses.length) {
+      const def = warehouses.find((w) => w.is_default) ?? warehouses[0];
+      if (def) form.setValue("storage_area", def.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouses.length]);
 
   const { fields, append, remove, update } = useFieldArray({
     control: form.control,
@@ -500,6 +513,7 @@ export default function CreatePurchaseOrder() {
       ...(isOrderMode ? { supplier: values.supplier } : {}),
       sell_order: values.sell_order || undefined,
       notes: values.notes,
+      storage_area: values.storage_area,
       items: values.items.map((item) => ({
         item: item.item,
         ...(isOrderMode ? {} : { supplier: item.line_supplier }),
@@ -885,6 +899,35 @@ export default function CreatePurchaseOrder() {
                             <FileText className='h-4 w-4' />
                           </Button>
                         </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Receiving warehouse */}
+                  <FormField
+                    control={form.control}
+                    name='storage_area'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>المخزن (يُستلَم فيه)</FormLabel>
+                        <Select
+                          value={field.value ? String(field.value) : undefined}
+                          onValueChange={(v) => field.onChange(Number(v))}
+                        >
+                          <FormControl>
+                            <SelectTrigger className='w-full'>
+                              <SelectValue placeholder='اختر المخزن' />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {warehouses.map((w) => (
+                              <SelectItem key={w.id} value={String(w.id)}>
+                                {w.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

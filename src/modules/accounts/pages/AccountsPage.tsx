@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAllAccounts, useExportAccountsExcel } from "@/hooks/useAccounts";
+import { useAllAccounts, useExportAccountsExcel, useTrialBalanceExcel } from "@/hooks/useAccounts";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import type { Account } from "@/types";
 import { cn } from "@/lib/utils";
@@ -268,6 +268,7 @@ export default function AccountsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const exportExcel = useExportAccountsExcel();
+  const trialBalance = useTrialBalanceExcel();
 
   const isSearching = search.length > 0;
 
@@ -325,7 +326,20 @@ export default function AccountsPage() {
           </h1>
           <p className="text-muted-foreground mt-1">إدارة الحسابات المالية وقيود اليومية</p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={trialBalance.isPending}
+            onClick={() => trialBalance.mutate()}
+          >
+            {trialBalance.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            ميزان المراجعة
+          </Button>
           <Button
             variant="outline"
             className="gap-2"
@@ -337,7 +351,7 @@ export default function AccountsPage() {
             ) : (
               <FileSpreadsheet className="h-4 w-4" />
             )}
-            تصدير Excel
+            تصدير الشجرة
           </Button>
           <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />

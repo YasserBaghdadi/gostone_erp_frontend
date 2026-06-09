@@ -188,6 +188,26 @@ export const useExportAccountsExcel = () => {
   });
 };
 
+/** Downloads the branded «ميزان المراجعة» (trial balance) Excel (.xlsx). */
+export const useTrialBalanceExcel = () => {
+  return useMutation({
+    mutationFn: async (): Promise<void> => {
+      const response = await api.get("/custom-v1/accounts/trial-balance/", {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "ميزان_المراجعة.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    },
+    onError: () => toast.error("تعذّر تصدير ميزان المراجعة"),
+  });
+};
+
 /** Fetches account statement PDF and opens it in a print-ready window. */
 export const usePrintAccountStatement = () => {
   return useMutation({

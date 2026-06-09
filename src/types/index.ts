@@ -747,6 +747,7 @@ export interface PurchaseOrder {
   sell_order?: number;
   status: PurchaseOrderStatus;
   total_cost?: string;
+  total_cost_tax?: string;
   item_count?: number;
   notes?: string;
   items?: PurchaseOrderItem[];

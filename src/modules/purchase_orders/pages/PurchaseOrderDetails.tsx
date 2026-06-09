@@ -201,6 +201,7 @@ export default function PurchaseOrderDetails() {
   };
 
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
+  const [receiveInvoice, setReceiveInvoice] = useState<File | null>(null);
   // map: po_item_id -> الكمية المستلمة (كنص لتمكين الإدخال)
   const [receivedQtyById, setReceivedQtyById] = useState<
     Record<number, string>
@@ -302,6 +303,7 @@ export default function PurchaseOrderDetails() {
       if (item.id != null) initial[item.id] = item.quantity ?? "";
     }
     setReceivedQtyById(initial);
+    setReceiveInvoice(null);
     setReceiveDialogOpen(true);
   };
 
@@ -322,17 +324,20 @@ export default function PurchaseOrderDetails() {
     [receivableItems, receivedQtyById],
   );
 
+  const poHasVat = parseFloat(purchaseOrder?.total_cost_tax || "0") > 0;
+
   const handleConfirmReceive = (poId: string | number) => {
     const items = receivableItems.map((item) => ({
       id: item.id!,
       received_quantity: Number(receivedQtyById[item.id!]),
     }));
     receiveMutation.mutate(
-      { id: poId, items },
+      { id: poId, items, attachment: poHasVat ? receiveInvoice : null },
       {
         onSuccess: () => {
           toast.success("تم استلام المواد وترحيلها للمخزون");
           setReceiveDialogOpen(false);
+          setReceiveInvoice(null);
         },
         onError: (err) => toast.error(parseBackendError(err)),
       },
@@ -646,6 +651,23 @@ export default function PurchaseOrderDetails() {
             )}
           </div>
 
+          {poHasVat && (
+            <div className='space-y-2 rounded-xl border border-dashed p-3'>
+              <label className='text-sm font-medium'>
+                الفاتورة الضريبية للمورد{" "}
+                <span className='text-destructive'>(إلزامي)</span>
+              </label>
+              <Input
+                type='file'
+                accept='.pdf,image/*'
+                onChange={(e) => setReceiveInvoice(e.target.files?.[0] ?? null)}
+              />
+              <p className='text-xs text-muted-foreground'>
+                PDF أو صورة بها رمز QR متوافق مع ZATCA — تُراجَع تلقائياً وتبقى «بانتظار التأكد».
+              </p>
+            </div>
+          )}
+
           <DialogFooter className='gap-2 sm:gap-0'>
             <Button
               type='button'
@@ -662,7 +684,8 @@ export default function PurchaseOrderDetails() {
               disabled={
                 receiveMutation.isPending ||
                 receivableItems.length === 0 ||
-                receiveQtyInvalid
+                receiveQtyInvalid ||
+                (poHasVat && !receiveInvoice)
               }
               className='rounded-xl bg-success hover:bg-success-dark text-success-foreground border-0'
             >

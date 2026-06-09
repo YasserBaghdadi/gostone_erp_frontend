@@ -156,12 +156,17 @@ export function useReceivePurchaseOrder() {
     mutationFn: async ({
       id,
       items,
+      attachment,
     }: {
       id: string | number;
       items: ReceivePurchaseOrderItemPayload[];
+      attachment?: File | null;
     }) => {
-      const res = await api.post(API_ENDPOINTS.PURCHASE_ORDERS.RECEIVE(id), {
-        items,
+      const fd = new FormData();
+      fd.append("items", JSON.stringify(items));
+      if (attachment) fd.append("attachment", attachment);
+      const res = await api.post(API_ENDPOINTS.PURCHASE_ORDERS.RECEIVE(id), fd, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
       return res.data as PurchaseOrder;
     },

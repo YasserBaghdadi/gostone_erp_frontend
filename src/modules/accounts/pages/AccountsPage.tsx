@@ -605,7 +605,8 @@ export default function AccountsPage() {
         open={reportDialog === "vat"}
         onOpenChange={(o) => setReportDialog(o ? "vat" : null)}
         title="ملخص ضريبة القيمة المضافة"
-        description="اختر الفترة لتصدير ملخص الضريبة."
+        description="اختر الربع والسنة لتصدير ملخص الضريبة (إقرار ZATCA الربعي)."
+        quarterMode
         isPending={vatSummary.isPending}
         onGenerate={(p) =>
           vatSummary.mutate(

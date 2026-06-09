@@ -8,7 +8,33 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+
+const QUARTERS = [
+  { value: "1", label: "الربع الأول (يناير – مارس)" },
+  { value: "2", label: "الربع الثاني (أبريل – يونيو)" },
+  { value: "3", label: "الربع الثالث (يوليو – سبتمبر)" },
+  { value: "4", label: "الربع الرابع (أكتوبر – ديسمبر)" },
+];
+
+/** Returns the Gregorian date range (YYYY-MM-DD) for a quarter of a year. */
+function quarterRange(year: number, quarter: number): { from: string; to: string } {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const startMonth = (quarter - 1) * 3; // 0,3,6,9
+  const endMonth = startMonth + 3; // 3,6,9,12
+  const lastDay = new Date(year, endMonth, 0).getDate();
+  return {
+    from: `${year}-${pad(startMonth + 1)}-01`,
+    to: `${year}-${pad(endMonth)}-${pad(lastDay)}`,
+  };
+}
 
 function startOfYear(): string {
   const d = new Date();
@@ -36,6 +62,8 @@ interface ReportPeriodDialogProps {
   showInventory?: boolean;
   /** Show a single "as of" date instead of a from/to range (balance sheet). */
   singleDate?: boolean;
+  /** Pick a fiscal quarter + year instead of a from/to range (VAT summary). */
+  quarterMode?: boolean;
   isPending?: boolean;
   onGenerate: (params: ReportPeriodParams) => void;
 }
@@ -47,18 +75,29 @@ export function ReportPeriodDialog({
   description,
   showInventory = false,
   singleDate = false,
+  quarterMode = false,
   isPending = false,
   onGenerate,
 }: ReportPeriodDialogProps) {
+  const now = new Date();
   const [from, setFrom] = useState(startOfYear());
   const [to, setTo] = useState(today());
   const [openingInv, setOpeningInv] = useState("");
   const [closingInv, setClosingInv] = useState("");
+  const [year, setYear] = useState(String(now.getFullYear()));
+  const [quarter, setQuarter] = useState(String(Math.floor(now.getMonth() / 3) + 1));
 
   const submit = () => {
+    let dateFrom = from;
+    let dateTo = to;
+    if (quarterMode) {
+      const r = quarterRange(Number(year), Number(quarter));
+      dateFrom = r.from;
+      dateTo = r.to;
+    }
     onGenerate({
-      date_from: from,
-      date_to: to,
+      date_from: dateFrom,
+      date_to: dateTo,
       ...(showInventory
         ? { opening_inventory: openingInv || "0", closing_inventory: closingInv || "0" }
         : {}),
@@ -74,7 +113,35 @@ export function ReportPeriodDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {singleDate ? (
+          {quarterMode ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">الربع</label>
+                <Select value={quarter} onValueChange={setQuarter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {QUARTERS.map((q) => (
+                      <SelectItem key={q.value} value={q.value}>
+                        {q.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">السنة</label>
+                <Input
+                  type="number"
+                  min="2020"
+                  max="2100"
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                />
+              </div>
+            </div>
+          ) : singleDate ? (
             <div className="space-y-2">
               <label className="text-sm font-medium">كما في تاريخ</label>
               <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />

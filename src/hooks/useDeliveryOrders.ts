@@ -132,6 +132,7 @@ interface ScheduleDeliveryOrderArgs {
   id: string | number;
   scheduled_at: string | null;
   responsible: number | null;
+  storage_area?: number | null;
 }
 
 export function useScheduleDeliveryOrder(): UseMutationResult<
@@ -145,10 +146,13 @@ export function useScheduleDeliveryOrder(): UseMutationResult<
       id,
       scheduled_at,
       responsible,
+      storage_area,
     }): Promise<DeliveryOrder> => {
       const { data } = await api.patch<DeliveryOrder>(
         API_ENDPOINTS.DELIVERY_ORDERS.SCHEDULE(id),
-        { scheduled_at, responsible },
+        storage_area === undefined
+          ? { scheduled_at, responsible }
+          : { scheduled_at, responsible, storage_area },
       );
       return data;
     },

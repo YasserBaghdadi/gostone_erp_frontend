@@ -45,6 +45,7 @@ import {
   useScheduleDeliveryOrder,
 } from "@/hooks/useDeliveryOrders";
 import { useDeliveryResponsibles, useCreateDeliveryResponsible } from "@/hooks/useDeliveryResponsibles";
+import { useStorageAreas } from "@/hooks/useStorageAreas";
 import { DELIVERY_ORDER_STATUS_LABELS } from "@/types";
 import { parseBackendError } from "@/lib/utils";
 
@@ -78,12 +79,15 @@ export default function DeliveryOrderDetails() {
 
   const { data: responsibles } = useDeliveryResponsibles();
   const createResponsible = useCreateDeliveryResponsible();
+  const { data: warehousesData } = useStorageAreas({ page_size: 200 });
+  const warehouses = warehousesData?.results ?? [];
 
   const [isDeliverModalOpen, setIsDeliverModalOpen] = useState(false);
 
-  // حقول الجدولة (موعد العميل + المسؤول) — تُعبّأ من بيانات الأمر.
+  // حقول الجدولة (موعد العميل + المسؤول + المخزن) — تُعبّأ من بيانات الأمر.
   const [scheduledAtInput, setScheduledAtInput] = useState("");
   const [responsibleInput, setResponsibleInput] = useState<string>(RESPONSIBLE_NONE);
+  const [storageAreaInput, setStorageAreaInput] = useState<string>("");
   // وضع إضافة مسؤول جديد للقائمة المخصّصة.
   const [addingResponsible, setAddingResponsible] = useState(false);
   const [newResponsibleName, setNewResponsibleName] = useState("");
@@ -94,7 +98,12 @@ export default function DeliveryOrderDetails() {
     setResponsibleInput(
       order.responsible != null ? String(order.responsible) : RESPONSIBLE_NONE,
     );
-  }, [order]);
+    const def = warehouses.find((w) => w.is_default) ?? warehouses[0];
+    setStorageAreaInput(
+      order.storage_area != null ? String(order.storage_area) : def ? String(def.id) : "",
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order, warehouses.length]);
 
   const handleAddResponsible = () => {
     const name = newResponsibleName.trim();
@@ -122,6 +131,7 @@ export default function DeliveryOrderDetails() {
         scheduled_at: datetimeLocalToIso(scheduledAtInput),
         responsible:
           responsibleInput === RESPONSIBLE_NONE ? null : Number(responsibleInput),
+        storage_area: storageAreaInput ? Number(storageAreaInput) : null,
       },
       {
         onSuccess: () => {
@@ -403,6 +413,21 @@ export default function DeliveryOrderDetails() {
                   </Button>
                 </div>
               )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>المخزن (المصدر)</Label>
+              <Select value={storageAreaInput} onValueChange={setStorageAreaInput}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="اختر المخزن" />
+                </SelectTrigger>
+                <SelectContent>
+                  {warehouses.map((w) => (
+                    <SelectItem key={w.id} value={String(w.id)}>
+                      {w.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="flex justify-end">

@@ -650,6 +650,9 @@ export interface DeliveryOrder {
   responsible?: number | null;
   /** اسم الموظف المسؤول (أو null) */
   responsible_name?: string | null;
+  /** مخزن المصدر الذي يخرج منه التسليم */
+  storage_area?: number | null;
+  storage_area_name?: string | null;
 }
 
 export interface StorageArea {

@@ -46,7 +46,7 @@ const formSchema = z.object({
   linked_purchasable_items: z.array(z.number()).optional().default([]),
   linked_sellable_items: z.array(z.number()).optional().default([]),
   thickness: z.string().optional().nullable(),
-  production_type: z.enum(["ready", "custom", "custom_stock"]).default("ready"),
+  production_type: z.enum(["ready", "custom", "custom_stock", "second_grade"]).default("ready"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -324,8 +324,9 @@ export default function CreateItem() {
                       <Select
                         onValueChange={(v) => {
                           field.onChange(v);
-                          // «مخزون تفصيل» يُغذّى من أوامر التصنيع فقط — لا يُشترى
-                          if (v === "custom_stock") form.setValue("is_purchable", false);
+                          // «مخزون تفصيل» و«مخزون درجة ثانية» يُغذّيان من أوامر التصنيع فقط — لا يُشتريان
+                          if (v === "custom_stock" || v === "second_grade")
+                            form.setValue("is_purchable", false);
                         }}
                         value={field.value}
                       >
@@ -338,10 +339,11 @@ export default function CreateItem() {
                           <SelectItem value="ready">جاهزة</SelectItem>
                           <SelectItem value="custom">تفصيل</SelectItem>
                           <SelectItem value="custom_stock">مخزون تفصيل</SelectItem>
+                          <SelectItem value="second_grade">مخزون درجة ثانية</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        «جاهزة» للأصناف الجاهزة، و«تفصيل» للأصناف التي تُصنّع حسب الطلب، و«مخزون تفصيل» لأصناف التفصيل المُجهَّزة مسبقاً وتُباع من المخزون مثل الجاهز
+                        «جاهزة» للأصناف الجاهزة، و«تفصيل» للأصناف التي تُصنّع حسب الطلب، و«مخزون تفصيل» لأصناف التفصيل المُجهَّزة مسبقاً وتُباع من المخزون مثل الجاهز، و«مخزون درجة ثانية» لمخرجات الإنتاج من الدرجة الثانية (تُخزَّن في مخزن «مخزون درجة ثانية» حصراً وبلا تسليم تلقائي)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -393,19 +395,20 @@ export default function CreateItem() {
                     control={form.control}
                     name="is_purchable"
                     render={({ field }) => {
-                      const isCustomStock = form.watch("production_type") === "custom_stock";
+                      const pt = form.watch("production_type");
+                      const isStockProduced = pt === "custom_stock" || pt === "second_grade";
                       return (
                         <FormItem className="flex items-center gap-2">
                           <FormControl>
                             <Checkbox
-                              checked={isCustomStock ? false : field.value}
+                              checked={isStockProduced ? false : field.value}
                               onCheckedChange={field.onChange}
-                              disabled={isCustomStock}
+                              disabled={isStockProduced}
                             />
                           </FormControl>
                           <FormLabel className="!mt-0 cursor-pointer">قابل للشراء</FormLabel>
-                          {isCustomStock && (
-                            <span className="text-xs text-muted-foreground">(مخزون تفصيل يُغذّى من أوامر التصنيع فقط)</span>
+                          {isStockProduced && (
+                            <span className="text-xs text-muted-foreground">(يُغذّى من أوامر التصنيع فقط)</span>
                           )}
                         </FormItem>
                       );

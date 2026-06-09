@@ -519,13 +519,14 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
-/** نوع المنتج: جاهزة، تفصيل، أو مخزون تفصيل */
-export type ProductionType = 'ready' | 'custom' | 'custom_stock';
+/** نوع المنتج: جاهزة، تفصيل، مخزون تفصيل، أو مخزون درجة ثانية */
+export type ProductionType = 'ready' | 'custom' | 'custom_stock' | 'second_grade';
 
 export const PRODUCTION_TYPE_LABELS: Record<ProductionType, string> = {
   ready: 'جاهزة',
   custom: 'تفصيل',
   custom_stock: 'مخزون تفصيل',
+  second_grade: 'مخزون درجة ثانية',
 };
 
 export interface Item {

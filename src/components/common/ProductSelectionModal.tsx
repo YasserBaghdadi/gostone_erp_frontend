@@ -29,8 +29,8 @@ interface ProductSelectionModalProps {
   filterPurchable?: boolean; // Only show purchasable products
   /** عند التمرير (>0) تُجلب أصناف المورد فقط */
   filterSupplier?: number;
-  /** تصفية حسب نوع المنتج: 'ready' (جاهزة)، 'custom' (تفصيل)، أو 'custom_stock' (مخزون تفصيل) */
-  filterProductionType?: "ready" | "custom" | "custom_stock";
+  /** تصفية حسب نوع المنتج: 'ready' (جاهزة)، 'custom' (تفصيل)، 'custom_stock' (مخزون تفصيل)، أو 'second_grade' (مخزون درجة ثانية) */
+  filterProductionType?: "ready" | "custom" | "custom_stock" | "second_grade";
   /**
    * قصر الاختيار على مجموعة معرّفات محددة (مثل المواد المرتبطة بصنف التصنيع).
    * عند تمريرها فارغة [] لا يظهر أي صنف.

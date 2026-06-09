@@ -117,6 +117,12 @@ export default function CreateProductionOrder() {
     if (!form.getValues("unit_name")) {
       form.setValue("unit_name", item.default_unit_name);
     }
+    // «مخزون درجة ثانية» output is ALWAYS stored in its dedicated warehouse — force the
+    // form to match the backend so the picked warehouse can't contradict it.
+    if (item.production_type === "second_grade") {
+      const sg = warehouses.find((w) => w.name === "مخزون درجة ثانية");
+      if (sg) form.setValue("storage_area", sg.id);
+    }
   };
 
   const removeSelectedItem = () => {
@@ -268,12 +274,16 @@ export default function CreateProductionOrder() {
               <FormField
                 control={form.control}
                 name="storage_area"
-                render={({ field }) => (
+                render={({ field }) => {
+                  const isSecondGrade =
+                    selectedItem?.production_type === "second_grade";
+                  return (
                   <FormItem>
                     <FormLabel>المخزن (يُخزَّن فيه المنتَج)</FormLabel>
                     <Select
                       value={field.value ? String(field.value) : undefined}
                       onValueChange={(v) => field.onChange(Number(v))}
+                      disabled={isSecondGrade}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
@@ -288,9 +298,15 @@ export default function CreateProductionOrder() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {isSecondGrade && (
+                      <FormDescription>
+                        أصناف «مخزون درجة ثانية» تُخزَّن في مخزن «مخزون درجة ثانية» حصراً، ولا يصدر لها أمر تسليم تلقائي
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
-                )}
+                  );
+                }}
               />
             </CardContent>
           </Card>

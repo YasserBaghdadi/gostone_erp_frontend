@@ -21,26 +21,65 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useCreateProductionOrder } from "@/hooks/useProductionOrders";
+import {
+  WashbasinSpecFields,
+  washbasinSpecFormSchema,
+  emptyWashbasinSpec,
+  type WashbasinSpecForm,
+} from "@/modules/sell_orders/pages/CreateSellOrder";
 import { parseBackendError, preventNegative, clampToPositive } from "@/lib/utils";
 
 const formSchema = z.object({
   finished_item: z.number().min(1, "الصنف المُصنّع مطلوب"),
   quantity: z.string().min(1, "الكمية مطلوبة"),
   unit_name: z.string().min(1, "الوحدة مطلوبة"),
+  // Manufacturing specs (same as the auto production order from a sell order).
+  // Held in a one-element `sell_order_items` array because WashbasinSpecFields
+  // reads its values from that path (mirrors IssueWorkOrderSpecsModal).
+  sell_order_items: z.array(z.object({ washbasin_spec: washbasinSpecFormSchema })),
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+const strToNum = (s: string | undefined | null): number | null => {
+  const n = parseFloat(String(s ?? ""));
+  return Number.isFinite(n) ? n : null;
+};
+
+/** Form strings → API washbasin-spec payload (mirrors CreateSellOrder). */
+function buildSpec(spec: WashbasinSpecForm) {
+  const hasCustomBowl = Boolean(spec.has_custom_bowl_size);
+  return {
+    surface_length: strToNum(spec.surface_length),
+    surface_width: strToNum(spec.surface_width),
+    has_custom_bowl_size: hasCustomBowl,
+    bowl_length: hasCustomBowl ? strToNum(spec.bowl_length) : null,
+    bowl_width: hasCustomBowl ? strToNum(spec.bowl_width) : null,
+    bowl_depth: hasCustomBowl ? strToNum(spec.bowl_depth) : null,
+    hole_position: spec.hole_position ?? null,
+    bowl_type: spec.bowl_type ?? null,
+    bowls_count: spec.bowls_count === 2 ? 2 : 1,
+    faucet_hole: spec.faucet_hole ?? null,
+    front_length: strToNum(spec.front_length),
+    front_height: strToNum(spec.front_height),
+    approved_color_number: spec.approved_color_number?.trim() || null,
+    supplier_company: spec.supplier_company?.trim() || null,
+  };
+}
 
 export default function CreateProductionOrder() {
   const navigate = useNavigate();
   const createMutation = useCreateProductionOrder();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    // zod .default() inside the spec schema makes input/output types differ; cast
+    // like the other forms in this codebase.
+    resolver: zodResolver(formSchema) as never,
     defaultValues: {
       finished_item: 0,
       quantity: "",
       unit_name: "",
+      sell_order_items: [{ washbasin_spec: emptyWashbasinSpec() }],
     },
   });
 
@@ -77,6 +116,7 @@ export default function CreateProductionOrder() {
         finished_item: pendingFormData.finished_item,
         quantity: pendingFormData.quantity,
         unit_name: pendingFormData.unit_name,
+        washbasin_spec: buildSpec(pendingFormData.sell_order_items[0].washbasin_spec),
       },
       {
         onSuccess: (order) => {
@@ -203,6 +243,19 @@ export default function CreateProductionOrder() {
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          {/* Manufacturing specs — same fields as the auto production order from a sale */}
+          <Card className="border-border/50 shadow-sm max-w-2xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Factory className="h-5 w-5 text-primary" />
+                تفاصيل التصنيع
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WashbasinSpecFields form={form} index={0} />
             </CardContent>
           </Card>
 

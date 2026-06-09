@@ -10,6 +10,15 @@ interface ProductionOrdersFilters {
   page_size?: number;
   search?: string;
   status?: string;
+  responsible?: number;
+  unassigned?: boolean;
+}
+
+// Params for the printable, filtered production-orders list (by responsible/status)
+export interface ProductionListPrintParams {
+  responsible?: number;
+  unassigned?: boolean;
+  status?: string;
 }
 
 interface CreateProductionOrderRequest {
@@ -128,10 +137,36 @@ export function usePrintProductionOrder(): UseMutationResult<
   });
 }
 
-// Schedule Production Order (موعد العميل)
+// Print the filtered production-orders list (by responsible / status) as a PDF
+export function usePrintProductionOrdersList(): UseMutationResult<
+  void,
+  Error,
+  ProductionListPrintParams
+> {
+  return useMutation({
+    mutationFn: async (params: ProductionListPrintParams): Promise<void> => {
+      const { extractFilenameFromResponse, openPdfInWindow } =
+        await import("@/lib/pdfUtils");
+
+      const response = await api.get(API_ENDPOINTS.PRODUCTION_ORDERS.PRINT_LIST, {
+        params,
+        responseType: "blob",
+      });
+
+      const filename = extractFilenameFromResponse(
+        response,
+        "production_orders_list.pdf",
+      );
+      openPdfInWindow(response.data, filename);
+    },
+  });
+}
+
+// Schedule Production Order (موعد العميل + مسؤول التصنيع)
 interface ScheduleProductionOrderArgs {
   id: string | number;
   scheduled_at: string | null;
+  responsible?: number | null;
 }
 
 export function useScheduleProductionOrder(): UseMutationResult<
@@ -141,10 +176,10 @@ export function useScheduleProductionOrder(): UseMutationResult<
 > {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, scheduled_at }): Promise<ProductionOrder> => {
+    mutationFn: async ({ id, scheduled_at, responsible }): Promise<ProductionOrder> => {
       const { data } = await api.patch<ProductionOrder>(
         API_ENDPOINTS.PRODUCTION_ORDERS.SCHEDULE(id),
-        { scheduled_at },
+        responsible === undefined ? { scheduled_at } : { scheduled_at, responsible },
       );
       return data;
     },

@@ -31,6 +31,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ProductSelectionModal } from "@/components/common/ProductSelectionModal";
 import { WashbasinDrawing } from "@/components/common/WashbasinDrawing";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
@@ -42,9 +49,15 @@ import {
   useScheduleProductionOrder,
 } from "@/hooks/useProductionOrders";
 import { useItemDetails } from "@/hooks/useItems";
+import {
+  useProductionResponsibles,
+  useCreateProductionResponsible,
+} from "@/hooks/useProductionResponsibles";
 import { PRODUCTION_ORDER_STATUS_LABELS } from "@/types";
 import type { Item } from "@/types";
 import { parseBackendError, preventNegative, clampToPositive } from "@/lib/utils";
+
+const RESPONSIBLE_NONE = "none";
 
 /** ISO datetime → قيمة <input type="datetime-local"> بالتوقيت المحلي (YYYY-MM-DDTHH:mm) */
 function isoToDatetimeLocal(iso: string | null | undefined): string {
@@ -76,6 +89,9 @@ export default function ProductionOrderDetails() {
   const printMutation = usePrintProductionOrder();
   const scheduleMutation = useScheduleProductionOrder();
 
+  const { data: responsibles } = useProductionResponsibles();
+  const createResponsible = useCreateProductionResponsible();
+
   // Add material form state
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
@@ -84,13 +100,38 @@ export default function ProductionOrderDetails() {
 
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
 
-  // حقل الجدولة (موعد العميل) — يُعبّأ من بيانات الأمر.
+  // حقول الجدولة (موعد العميل + المسؤول) — تُعبّأ من بيانات الأمر.
   const [scheduledAtInput, setScheduledAtInput] = useState("");
+  const [responsibleInput, setResponsibleInput] = useState<string>(RESPONSIBLE_NONE);
+  // وضع إضافة مسؤول جديد للقائمة المخصّصة.
+  const [addingResponsible, setAddingResponsible] = useState(false);
+  const [newResponsibleName, setNewResponsibleName] = useState("");
 
   useEffect(() => {
     if (!order) return;
     setScheduledAtInput(isoToDatetimeLocal(order.scheduled_at));
+    setResponsibleInput(
+      order.responsible != null ? String(order.responsible) : RESPONSIBLE_NONE,
+    );
   }, [order]);
+
+  const handleAddResponsible = () => {
+    const name = newResponsibleName.trim();
+    if (!name) return;
+    createResponsible.mutate(
+      { name },
+      {
+        onSuccess: (created) => {
+          setResponsibleInput(String(created.id));
+          setNewResponsibleName("");
+          setAddingResponsible(false);
+          toast.success("تمت إضافة المسؤول");
+        },
+        onError: (e) =>
+          toast.error("فشل إضافة المسؤول", { description: parseBackendError(e) }),
+      },
+    );
+  };
 
   const handleSaveSchedule = () => {
     if (!order) return;
@@ -98,14 +139,16 @@ export default function ProductionOrderDetails() {
       {
         id: order.id,
         scheduled_at: datetimeLocalToIso(scheduledAtInput),
+        responsible:
+          responsibleInput === RESPONSIBLE_NONE ? null : Number(responsibleInput),
       },
       {
         onSuccess: () => {
-          toast.success("تم حفظ موعد العميل");
+          toast.success("تم حفظ الجدولة والمسؤول");
           refetch();
         },
         onError: (error) => {
-          toast.error("فشل حفظ موعد العميل", {
+          toast.error("فشل حفظ الجدولة", {
             description: parseBackendError(error),
           });
         },
@@ -320,7 +363,7 @@ export default function ProductionOrderDetails() {
         <CardHeader className="bg-muted/5 pb-4 border-b border-border/50">
           <CardTitle className="text-lg flex items-center gap-2">
             <CalendarClock className="w-5 h-5 text-primary" />
-            موعد العميل
+            الجدولة والمسؤول
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
@@ -333,6 +376,73 @@ export default function ProductionOrderDetails() {
                 value={scheduledAtInput}
                 onChange={(e) => setScheduledAtInput(e.target.value)}
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label>مسؤول التصنيع</Label>
+              {addingResponsible ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    autoFocus
+                    placeholder="اسم المسؤول"
+                    value={newResponsibleName}
+                    onChange={(e) => setNewResponsibleName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddResponsible();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddResponsible}
+                    disabled={createResponsible.isPending}
+                  >
+                    {createResponsible.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "إضافة"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setAddingResponsible(false);
+                      setNewResponsibleName("");
+                    }}
+                  >
+                    إلغاء
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Select value={responsibleInput} onValueChange={setResponsibleInput}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="اختر المسؤول" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={RESPONSIBLE_NONE}>—</SelectItem>
+                      {(responsibles ?? []).map((r) => (
+                        <SelectItem key={r.id} value={String(r.id)}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    title="إضافة مسؤول جديد"
+                    onClick={() => setAddingResponsible(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex justify-end">

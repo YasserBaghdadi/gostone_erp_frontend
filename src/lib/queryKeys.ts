@@ -68,6 +68,12 @@ export const deliveryResponsibleKeys = {
   list: () => [...deliveryResponsibleKeys.lists()] as const,
 };
 
+export const productionResponsibleKeys = {
+  all: ['productionResponsibles'] as const,
+  lists: () => [...productionResponsibleKeys.all, 'list'] as const,
+  list: () => [...productionResponsibleKeys.lists()] as const,
+};
+
 // =====================
 // Sell Orders
 // =====================

@@ -589,6 +589,18 @@ export interface ProductionOrder {
   scheduled_at?: string | null;
   /** مواصفات تصنيع المغسلة الفعّالة (للبنود من نوع تفصيل)؛ متوفّر في تفاصيل الأمر فقط */
   washbasin_spec?: WashbasinSpec | null;
+  /** مسؤول التصنيع المُسنَد للأمر */
+  responsible?: number | null;
+  /** اسم مسؤول التصنيع */
+  responsible_name?: string | null;
+}
+
+/** مسؤول التصنيع (قائمة مُدارة منفصلة عن مسؤولي التسليم) */
+export interface ProductionResponsible {
+  id: number;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
 }
 
 // ----------------------------------------------------------------------------

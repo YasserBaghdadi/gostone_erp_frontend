@@ -103,6 +103,11 @@ export const API_ENDPOINTS = {
     CREATE: "/custom-v1/delivery-responsibles/",
   },
 
+  PRODUCTION_RESPONSIBLES: {
+    LIST: "/custom-v1/production-responsibles/",
+    CREATE: "/custom-v1/production-responsibles/",
+  },
+
   // Sell Orders (Sales Orders API)
   SELL_ORDERS: {
     LIST: "/custom-v1/sell_orders/",
@@ -171,6 +176,7 @@ export const API_ENDPOINTS = {
       `/custom-v1/production-orders/${id}/close/`,
     PRINT: (id: string | number) =>
       `/custom-v1/production-orders/${id}/print/`,
+    PRINT_LIST: "/custom-v1/production-orders/print-list/",
     SCHEDULE: (id: string | number) =>
       `/custom-v1/production-orders/${id}/schedule/`,
   },

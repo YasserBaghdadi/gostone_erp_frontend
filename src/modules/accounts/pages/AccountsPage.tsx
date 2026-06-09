@@ -16,6 +16,7 @@ import {
 } from "@/hooks/useAccounts";
 import { ReportPeriodDialog } from "../components/ReportPeriodDialog";
 import { InventoryAdjustmentDialog } from "../components/InventoryAdjustmentDialog";
+import { ReportPreviewModal } from "../components/ReportPreviewModal";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import type { Account } from "@/types";
 import { cn } from "@/lib/utils";
@@ -285,6 +286,33 @@ export default function AccountsPage() {
     null | "vat" | "income" | "balance"
   >(null);
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [preview, setPreview] = useState<{
+    kind: "vat" | "income" | "balance" | "trial";
+    endpoint: string;
+    params: Record<string, string>;
+  } | null>(null);
+
+  const downloadPreview = () => {
+    if (!preview) return;
+    const p = preview.params;
+    if (preview.kind === "vat")
+      vatSummary.mutate({ date_from: p.date_from, date_to: p.date_to });
+    else if (preview.kind === "income")
+      incomeStatement.mutate({
+        date_from: p.date_from,
+        date_to: p.date_to,
+        opening_inventory: p.opening_inventory,
+        closing_inventory: p.closing_inventory,
+      });
+    else if (preview.kind === "balance")
+      balanceSheet.mutate({ as_of: p.as_of });
+    else if (preview.kind === "trial") trialBalance.mutate();
+  };
+  const downloadPending =
+    vatSummary.isPending ||
+    incomeStatement.isPending ||
+    balanceSheet.isPending ||
+    trialBalance.isPending;
 
   const isSearching = search.length > 0;
 
@@ -346,14 +374,11 @@ export default function AccountsPage() {
           <Button
             variant="outline"
             className="gap-2"
-            disabled={trialBalance.isPending}
-            onClick={() => trialBalance.mutate()}
+            onClick={() =>
+              setPreview({ kind: "trial", endpoint: "trial-balance", params: {} })
+            }
           >
-            {trialBalance.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileSpreadsheet className="h-4 w-4" />
-            )}
+            <FileSpreadsheet className="h-4 w-4" />
             ميزان المراجعة
           </Button>
           <Button
@@ -605,42 +630,64 @@ export default function AccountsPage() {
         open={reportDialog === "vat"}
         onOpenChange={(o) => setReportDialog(o ? "vat" : null)}
         title="ملخص ضريبة القيمة المضافة"
-        description="اختر الربع والسنة لتصدير ملخص الضريبة (إقرار ZATCA الربعي)."
+        description="اختر الربع والسنة لعرض ملخص الضريبة (إقرار ZATCA الربعي)."
         quarterMode
-        isPending={vatSummary.isPending}
-        onGenerate={(p) =>
-          vatSummary.mutate(
-            { date_from: p.date_from, date_to: p.date_to },
-            { onSuccess: () => setReportDialog(null) },
-          )
-        }
+        submitLabel="عرض"
+        onGenerate={(p) => {
+          setPreview({
+            kind: "vat",
+            endpoint: "vat-summary",
+            params: { date_from: p.date_from, date_to: p.date_to },
+          });
+          setReportDialog(null);
+        }}
       />
       <ReportPeriodDialog
         open={reportDialog === "income"}
         onOpenChange={(o) => setReportDialog(o ? "income" : null)}
         title="قائمة الدخل"
-        description="اختر الفترة (والمخزون اختيارياً) لتصدير قائمة الدخل."
+        description="اختر الفترة (والمخزون اختيارياً) لعرض قائمة الدخل."
         showInventory
-        isPending={incomeStatement.isPending}
-        onGenerate={(p) =>
-          incomeStatement.mutate(p, { onSuccess: () => setReportDialog(null) })
-        }
+        submitLabel="عرض"
+        onGenerate={(p) => {
+          setPreview({
+            kind: "income",
+            endpoint: "income-statement",
+            params: {
+              date_from: p.date_from,
+              date_to: p.date_to,
+              opening_inventory: p.opening_inventory ?? "0",
+              closing_inventory: p.closing_inventory ?? "0",
+            },
+          });
+          setReportDialog(null);
+        }}
       />
       <ReportPeriodDialog
         open={reportDialog === "balance"}
         onOpenChange={(o) => setReportDialog(o ? "balance" : null)}
         title="الميزانية العمومية"
-        description="اختر التاريخ لتصدير الميزانية العمومية."
+        description="اختر التاريخ لعرض الميزانية العمومية."
         singleDate
-        isPending={balanceSheet.isPending}
-        onGenerate={(p) =>
-          balanceSheet.mutate(
-            { as_of: p.date_to },
-            { onSuccess: () => setReportDialog(null) },
-          )
-        }
+        submitLabel="عرض"
+        onGenerate={(p) => {
+          setPreview({
+            kind: "balance",
+            endpoint: "balance-sheet",
+            params: { as_of: p.date_to },
+          });
+          setReportDialog(null);
+        }}
       />
       <InventoryAdjustmentDialog open={inventoryOpen} onOpenChange={setInventoryOpen} />
+      <ReportPreviewModal
+        open={!!preview}
+        onOpenChange={(o) => !o && setPreview(null)}
+        endpoint={preview?.endpoint ?? ""}
+        params={preview?.params ?? {}}
+        onDownload={downloadPreview}
+        downloadPending={downloadPending}
+      />
     </div>
   );
 }

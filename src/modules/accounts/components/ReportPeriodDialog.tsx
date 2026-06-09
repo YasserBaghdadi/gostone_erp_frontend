@@ -64,6 +64,8 @@ interface ReportPeriodDialogProps {
   singleDate?: boolean;
   /** Pick a fiscal quarter + year instead of a from/to range (VAT summary). */
   quarterMode?: boolean;
+  /** Submit button label (default «تصدير»). */
+  submitLabel?: string;
   isPending?: boolean;
   onGenerate: (params: ReportPeriodParams) => void;
 }
@@ -76,6 +78,7 @@ export function ReportPeriodDialog({
   showInventory = false,
   singleDate = false,
   quarterMode = false,
+  submitLabel = "تصدير",
   isPending = false,
   onGenerate,
 }: ReportPeriodDialogProps) {
@@ -197,7 +200,7 @@ export function ReportPeriodDialog({
             </Button>
             <Button type="button" onClick={submit} disabled={isPending}>
               {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              تصدير
+              {submitLabel}
             </Button>
           </div>
         </div>

@@ -16,6 +16,7 @@ import {
   PlusCircle,
   ShoppingCart,
   Warehouse,
+  ArrowLeftRight,
   CreditCard,
   FileText,
   PackageOpen,
@@ -88,6 +89,7 @@ const navigationGroups = [
     items: [
       { name: "الموافقات", href: "/approvals", icon: ClipboardList, permission: "approval_management" },
       { name: "المخازن", href: "/storage-areas", icon: Warehouse, permission: "storage_areas_management" },
+      { name: "تحويل المخزون", href: "/stock-transfers", icon: ArrowLeftRight, permission: "storage_areas_management" },
     ]
   }
 ];

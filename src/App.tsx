@@ -78,6 +78,7 @@ const SuppliersList = lazy(() => import("@/modules/purchase_orders/pages/Supplie
 const SupplierDetails = lazy(() => import("@/modules/purchase_orders/pages/SupplierDetails"));
 const CreateSupplier = lazy(() => import("@/modules/purchase_orders/pages/CreateSupplier"));
 const StorageAreasList = lazy(() => import("@/modules/storage/pages/StorageAreasList"));
+const StockTransfers = lazy(() => import("@/modules/stock_transfers/pages/StockTransfers"));
 
 // Customer Returns
 const CustomerReturnsList = lazy(() => import("@/modules/customer_returns/pages/CustomerReturnsList"));
@@ -299,6 +300,7 @@ function AppContent() {
               {/* Storage Areas */}
               <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.storageAreas} />}>
                 <Route path="storage-areas" element={<LazyRoute component={StorageAreasList} moduleName="مناطق التخزين" />} />
+                <Route path="stock-transfers" element={<LazyRoute component={StockTransfers} moduleName="تحويل المخزون" />} />
               </Route>
               
               {/* Financial Management */}

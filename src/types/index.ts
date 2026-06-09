@@ -662,6 +662,21 @@ export interface StorageArea {
   is_active?: boolean;
 }
 
+/** تحويل مخزون بين مخزنين */
+export interface StockTransfer {
+  id: number;
+  item: number;
+  item_name: string;
+  from_storage_area: number;
+  from_storage_area_name: string;
+  to_storage_area: number;
+  to_storage_area_name: string;
+  quantity: string;
+  unit_name: string;
+  note: string;
+  created_at: string;
+}
+
 // Purchase Order Types
 export type PurchaseOrderStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING' | 'APPROVED' | 'ACCEPTED' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
 

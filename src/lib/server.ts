@@ -318,6 +318,11 @@ export const API_ENDPOINTS = {
     DELETE: (id: string | number) => `/custom-v1/storage-areas/${id}/`,
   },
 
+  STOCK_TRANSFERS: {
+    LIST: "/custom-v1/stock-transfers/",
+    CREATE: "/custom-v1/stock-transfers/",
+  },
+
   // Customer Returns
   CUSTOMER_RETURNS: {
     LIST: "/custom-v1/customer-returns/",

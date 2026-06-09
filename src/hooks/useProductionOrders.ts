@@ -25,6 +25,7 @@ interface CreateProductionOrderRequest {
   finished_item: number;
   quantity: string;
   unit_name: string;
+  storage_area?: number;
   washbasin_spec?: Record<string, unknown> | null;
 }
 

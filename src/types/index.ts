@@ -655,6 +655,8 @@ export interface DeliveryOrder {
 export interface StorageArea {
   id: number;
   name: string;
+  is_default?: boolean;
+  is_active?: boolean;
 }
 
 // Purchase Order Types

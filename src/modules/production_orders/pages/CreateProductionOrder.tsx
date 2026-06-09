@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,6 +21,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useCreateProductionOrder } from "@/hooks/useProductionOrders";
+import { useStorageAreas } from "@/hooks/useStorageAreas";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   WashbasinSpecFields,
   washbasinSpecFormSchema,
@@ -33,6 +41,7 @@ const formSchema = z.object({
   finished_item: z.number().min(1, "الصنف المُصنّع مطلوب"),
   quantity: z.string().min(1, "الكمية مطلوبة"),
   unit_name: z.string().min(1, "الوحدة مطلوبة"),
+  storage_area: z.number().optional(),
   // Manufacturing specs (same as the auto production order from a sell order).
   // Held in a one-element `sell_order_items` array because WashbasinSpecFields
   // reads its values from that path (mirrors IssueWorkOrderSpecsModal).
@@ -70,6 +79,8 @@ function buildSpec(spec: WashbasinSpecForm) {
 export default function CreateProductionOrder() {
   const navigate = useNavigate();
   const createMutation = useCreateProductionOrder();
+  const { data: warehousesData } = useStorageAreas({ page_size: 200 });
+  const warehouses = warehousesData?.results ?? [];
 
   const form = useForm<FormValues>({
     // zod .default() inside the spec schema makes input/output types differ; cast
@@ -82,6 +93,15 @@ export default function CreateProductionOrder() {
       sell_order_items: [{ washbasin_spec: emptyWashbasinSpec() }],
     },
   });
+
+  // Default the output warehouse to «المخزن الرئيسي» (or the first warehouse).
+  useEffect(() => {
+    if (!form.getValues("storage_area") && warehouses.length) {
+      const def = warehouses.find((w) => w.is_default) ?? warehouses[0];
+      if (def) form.setValue("storage_area", def.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouses.length]);
 
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
@@ -116,6 +136,7 @@ export default function CreateProductionOrder() {
         finished_item: pendingFormData.finished_item,
         quantity: pendingFormData.quantity,
         unit_name: pendingFormData.unit_name,
+        storage_area: pendingFormData.storage_area,
         washbasin_spec: buildSpec(pendingFormData.sell_order_items[0].washbasin_spec),
       },
       {
@@ -239,6 +260,34 @@ export default function CreateProductionOrder() {
                     <FormControl>
                       <Input placeholder="مثال: piece, meter, sqm" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="storage_area"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>المخزن (يُخزَّن فيه المنتَج)</FormLabel>
+                    <Select
+                      value={field.value ? String(field.value) : undefined}
+                      onValueChange={(v) => field.onChange(Number(v))}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="اختر المخزن" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {warehouses.map((w) => (
+                          <SelectItem key={w.id} value={String(w.id)}>
+                            {w.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

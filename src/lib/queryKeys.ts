@@ -42,6 +42,13 @@ export const depreciationRunKeys = {
     filters ? [...depreciationRunKeys.lists(), filters] as const : depreciationRunKeys.lists(),
 };
 
+export const supplierPaymentKeys = {
+  all: ['supplier-payments'] as const,
+  lists: () => [...supplierPaymentKeys.all, 'list'] as const,
+  list: (filters?: object) =>
+    filters ? [...supplierPaymentKeys.lists(), filters] as const : supplierPaymentKeys.lists(),
+};
+
 // =====================
 // Customers
 // =====================

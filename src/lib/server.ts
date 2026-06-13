@@ -225,6 +225,16 @@ export const API_ENDPOINTS = {
       `/custom-v1/suppliers/${id}/statement/`,
   },
 
+  // General supplier payments (on-account)
+  SUPPLIER_PAYMENTS: {
+    LIST: "/custom-v1/supplier-payments/",
+    CREATE: "/custom-v1/supplier-payments/",
+  },
+
+  // Cash / bank accounts (payment sources)
+  CASH_ACCOUNTS: { LIST: "/custom-v1/cash-accounts/" },
+  BANK_ACCOUNTS: { LIST: "/custom-v1/bank-accounts/" },
+
   // Accounts (Chart of Accounts)
   ACCOUNTS: {
     LIST: "/custom-v1/accounts/",

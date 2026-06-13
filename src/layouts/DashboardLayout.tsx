@@ -87,6 +87,7 @@ const navigationGroups = [
       { name: "قوالب الاستحقاق", href: "/accrual-templates", icon: FileText, permission: "accounts_management" },
       { name: "الأصول الثابتة", href: "/fixed-assets", icon: Package, permission: "accounts_management" },
       { name: "مسودّات آخر الشهر", href: "/month-end-drafts", icon: ClipboardList, permission: "accounts_management" },
+      { name: "دفعات الموردين", href: "/supplier-payments", icon: HandCoins, permission: "accounts_management" },
     ]
   },
   {

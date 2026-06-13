@@ -120,6 +120,7 @@ const CreateJournalEntry = lazy(() => import("@/modules/accounts/pages/CreateJou
 const AccrualTemplatesList = lazy(() => import("@/modules/accruals/pages/AccrualTemplatesList"));
 const MonthEndDraftsPage = lazy(() => import("@/modules/accruals/pages/MonthEndDraftsPage"));
 const FixedAssetsList = lazy(() => import("@/modules/fixed_assets/pages/FixedAssetsList"));
+const SupplierPaymentsPage = lazy(() => import("@/modules/supplier_payments/pages/SupplierPaymentsPage"));
 
 // ... imports remain the same
 
@@ -355,6 +356,7 @@ function AppContent() {
                 <Route path="accrual-templates" element={<LazyRoute component={AccrualTemplatesList} moduleName="قوالب الاستحقاق" />} />
                 <Route path="fixed-assets" element={<LazyRoute component={FixedAssetsList} moduleName="الأصول الثابتة" />} />
                 <Route path="month-end-drafts" element={<LazyRoute component={MonthEndDraftsPage} moduleName="مسودّات آخر الشهر" />} />
+                <Route path="supplier-payments" element={<LazyRoute component={SupplierPaymentsPage} moduleName="دفعات الموردين" />} />
               </Route>
 
               </Route>

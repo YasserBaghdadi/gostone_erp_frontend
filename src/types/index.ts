@@ -1066,3 +1066,88 @@ export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
   tabby: 'تابي',
   buy_now_pay_later: 'اشترِ الآن وادفع لاحقاً',
 };
+
+// =====================
+// Recurring Accruals & Fixed-Asset Depreciation
+// =====================
+
+export type AccrualKind = 'SALARY' | 'RENT' | 'OTHER';
+
+export const ACCRUAL_KIND_LABELS: Record<AccrualKind, string> = {
+  SALARY: 'رواتب',
+  RENT: 'إيجار',
+  OTHER: 'أخرى',
+};
+
+export type RunStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
+
+export const RUN_STATUS_LABELS: Record<
+  RunStatus,
+  { label: string; color: 'secondary' | 'success' | 'destructive' }
+> = {
+  DRAFT: { label: 'مسودّة', color: 'secondary' },
+  POSTED: { label: 'مُرحّل', color: 'success' },
+  CANCELLED: { label: 'ملغي', color: 'destructive' },
+};
+
+export interface AccrualTemplate {
+  id: number;
+  name: string;
+  kind: AccrualKind;
+  expense_account: number;
+  liability_account: number;
+  amount: string;
+  is_taxable: boolean;
+  start_date: string; // YYYY-MM-DD
+  end_date: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AccrualRun {
+  id: number;
+  template: number;
+  template_name: string;
+  period_year: number;
+  period_month: number;
+  gross_amount: string;
+  net_amount: string;
+  tax_amount: string;
+  is_taxable: boolean;
+  status: RunStatus;
+  journal_entry: number | null;
+  posted_at: string | null;
+  created_at: string;
+}
+
+export interface FixedAsset {
+  id: number;
+  name: string;
+  cost: string;
+  salvage_value: string;
+  acquisition_date: string; // YYYY-MM-DD
+  useful_life_months: number;
+  method: string;
+  expense_account: number;
+  accumulated_account: number;
+  is_active: boolean;
+  monthly_depreciation: string;
+  accumulated_depreciation: string;
+  remaining_depreciable: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DepreciationRun {
+  id: number;
+  asset: number;
+  asset_name: string;
+  period_year: number;
+  period_month: number;
+  amount: string;
+  status: RunStatus;
+  journal_entry: number | null;
+  posted_at: string | null;
+  created_at: string;
+}

@@ -84,6 +84,9 @@ const navigationGroups = [
       { name: "بوابات الدفع", href: "/accounts/payment-gateways", icon: CreditCard, permission: "payment_gateways_management" },
       { name: "بوابات القبض", href: "/collections", icon: HandCoins, permission: "payment_gateways_management" },
       { name: "طلبات الدفع", href: "/payment-requests", icon: CreditCard, permission: "accounts_management" },
+      { name: "قوالب الاستحقاق", href: "/accrual-templates", icon: FileText, permission: "accounts_management" },
+      { name: "الأصول الثابتة", href: "/fixed-assets", icon: Package, permission: "accounts_management" },
+      { name: "مسودّات آخر الشهر", href: "/month-end-drafts", icon: ClipboardList, permission: "accounts_management" },
     ]
   },
   {

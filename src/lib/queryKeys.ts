@@ -1,11 +1,46 @@
 /**
  * Centralized Query Keys
- * 
+ *
  * All React Query keys are defined here for:
  * - Consistency across the application
  * - Easier refactoring and maintenance
  * - Better cache invalidation
  */
+
+// =====================
+// Recurring Accruals & Fixed Assets
+// =====================
+export const accrualTemplateKeys = {
+  all: ['accrual-templates'] as const,
+  lists: () => [...accrualTemplateKeys.all, 'list'] as const,
+  list: (filters?: object) =>
+    filters ? [...accrualTemplateKeys.lists(), filters] as const : accrualTemplateKeys.lists(),
+  details: () => [...accrualTemplateKeys.all, 'detail'] as const,
+  detail: (id: string | number) => [...accrualTemplateKeys.details(), id] as const,
+};
+
+export const accrualRunKeys = {
+  all: ['accrual-runs'] as const,
+  lists: () => [...accrualRunKeys.all, 'list'] as const,
+  list: (filters?: object) =>
+    filters ? [...accrualRunKeys.lists(), filters] as const : accrualRunKeys.lists(),
+};
+
+export const fixedAssetKeys = {
+  all: ['fixed-assets'] as const,
+  lists: () => [...fixedAssetKeys.all, 'list'] as const,
+  list: (filters?: object) =>
+    filters ? [...fixedAssetKeys.lists(), filters] as const : fixedAssetKeys.lists(),
+  details: () => [...fixedAssetKeys.all, 'detail'] as const,
+  detail: (id: string | number) => [...fixedAssetKeys.details(), id] as const,
+};
+
+export const depreciationRunKeys = {
+  all: ['depreciation-runs'] as const,
+  lists: () => [...depreciationRunKeys.all, 'list'] as const,
+  list: (filters?: object) =>
+    filters ? [...depreciationRunKeys.lists(), filters] as const : depreciationRunKeys.lists(),
+};
 
 // =====================
 // Customers

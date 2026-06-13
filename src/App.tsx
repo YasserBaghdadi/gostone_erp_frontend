@@ -116,6 +116,11 @@ const JournalEntriesList = lazy(() => import("@/modules/accounts/pages/JournalEn
 const JournalEntryDetails = lazy(() => import("@/modules/accounts/pages/JournalEntryDetails"));
 const CreateJournalEntry = lazy(() => import("@/modules/accounts/pages/CreateJournalEntry"));
 
+// Recurring Accruals & Fixed Assets
+const AccrualTemplatesList = lazy(() => import("@/modules/accruals/pages/AccrualTemplatesList"));
+const MonthEndDraftsPage = lazy(() => import("@/modules/accruals/pages/MonthEndDraftsPage"));
+const FixedAssetsList = lazy(() => import("@/modules/fixed_assets/pages/FixedAssetsList"));
+
 // ... imports remain the same
 
 function AppContent() {
@@ -344,7 +349,14 @@ function AppContent() {
                     <Route path=":id" element={<LazyRoute component={JournalEntryDetails} moduleName="تفاصيل القيد" />} />
                 </Route>
               </Route>
-              
+
+              {/* Recurring Accruals & Fixed-Asset Depreciation */}
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.accounts} />}>
+                <Route path="accrual-templates" element={<LazyRoute component={AccrualTemplatesList} moduleName="قوالب الاستحقاق" />} />
+                <Route path="fixed-assets" element={<LazyRoute component={FixedAssetsList} moduleName="الأصول الثابتة" />} />
+                <Route path="month-end-drafts" element={<LazyRoute component={MonthEndDraftsPage} moduleName="مسودّات آخر الشهر" />} />
+              </Route>
+
               </Route>
           </Route>
 

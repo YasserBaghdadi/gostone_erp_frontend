@@ -366,4 +366,38 @@ export const API_ENDPOINTS = {
     UPLOAD_ATTACHMENT: (id: string | number) =>
       `/custom-v1/journal-entries/${id}/upload-attachment/`,
   },
+
+  // Accrual Templates (قوالب الاستحقاق المتكررة)
+  ACCRUAL_TEMPLATES: {
+    LIST: "/custom-v1/accrual-templates/",
+    DETAILS: (id: string | number) => `/custom-v1/accrual-templates/${id}/`,
+    CREATE: "/custom-v1/accrual-templates/",
+    UPDATE: (id: string | number) => `/custom-v1/accrual-templates/${id}/`,
+    DELETE: (id: string | number) => `/custom-v1/accrual-templates/${id}/`,
+  },
+
+  // Accrual Runs (drafts → post)
+  ACCRUAL_RUNS: {
+    LIST: "/custom-v1/accrual-runs/",
+    DETAILS: (id: string | number) => `/custom-v1/accrual-runs/${id}/`,
+    GENERATE: "/custom-v1/accrual-runs/generate/",
+    POST: (id: string | number) => `/custom-v1/accrual-runs/${id}/post/`,
+  },
+
+  // Fixed Assets (الأصول الثابتة)
+  FIXED_ASSETS: {
+    LIST: "/custom-v1/fixed-assets/",
+    DETAILS: (id: string | number) => `/custom-v1/fixed-assets/${id}/`,
+    CREATE: "/custom-v1/fixed-assets/",
+    UPDATE: (id: string | number) => `/custom-v1/fixed-assets/${id}/`,
+    DELETE: (id: string | number) => `/custom-v1/fixed-assets/${id}/`,
+  },
+
+  // Depreciation Runs (drafts → post)
+  DEPRECIATION_RUNS: {
+    LIST: "/custom-v1/depreciation-runs/",
+    DETAILS: (id: string | number) => `/custom-v1/depreciation-runs/${id}/`,
+    GENERATE: "/custom-v1/depreciation-runs/generate/",
+    POST: (id: string | number) => `/custom-v1/depreciation-runs/${id}/post/`,
+  },
 };

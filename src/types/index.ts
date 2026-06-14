@@ -144,6 +144,8 @@ export interface Employee {
   phone: string; // New spec uses 'phone' but let's keep phone_number for types consistency if mapped, or add both
   email?: string; // Optional now
   is_active: boolean | string;
+  is_staff?: boolean;
+  is_superuser?: boolean; // full manager — sees all interfaces
   gender?: string; // New field
   permission_groups?: string | PermissionGroup[]; // Updated to allow array of objects
   groups?: PermissionGroup[]; // Keep for compatibility if we map it, likely removed in raw response

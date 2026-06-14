@@ -23,8 +23,12 @@ export function PermissionRoute({ permission, redirectTo = "/" }: PermissionRout
     );
   }
 
-  // Check if user has the required permission
-  const hasPermission = user?.permission_groups?.some((g) => g.name === permission) ?? false;
+  // A superuser (full manager) can reach every interface. Others must have
+  // the matching permission group.
+  const hasPermission =
+    Boolean(user?.is_superuser) ||
+    (Array.isArray(user?.permission_groups) &&
+      user.permission_groups.some((g) => g.name === permission));
 
   if (!hasPermission) {
     return <Navigate to={redirectTo} replace />;

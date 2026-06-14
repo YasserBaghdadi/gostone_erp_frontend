@@ -282,6 +282,8 @@ export default function DashboardLayout() {
   const hasPermission = (permission?: string) => {
     if (!permission) return true;
     if (!user) return false;
+    // A superuser (full manager) always sees every interface.
+    if (user.is_superuser) return true;
     return user.permission_groups?.some((g) => g.name === permission) ?? false;
   };
 

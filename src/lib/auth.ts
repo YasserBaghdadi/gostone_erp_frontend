@@ -81,6 +81,8 @@ export interface User {
   last_name: string;
   email: string;
   is_active: boolean; // boolean in JSON
+  is_staff?: boolean;
+  is_superuser?: boolean; // full manager — sees all interfaces
   permission_groups: {
     id: number;
     name: string;

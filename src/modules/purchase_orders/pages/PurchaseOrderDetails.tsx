@@ -65,6 +65,7 @@ import { AttachmentLinksList } from "@/components/shared";
 import { toast } from "sonner";
 import { formatNameWithBalance } from "@/lib/partyDisplay";
 import { parseBackendError } from "@/lib/utils";
+import { useCan } from "@/hooks/usePermissions";
 
 function formatLineNotes(notes?: string | null): string | null {
   const t = notes?.trim();
@@ -152,6 +153,7 @@ function supplierBalanceForSupplierId(
 }
 
 export default function PurchaseOrderDetails() {
+  const { can } = useCan();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -496,54 +498,60 @@ export default function PurchaseOrderDetails() {
               </Button>
             </a>
           ) : (
+            can("purchase_orders.upload_invoice") && (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl gap-2"
+                disabled={uploadInvoiceMutation.isPending || invoiceDialogOpen}
+                onClick={() => invoiceInputRef.current?.click()}
+                title="رفع فاتورة طلب الشراء"
+              >
+                {uploadInvoiceMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                رفع الفاتورة
+              </Button>
+            )
+          )}
+          {can("purchase_orders.edit") && (
             <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl gap-2"
-              disabled={uploadInvoiceMutation.isPending || invoiceDialogOpen}
-              onClick={() => invoiceInputRef.current?.click()}
-              title="رفع فاتورة طلب الشراء"
+              variant='outline'
+              className='rounded-xl gap-2'
+              onClick={() =>
+                navigate(`/purchase-orders/${purchaseOrder.id}/edit`)
+              }
             >
-              {uploadInvoiceMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4" />
-              )}
-              رفع الفاتورة
+              <Edit className='h-4 w-4' />
+              تعديل
             </Button>
           )}
-          <Button
-            variant='outline'
-            className='rounded-xl gap-2'
-            onClick={() =>
-              navigate(`/purchase-orders/${purchaseOrder.id}/edit`)
-            }
-          >
-            <Edit className='h-4 w-4' />
-            تعديل
-          </Button>
-          <Button
-            variant='outline'
-            className='rounded-xl gap-2'
-            disabled={printMutation.isPending}
-            onClick={() => {
-              printMutation.mutate(
-                { id: purchaseOrder.id },
-                {
-                  onSuccess: () => toast.success("تم فتح طلب الشراء للطباعة"),
-                  onError: () => toast.error("فشل تحميل طلب الشراء"),
-                },
-              );
-            }}
-          >
-            {printMutation.isPending ? (
-              <Loader2 className='h-4 w-4 animate-spin' />
-            ) : (
-              <Printer className='h-4 w-4' />
-            )}
-            طباعة طلب الشراء
-          </Button>
-          {canReceive && (
+          {can("purchase_orders.print") && (
+            <Button
+              variant='outline'
+              className='rounded-xl gap-2'
+              disabled={printMutation.isPending}
+              onClick={() => {
+                printMutation.mutate(
+                  { id: purchaseOrder.id },
+                  {
+                    onSuccess: () => toast.success("تم فتح طلب الشراء للطباعة"),
+                    onError: () => toast.error("فشل تحميل طلب الشراء"),
+                  },
+                );
+              }}
+            >
+              {printMutation.isPending ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <Printer className='h-4 w-4' />
+              )}
+              طباعة طلب الشراء
+            </Button>
+          )}
+          {canReceive && can("purchase_orders.receive") && (
             <Button
               className='rounded-xl gap-2 bg-success hover:bg-success-dark text-success-foreground border-0'
               disabled={receiveMutation.isPending}

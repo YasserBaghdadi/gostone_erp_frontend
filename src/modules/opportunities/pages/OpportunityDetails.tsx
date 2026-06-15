@@ -20,8 +20,10 @@ import { formatCustomerWithBalance } from "@/lib/partyDisplay";
 import { parseBackendError } from "@/lib/utils";
 import CompleteCompanyDataModal from "@/modules/customers/components/CompleteCompanyDataModal";
 import IssueWorkOrderSpecsModal, { type SpecItem } from "@/modules/opportunities/components/IssueWorkOrderSpecsModal";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function OpportunityDetails() {
+  const { can } = useCan();
   const { id } = useParams();
   const navigate = useNavigate();
   
@@ -172,28 +174,32 @@ export default function OpportunityDetails() {
             </div>
             
              <div className="flex items-center gap-2 w-full md:w-auto">
-                 <Button 
-                     variant="outline" 
-                     size="sm" 
-                     className="gap-2 rounded-lg" 
+                 {can("opportunities.print") && (
+                 <Button
+                     variant="outline"
+                     size="sm"
+                     className="gap-2 rounded-lg"
                      onClick={handlePrintQuotation}
                      disabled={printQuotationMutation.isPending}
                  >
                      {printQuotationMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
                      طباعة عرض السعر
                  </Button>
-                
+                 )}
+
                  {opportunity.status !== 'converted' && opportunity.status !== 'rejected' && opportunity.status !== 'work_order_pending' && (
                      <>
+                         {can("opportunities.edit") && (
                          <Link to={`/opportunities/${opportunity.id}/edit`}>
                              <Button variant="outline" size="sm" className="hidden md:flex gap-2 rounded-lg">
                                 <Edit className="h-4 w-4" />
                                 تعديل
                              </Button>
                          </Link>
+                         )}
 
                         {/* متاح دائماً ما لم يوجد طلب مقاسات مفتوح — لإعادة طلب المقاس */}
-                        {!opportunity.need_dim_order && (
+                        {!opportunity.need_dim_order && can("opportunities.request_dim") && (
                              <Button
                                 variant="secondary"
                                 size="sm"
@@ -205,12 +211,12 @@ export default function OpportunityDetails() {
                                 {opportunity.dimensions && opportunity.dimensions.length > 0 ? "طلب مقاسات جديد" : "طلب مقاسات"}
                              </Button>
                         )}
-                        
+
                          {/* Create Sell Order Button - Hide if already has sell order */}
-                          {!opportunity.have_sell_order && (
-                            <Button 
-                               size="sm" 
-                               className="gap-2 rounded-lg shadow-lg shadow-primary/20" 
+                          {!opportunity.have_sell_order && can("opportunities.create_sell_order") && (
+                            <Button
+                               size="sm"
+                               className="gap-2 rounded-lg shadow-lg shadow-primary/20"
                                onClick={() => setConfirmAction("sellOrder")}
                                disabled={createSellOrderMutation.isPending}
                             >

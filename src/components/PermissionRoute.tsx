@@ -3,7 +3,8 @@ import { useUser } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
 interface PermissionRouteProps {
-  permission: string;
+  /** A single catalog key, or several (any-of) that grant access. */
+  permission: string | readonly string[];
   redirectTo?: string;
 }
 
@@ -23,12 +24,13 @@ export function PermissionRoute({ permission, redirectTo = "/" }: PermissionRout
     );
   }
 
-  // A superuser (full manager) can reach every interface. Others must have
-  // the matching permission group.
+  const required = Array.isArray(permission) ? permission : [permission];
+  // A superuser (full manager) can reach every interface. Others must have at
+  // least one of the matching permission groups.
   const hasPermission =
     Boolean(user?.is_superuser) ||
     (Array.isArray(user?.permission_groups) &&
-      user.permission_groups.some((g) => g.name === permission));
+      user.permission_groups.some((g) => required.includes(g.name)));
 
   if (!hasPermission) {
     return <Navigate to={redirectTo} replace />;

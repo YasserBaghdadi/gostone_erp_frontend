@@ -23,6 +23,7 @@ import { PURCHASE_ORDER_STATUS_LABELS, type PurchaseOrderStatus } from "@/types"
 import { PageHeader, Pagination, LoadingState, EmptyState } from "@/components/shared";
 import { LinkedSellOrderLink } from "@/modules/purchase_orders/components/LinkedSellOrderLink";
 import { formatNameWithBalance } from "@/lib/partyDisplay";
+import { useCan } from "@/hooks/usePermissions";
 
 function SupplierBadge({
   supplier,
@@ -294,7 +295,8 @@ function PurchaseOrderMobileCard({ order }: { order: any }) {
 }
 
 export default function PurchaseOrdersList() {
-  
+  const { can } = useCan();
+
   // Use custom hooks for pagination and search
   const { page, pageSize, setPage, setPageSize, reset: resetPage } = usePagination();
   const { searchTerm, debouncedTerm, setSearchTerm, clear: clearSearch } = useSearch({ debounceMs: 300 });
@@ -345,12 +347,14 @@ export default function PurchaseOrdersList() {
         subtitle="إدارة طلبات الشراء من الموردين"
         icon={<ShoppingCart className="w-7 h-7" />}
         action={
-          <Link to="/purchase-orders/new">
-            <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
-              <Plus className="ml-2 h-5 w-5" />
-              طلب شراء جديد
-            </Button>
-          </Link>
+          can("purchase_orders.create") && (
+            <Link to="/purchase-orders/new">
+              <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
+                <Plus className="ml-2 h-5 w-5" />
+                طلب شراء جديد
+              </Button>
+            </Link>
+          )
         }
       />
 
@@ -455,14 +459,14 @@ export default function PurchaseOrdersList() {
           action={
             hasActiveFilters ? (
               <Button variant="link" onClick={clearFilters}>مسح عوامل التصفية</Button>
-            ) : (
+            ) : can("purchase_orders.create") ? (
               <Link to="/purchase-orders/new">
                 <Button>
                   <Plus className="h-4 w-4 ml-2" />
                   طلب شراء جديد
                 </Button>
               </Link>
-            )
+            ) : null
           }
         />
       ) : (

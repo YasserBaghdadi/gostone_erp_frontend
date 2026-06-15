@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 import { PERMISSION_GROUP_LABELS } from "@/types";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function EmployeeDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = useCan();
   const { data: employee, isLoading, isError } = useEmployeeDetails(id!);
 
   // is_active might be handled via edit now, but kept display logic.
@@ -74,12 +76,14 @@ export default function EmployeeDetails() {
               العودة
             </Button>
           </Link>
-          <Link to={`/employees/${employee.id}/edit`}>
-            <Button variant="outline" className="rounded-xl gap-2">
-              <Edit className="h-4 w-4" />
-              تعديل
-            </Button>
-          </Link>
+          {can("employees.edit") && (
+            <Link to={`/employees/${employee.id}/edit`}>
+              <Button variant="outline" className="rounded-xl gap-2">
+                <Edit className="h-4 w-4" />
+                تعديل
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

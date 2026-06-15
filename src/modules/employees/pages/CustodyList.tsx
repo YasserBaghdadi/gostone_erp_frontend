@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
+import { useCan } from "@/hooks/usePermissions";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   PENDING: { label: "قيد المراجعة", color: "warning" },
@@ -19,6 +20,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 export default function CustodyList() {
   const navigate = useNavigate();
+  const { can } = useCan();
   const [searchQuery, setSearchQuery] = useState("");
   const { page, pageSize, setPage, setPageSize } = usePagination();
 
@@ -68,12 +70,14 @@ export default function CustodyList() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Link to="/custody/new">
-            <Button className="rounded-xl shadow-lg shadow-primary/20 gap-2">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">طلب جديد</span>
-            </Button>
-          </Link>
+          {can("custody.create") && (
+            <Link to="/custody/new">
+              <Button className="rounded-xl shadow-lg shadow-primary/20 gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">طلب جديد</span>
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -163,7 +167,7 @@ export default function CustodyList() {
                     <FileText className="h-4 w-4" />
                     التفاصيل
                   </Button>
-                  {request.status === "pending" && (
+                  {request.status === "pending" && can("custody.edit") && (
                     <Button
                       variant="outline"
                       className="flex-1 gap-2 rounded-lg"
@@ -185,7 +189,7 @@ export default function CustodyList() {
               <p className="text-muted-foreground mt-2 max-w-sm">
                 لم يتم العثور على طلبات {searchQuery ? "تطابق بحثك" : "حالية"}.
               </p>
-              {!searchQuery && (
+              {!searchQuery && can("custody.create") && (
                 <Link to="/custody/new" className="mt-6">
                   <Button>
                     <Plus className="h-4 w-4 ml-2" />

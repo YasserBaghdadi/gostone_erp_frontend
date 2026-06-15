@@ -14,8 +14,10 @@ import { useCustomerReturnDetails, useAcceptCustomerReturn } from "@/hooks/useCu
 import { CUSTOMER_RETURN_STATUS_LABELS, type CustomerReturnStatus } from "@/types";
 import { formatCustomerReturnPartyLabel } from "@/lib/partyDisplay";
 import { parseBackendError } from "@/lib/utils";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function CustomerReturnDetails() {
+  const { can } = useCan();
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: returnData, isLoading, isError } = useCustomerReturnDetails(id || "");
@@ -93,14 +95,18 @@ export default function CustomerReturnDetails() {
           </Link>
           {isDraft && (
             <>
+              {can("customer_returns.edit") && (
               <Button variant="outline" className="rounded-xl gap-2" onClick={() => navigate(`/customer-returns/${returnData.id}/edit`)}>
                 <Edit className="h-4 w-4" />
                 تعديل
               </Button>
+              )}
+              {can("customer_returns.accept") && (
               <Button className="rounded-xl gap-2" onClick={handleAccept} disabled={acceptMutation.isPending}>
                 {acceptMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 قبول واعتماد
               </Button>
+              )}
             </>
           )}
         </div>

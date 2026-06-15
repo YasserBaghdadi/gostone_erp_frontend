@@ -13,6 +13,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { Pagination } from "@/components/shared";
 import { ApprovalsFilter, type ApprovalFilterStatus } from "@/modules/approvals/components/ApprovalsFilter";
 import { ApprovalActionButtons } from "@/modules/approvals/components/ApprovalActionButtons";
+import { useCan } from "@/hooks/usePermissions";
 import type { Approval } from "@/types";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -102,6 +103,7 @@ interface ApprovalCardProps {
 }
 
 function ApprovalCard({ approval, onApprove, onReject, isProcessing }: ApprovalCardProps) {
+  const { can } = useCan();
   const badge = STATUS_BADGE[approval.status] || STATUS_BADGE.pending;
 
   return (
@@ -143,7 +145,8 @@ function ApprovalCard({ approval, onApprove, onReject, isProcessing }: ApprovalC
 
         {/* Footer */}
         <div className="mt-auto pt-4 border-t flex flex-col gap-3">
-          {(approval.status === "pending" || approval.status === "in_progress") && (
+          {(approval.status === "pending" || approval.status === "in_progress") &&
+            can(["approvals.approve", "approvals.reject"]) && (
             <ApprovalActionButtons
               onApprove={onApprove}
               onReject={onReject}

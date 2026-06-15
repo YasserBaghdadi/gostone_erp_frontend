@@ -19,8 +19,10 @@ import type { StorageArea } from "@/types";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { parseBackendError } from "@/lib/utils";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function StorageAreasList() {
+  const { can } = useCan();
   const [searchTerm, setSearchTerm] = useState("");
   const { page, pageSize, setPage, setPageSize } = usePagination();
   
@@ -84,10 +86,12 @@ export default function StorageAreasList() {
             قائمة بجميع المخازن المتاحة في النظام
           </p>
         </div>
+        {can("storage_areas.create") && (
         <Button size="lg" onClick={handleCreate} className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
           <Plus className="ml-2 h-5 w-5" />
           مخزن جديد
         </Button>
+        )}
       </div>
 
       <div className="bg-card p-4 rounded-2xl border shadow-sm space-y-4">
@@ -139,6 +143,7 @@ export default function StorageAreasList() {
                         </div>
 
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            {can("storage_areas.edit") && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -147,6 +152,8 @@ export default function StorageAreasList() {
                             >
                                 <Edit className="h-4 w-4" />
                             </Button>
+                            )}
+                            {can("storage_areas.edit") && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -155,6 +162,7 @@ export default function StorageAreasList() {
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
+                            )}
                         </div>
                     </div>
                 ))
@@ -211,6 +219,7 @@ export default function StorageAreasList() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                        {can("storage_areas.edit") && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -219,6 +228,8 @@ export default function StorageAreasList() {
                         >
                             <Edit className="h-4 w-4" />
                         </Button>
+                        )}
+                         {can("storage_areas.edit") && (
                          <Button
                            variant="ghost"
                            size="icon"
@@ -227,6 +238,7 @@ export default function StorageAreasList() {
                          >
                             <Trash2 className="h-4 w-4" />
                         </Button>
+                         )}
                       </div>
                     </TableCell>
                   </TableRow>

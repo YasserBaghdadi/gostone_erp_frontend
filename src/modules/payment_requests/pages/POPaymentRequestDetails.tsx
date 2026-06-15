@@ -14,6 +14,7 @@ import {
 } from "@/hooks/useLinkedEntitiesForPaymentRequests";
 import { parseBackendError } from "@/lib/utils";
 import { MarkPaymentTransferDialog } from "@/modules/payment_requests/components/MarkPaymentTransferDialog";
+import { useCan } from "@/hooks/usePermissions";
 
 function statusBadgeVariant(status: string): "secondary" | "success" | "destructive" | "warning" {
   const s = (status || "").toUpperCase();
@@ -36,6 +37,7 @@ export default function POPaymentRequestDetails() {
   const { data, isLoading, isError } = usePOPaymentRequestDetails(id || "");
   const { data: poDetail } = usePurchaseOrderDetails(data?.purchase_order ?? "");
   const markDone = useMarkPOPaymentDone();
+  const { can } = useCan();
   const [markDialogOpen, setMarkDialogOpen] = useState(false);
 
   const handleConfirmMarkDone = (source_account: number) => {
@@ -99,7 +101,7 @@ export default function POPaymentRequestDetails() {
             </p>
           </div>
         </div>
-        {isPending && (
+        {isPending && can("payment_requests.mark_done") && (
           <Button
             type="button"
             onClick={() => setMarkDialogOpen(true)}

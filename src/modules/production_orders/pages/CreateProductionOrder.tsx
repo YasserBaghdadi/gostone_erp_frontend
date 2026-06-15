@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useCreateProductionOrder } from "@/hooks/useProductionOrders";
+import { useCan } from "@/hooks/usePermissions";
 import { useStorageAreas } from "@/hooks/useStorageAreas";
 import {
   Select,
@@ -78,6 +79,7 @@ function buildSpec(spec: WashbasinSpecForm) {
 
 export default function CreateProductionOrder() {
   const navigate = useNavigate();
+  const { can } = useCan();
   const createMutation = useCreateProductionOrder();
   const { data: warehousesData } = useStorageAreas({ page_size: 200 });
   const warehouses = warehousesData?.results ?? [];
@@ -324,15 +326,17 @@ export default function CreateProductionOrder() {
             </CardContent>
           </Card>
 
-          <Button
-            type="submit"
-            className="w-full max-w-2xl h-12 text-lg rounded-xl shadow-lg shadow-primary/20"
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending && <Loader2 className="ml-2 h-5 w-5 animate-spin" />}
-            <Save className="ml-2 h-5 w-5" />
-            إنشاء أمر التصنيع
-          </Button>
+          {can("production_orders.create") && (
+            <Button
+              type="submit"
+              className="w-full max-w-2xl h-12 text-lg rounded-xl shadow-lg shadow-primary/20"
+              disabled={createMutation.isPending}
+            >
+              {createMutation.isPending && <Loader2 className="ml-2 h-5 w-5 animate-spin" />}
+              <Save className="ml-2 h-5 w-5" />
+              إنشاء أمر التصنيع
+            </Button>
+          )}
         </form>
       </Form>
 

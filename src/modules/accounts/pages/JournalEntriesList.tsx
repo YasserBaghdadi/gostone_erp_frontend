@@ -18,9 +18,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/shared/Pagination";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function JournalEntriesList() {
   const navigate = useNavigate();
+  const { can } = useCan();
   const [search, setSearch] = useState("");
   const { page, pageSize, setPage, setPageSize } = usePagination();
 
@@ -50,12 +52,14 @@ export default function JournalEntriesList() {
           </h1>
           <p className="text-muted-foreground mt-1">إدارة القيود المحاسبية</p>
         </div>
-        <Link to="/journal-entries/new">
-          <Button className="gap-2 rounded-xl shadow-lg shadow-primary/20 w-full md:w-auto">
-            <Plus className="h-4 w-4" />
-            قيد جديد
-          </Button>
-        </Link>
+        {can("journal_entries.create") && (
+          <Link to="/journal-entries/new">
+            <Button className="gap-2 rounded-xl shadow-lg shadow-primary/20 w-full md:w-auto">
+              <Plus className="h-4 w-4" />
+              قيد جديد
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Search */}
@@ -96,12 +100,14 @@ export default function JournalEntriesList() {
               <p className="font-medium text-lg">لا توجد سندات قيد</p>
               <p className="text-muted-foreground">ابدأ بإنشاء قيد جديد</p>
             </div>
-            <Link to="/journal-entries/new">
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                قيد جديد
-              </Button>
-            </Link>
+            {can("journal_entries.create") && (
+              <Link to="/journal-entries/new">
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  قيد جديد
+                </Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       )}

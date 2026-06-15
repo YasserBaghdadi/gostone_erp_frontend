@@ -29,11 +29,13 @@ import {
 } from "@/components/ui/table";
 import { useStockReport, useStockReportExcel } from "@/hooks/useStockReport";
 import { useStorageAreas } from "@/hooks/useStorageAreas";
+import { useCan } from "@/hooks/usePermissions";
 
 const formatQty = (value: string | number) =>
   Number(value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
 export default function StockReport() {
+  const { can } = useCan();
   const [storageArea, setStorageArea] = useState<number | "">("");
   const [search, setSearch] = useState("");
   const [hideZero, setHideZero] = useState(false);
@@ -57,6 +59,7 @@ export default function StockReport() {
             أرصدة المنتجات موزعة على المخازن في تقرير واحد
           </p>
         </div>
+        {can(["stock_report.export", "items.stock_export"]) && (
         <Button
           onClick={() => exportMutation.mutate(params)}
           disabled={exportMutation.isPending}
@@ -69,6 +72,7 @@ export default function StockReport() {
           )}
           تصدير Excel
         </Button>
+        )}
       </div>
 
       <Card className="border-border/50 shadow-sm backdrop-blur-sm bg-card/95">

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 
 import { useCreateFixedAsset, useFixedAssets } from "@/hooks/useFixedAssets";
+import { useCan } from "@/hooks/usePermissions";
 
 interface AssetForm {
   name: string;
@@ -45,6 +46,7 @@ export default function FixedAssetsList() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<AssetForm>(EMPTY);
 
+  const { can } = useCan();
   const { data, isLoading } = useFixedAssets();
   const createMutation = useCreateFixedAsset();
 
@@ -79,6 +81,7 @@ export default function FixedAssetsList() {
             يُحسب الإهلاك بالقسط الثابت ويُستحق آخر كل شهر
           </p>
         </div>
+        {can("fixed_assets.create") && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -145,6 +148,7 @@ export default function FixedAssetsList() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <Card>

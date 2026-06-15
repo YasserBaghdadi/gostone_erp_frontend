@@ -32,6 +32,7 @@ import { cn, parseBackendError } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
 import { sellOrderHasInvoice } from "@/hooks/useSellOrders";
 import { BranchDialog } from "../components/BranchDialog";
+import { useCan } from "@/hooks/usePermissions";
 
 function sellOrderCustomerLabel(order: SellOrder): string {
   if (!order.customer) return "—";
@@ -222,6 +223,7 @@ function SellOrderMobileCard({ order }: { order: SellOrderRowData }) {
 }
 
 export default function SellOrdersList() {
+  const { can } = useCan();
   /** الافتراضي: كل الأوامر. عند التفعيل يُرسل `have_invoice=false` لإخفاء التي لها فاتورة. */
   const [hideOrdersWithInvoice, setHideOrdersWithInvoice] = useState(false);
   const [isBranchDialogOpen, setIsBranchDialogOpen] = useState(false);
@@ -338,7 +340,7 @@ export default function SellOrdersList() {
             </Button>
             {/* A new order auto-assigns to the active branch, so creation is
                 only offered from a specific branch tab — not from «الكل». */}
-            {activeSelection !== "all" && (
+            {activeSelection !== "all" && can("sell_orders.create") && (
               <Link to={createOrderHref}>
                 <Button className='rounded-xl shadow-lg shadow-primary/20 gap-2'>
                   <Plus className='h-4 w-4' />
@@ -457,7 +459,7 @@ export default function SellOrdersList() {
                 : "لم يتم إنشاء أوامر بيع حالية. يمكنك إنشاء أمر بيع جديد للبدء."
           }
           action={
-            !searchQuery && activeSelection !== "all" && (
+            !searchQuery && activeSelection !== "all" && can("sell_orders.create") && (
               <Link to={createOrderHref}>
                 <Button>
                   <Plus className='h-4 w-4 ml-2' />

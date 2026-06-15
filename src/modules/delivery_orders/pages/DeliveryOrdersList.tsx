@@ -17,6 +17,7 @@ import { useDeliveryOrders, usePrintDeliveryOrdersList } from "@/hooks/useDelive
 import type { DeliveryListPrintParams } from "@/hooks/useDeliveryOrders";
 import { useDeliveryResponsibles } from "@/hooks/useDeliveryResponsibles";
 import { usePagination } from "@/hooks/usePagination";
+import { useCan } from "@/hooks/usePermissions";
 import { DELIVERY_ORDER_STATUS_LABELS } from "@/types";
 import type { DeliveryOrder, DeliveryOrderStatus } from "@/types";
 import { PageHeader, Pagination, LoadingState, EmptyState } from "@/components/shared";
@@ -129,6 +130,7 @@ function DeliveryOrderMobileCard({ order }: { order: DeliveryOrder }) {
 const STATUS_OPTIONS: DeliveryOrderStatus[] = ["pending", "delivered", "canceled"];
 
 export default function DeliveryOrdersList() {
+  const { can } = useCan();
   const { page, pageSize, setPage, setPageSize } = usePagination();
   const [responsibleFilter, setResponsibleFilter] = useState<string>("all"); // "all" | "unassigned" | "<id>"
   const [statusFilter, setStatusFilter] = useState<string>("all"); // "all" | DeliveryOrderStatus
@@ -226,16 +228,18 @@ export default function DeliveryOrdersList() {
           </Select>
         </div>
 
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={() => printList.mutate(filterParams)}
-          disabled={printList.isPending}
-          title="طباعة القائمة الحالية كـ PDF"
-        >
-          <Printer className={`h-4 w-4 ${printList.isPending ? "animate-pulse" : ""}`} />
-          طباعة القائمة
-        </Button>
+        {can("delivery_orders.print") && (
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => printList.mutate(filterParams)}
+            disabled={printList.isPending}
+            title="طباعة القائمة الحالية كـ PDF"
+          >
+            <Printer className={`h-4 w-4 ${printList.isPending ? "animate-pulse" : ""}`} />
+            طباعة القائمة
+          </Button>
+        )}
       </div>
 
       {isLoading ? (

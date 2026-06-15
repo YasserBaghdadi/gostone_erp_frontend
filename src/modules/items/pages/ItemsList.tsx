@@ -26,6 +26,7 @@ import { ServerErrorPage, isServerError } from "@/components/common/ServerErrorP
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCan } from "@/hooks/usePermissions";
 
 const UNIT_LABELS: Record<string, string> = {
   piece: "حبة",
@@ -44,7 +45,8 @@ const getUnitLabel = (unit: string) => UNIT_LABELS[unit] || unit;
 
 export default function ItemsList() {
   const navigate = useNavigate();
-  
+  const { can } = useCan();
+
   // Use custom hooks for pagination and search
   const { page, pageSize, setPage, setPageSize, reset: resetPage } = usePagination();
   const { searchTerm, debouncedTerm, setSearchTerm, clear: clearSearch } = useSearch({ debounceMs: 300 });
@@ -103,12 +105,14 @@ export default function ItemsList() {
             قائمة بجميع المنتجات والأصناف المتاحة
           </p>
         </div>
-        <Link to="/items/new">
-          <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
-            <Plus className="ml-2 h-5 w-5" />
-            منتج جديد
-          </Button>
-        </Link>
+        {can("items.create") && (
+          <Link to="/items/new">
+            <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
+              <Plus className="ml-2 h-5 w-5" />
+              منتج جديد
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="bg-card p-4 rounded-2xl border shadow-sm space-y-4">
@@ -249,15 +253,17 @@ export default function ItemsList() {
                             <Eye className="ml-2 h-4 w-4" />
                             عرض التفاصيل
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/items/${item.id}/edit`);
-                            }}
-                          >
-                            <Edit className="ml-2 h-4 w-4" />
-                            تعديل
-                          </DropdownMenuItem>
+                          {can("items.edit") && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/items/${item.id}/edit`);
+                              }}
+                            >
+                              <Edit className="ml-2 h-4 w-4" />
+                              تعديل
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                   </div>
@@ -466,15 +472,17 @@ export default function ItemsList() {
                             <Eye className="ml-2 h-4 w-4" />
                             عرض التفاصيل
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/items/${item.id}/edit`);
-                            }}
-                          >
-                            <Edit className="ml-2 h-4 w-4" />
-                            تعديل
-                          </DropdownMenuItem>
+                          {can("items.edit") && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/items/${item.id}/edit`);
+                              }}
+                            >
+                              <Edit className="ml-2 h-4 w-4" />
+                              تعديل
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

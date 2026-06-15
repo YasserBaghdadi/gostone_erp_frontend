@@ -3,8 +3,10 @@ import { Loader2, ClipboardList, CheckCircle2, AlertTriangle } from "lucide-reac
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSystemNotes, useResolveNote } from "@/hooks/useSystemNotes";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function NotesPage() {
+  const { can } = useCan();
   const [showResolved, setShowResolved] = useState(false);
   const { data: notes = [], isLoading } = useSystemNotes(
     showResolved ? undefined : { is_resolved: "false" },
@@ -61,7 +63,7 @@ export default function NotesPage() {
                     {n.is_resolved && " · ✅ مُعالَجة"}
                   </p>
                 </div>
-                {!n.is_resolved && (
+                {!n.is_resolved && can("notes.resolve") && (
                   <Button
                     size="sm"
                     variant="outline"

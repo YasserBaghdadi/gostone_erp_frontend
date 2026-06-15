@@ -10,10 +10,12 @@ import { PageHeader, Pagination, SearchBar, LoadingState, EmptyState } from "@/c
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 import { PERMISSION_GROUP_LABELS } from "@/types";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function EmployeesList() {
   const navigate = useNavigate();
-  
+  const { can } = useCan();
+
   // Use custom hooks for pagination and search
   const { page, pageSize, setPage, setPageSize, reset: resetPage } = usePagination();
   const { searchTerm: searchQuery, debouncedTerm, setSearchTerm: setSearchQuery } = useSearch({ debounceMs: 300 });
@@ -41,12 +43,14 @@ export default function EmployeesList() {
         icon={<Users className="w-7 h-7" />}
         sticky
         action={
-          <Link to="/employees/new">
-            <Button className="rounded-xl shadow-lg shadow-primary/20 gap-2">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">موظف جديد</span>
-            </Button>
-          </Link>
+          can("employees.create") && (
+            <Link to="/employees/new">
+              <Button className="rounded-xl shadow-lg shadow-primary/20 gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">موظف جديد</span>
+              </Button>
+            </Link>
+          )
         }
       >
         <SearchBar
@@ -67,7 +71,7 @@ export default function EmployeesList() {
           title="لا يوجد موظفين"
           description={searchQuery ? "لم يتم العثور على موظفين تطابق بحثك." : "لم يتم إضافة موظفين حالياً."}
           action={
-            !searchQuery && (
+            !searchQuery && can("employees.create") && (
               <Link to="/employees/new">
                 <Button>
                   <Plus className="h-4 w-4 ml-2" />
@@ -167,22 +171,26 @@ export default function EmployeesList() {
               </CardContent>
 
               <CardFooter className="p-3 bg-muted/30 flex gap-2">
-                <Button 
-                  variant="default" 
-                  className="flex-1 gap-2 rounded-lg shadow-sm" 
-                  size="sm"
-                  onClick={() => navigate(`/employees/${employee.id}`)}
-                >
-                  التفاصيل
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex-1 gap-2 rounded-lg" 
-                  size="sm"
-                  onClick={() => navigate(`/employees/${employee.id}/edit`)}
-                >
-                  تعديل
-                </Button>
+                {can("employees.detail") && (
+                  <Button
+                    variant="default"
+                    className="flex-1 gap-2 rounded-lg shadow-sm"
+                    size="sm"
+                    onClick={() => navigate(`/employees/${employee.id}`)}
+                  >
+                    التفاصيل
+                  </Button>
+                )}
+                {can("employees.edit") && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 gap-2 rounded-lg"
+                    size="sm"
+                    onClick={() => navigate(`/employees/${employee.id}/edit`)}
+                  >
+                    تعديل
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}

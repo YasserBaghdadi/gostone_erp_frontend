@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { useItemDetails, useItems } from "@/hooks/useItems";
 import { PRODUCTION_TYPE_LABELS } from "@/types";
 import { useMemo } from "react";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function ItemDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = useCan();
   const { data: item, isLoading, isError } = useItemDetails(id!);
 
   // Fetch all items to resolve linked IDs to names
@@ -55,12 +57,14 @@ export default function ItemDetails() {
             </p>
           </div>
         </div>
-        <Link to={`/items/${id}/edit`}>
-          <Button className="rounded-xl shadow-lg shadow-primary/20">
-            <Edit className="ml-2 h-4 w-4" />
-            تعديل
-          </Button>
-        </Link>
+        {can("items.edit") && (
+          <Link to={`/items/${id}/edit`}>
+            <Button className="rounded-xl shadow-lg shadow-primary/20">
+              <Edit className="ml-2 h-4 w-4" />
+              تعديل
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

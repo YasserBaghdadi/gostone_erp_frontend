@@ -45,6 +45,7 @@ import {
   useScheduleDeliveryOrder,
 } from "@/hooks/useDeliveryOrders";
 import { useDeliveryResponsibles, useCreateDeliveryResponsible } from "@/hooks/useDeliveryResponsibles";
+import { useCan } from "@/hooks/usePermissions";
 import { useStorageAreas } from "@/hooks/useStorageAreas";
 import { DELIVERY_ORDER_STATUS_LABELS } from "@/types";
 import { parseBackendError } from "@/lib/utils";
@@ -71,6 +72,7 @@ function datetimeLocalToIso(value: string): string | null {
 export default function DeliveryOrderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = useCan();
 
   const { data: order, isLoading, isError, refetch } = useDeliveryOrderDetails(id!);
   const deliverMutation = useDeliverDeliveryOrder();
@@ -217,28 +219,30 @@ export default function DeliveryOrderDetails() {
               العودة
             </Button>
           </Link>
-          <Button
-            variant="outline"
-            className="rounded-xl gap-2 hover:bg-muted/50 transition-colors"
-            disabled={printMutation.isPending}
-            onClick={() => {
-              printMutation.mutate(
-                { id: order.id },
-                {
-                  onSuccess: () => toast.success("تم فتح أمر التسليم للطباعة"),
-                  onError: () => toast.error("فشل تحميل أمر التسليم"),
-                },
-              );
-            }}
-          >
-            {printMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Printer className="h-4 w-4" />
-            )}
-            طباعة أمر التسليم
-          </Button>
-          {isPending && (
+          {can("delivery_orders.print") && (
+            <Button
+              variant="outline"
+              className="rounded-xl gap-2 hover:bg-muted/50 transition-colors"
+              disabled={printMutation.isPending}
+              onClick={() => {
+                printMutation.mutate(
+                  { id: order.id },
+                  {
+                    onSuccess: () => toast.success("تم فتح أمر التسليم للطباعة"),
+                    onError: () => toast.error("فشل تحميل أمر التسليم"),
+                  },
+                );
+              }}
+            >
+              {printMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Printer className="h-4 w-4" />
+              )}
+              طباعة أمر التسليم
+            </Button>
+          )}
+          {isPending && can("delivery_orders.deliver") && (
             <Button
               className="rounded-xl gap-2"
               onClick={() => setIsDeliverModalOpen(true)}
@@ -431,18 +435,20 @@ export default function DeliveryOrderDetails() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button
-              className="rounded-xl gap-2"
-              onClick={handleSaveSchedule}
-              disabled={scheduleMutation.isPending}
-            >
-              {scheduleMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              حفظ
-            </Button>
+            {can("delivery_orders.schedule") && (
+              <Button
+                className="rounded-xl gap-2"
+                onClick={handleSaveSchedule}
+                disabled={scheduleMutation.isPending}
+              >
+                {scheduleMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                حفظ
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

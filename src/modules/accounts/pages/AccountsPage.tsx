@@ -20,6 +20,7 @@ import { ReportPreviewModal } from "../components/ReportPreviewModal";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import type { Account } from "@/types";
 import { cn } from "@/lib/utils";
+import { useCan } from "@/hooks/usePermissions";
 
 interface AccountTreeNode extends Account {
   children: AccountTreeNode[];
@@ -273,6 +274,7 @@ function AccountTreeCard({
 export default function AccountsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { can } = useCan();
   const search = searchParams.get("search") || "";
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -408,14 +410,16 @@ export default function AccountsPage() {
             <FileText className="h-4 w-4" />
             الميزانية العمومية
           </Button>
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => setInventoryOpen(true)}
-          >
-            <Wallet className="h-4 w-4" />
-            تسوية الجرد
-          </Button>
+          {can("accounts.edit") && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setInventoryOpen(true)}
+            >
+              <Wallet className="h-4 w-4" />
+              تسوية الجرد
+            </Button>
+          )}
           <Button
             variant="outline"
             className="gap-2"
@@ -429,10 +433,12 @@ export default function AccountsPage() {
             )}
             تصدير الشجرة
           </Button>
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            حساب جديد
-          </Button>
+          {can("accounts.create") && (
+            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              حساب جديد
+            </Button>
+          )}
         </div>
       </div>
 

@@ -32,6 +32,7 @@ import {
   usePostDepreciationRun,
 } from "@/hooks/useFixedAssets";
 import type { AccrualRun } from "@/types";
+import { useCan } from "@/hooks/usePermissions";
 
 const now = new Date();
 
@@ -43,6 +44,7 @@ export default function MonthEndDraftsPage() {
   const [taxRun, setTaxRun] = useState<AccrualRun | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
+  const { can } = useCan();
   const { data: accrualData, isLoading: accLoading } = useAccrualRuns({ status: "DRAFT" });
   const { data: depData, isLoading: depLoading } = useDepreciationRuns({ status: "DRAFT" });
 
@@ -112,12 +114,14 @@ export default function MonthEndDraftsPage() {
               onChange={(e) => setMonth(Number(e.target.value))}
             />
           </div>
+          {can(["accrual_templates.generate", "fixed_assets.generate"]) && (
           <Button
             onClick={handleGenerate}
             disabled={genAccruals.isPending || genDepreciation.isPending}
           >
             توليد مسودّات الشهر
           </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -159,6 +163,7 @@ export default function MonthEndDraftsPage() {
                       {r.is_taxable ? r.tax_amount : <Badge variant="outline">بدون</Badge>}
                     </TableCell>
                     <TableCell>
+                      {can(["accrual_templates.post", "month_end_drafts.post"]) && (
                       <Button
                         size="sm"
                         onClick={() => handlePostAccrual(r)}
@@ -166,6 +171,7 @@ export default function MonthEndDraftsPage() {
                       >
                         ترحيل
                       </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -207,6 +213,7 @@ export default function MonthEndDraftsPage() {
                     <TableCell>{r.period_year}-{String(r.period_month).padStart(2, "0")}</TableCell>
                     <TableCell>{r.amount}</TableCell>
                     <TableCell>
+                      {can(["fixed_assets.post", "month_end_drafts.post"]) && (
                       <Button
                         size="sm"
                         onClick={() => postDepreciation.mutate(r.id)}
@@ -214,6 +221,7 @@ export default function MonthEndDraftsPage() {
                       >
                         ترحيل
                       </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -239,12 +247,14 @@ export default function MonthEndDraftsPage() {
             />
           </div>
           <DialogFooter>
+            {can(["accrual_templates.post", "month_end_drafts.post"]) && (
             <Button
               onClick={confirmTaxablePost}
               disabled={!file || postAccrual.isPending}
             >
               {postAccrual.isPending ? "جارٍ الترحيل..." : "ترحيل"}
             </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

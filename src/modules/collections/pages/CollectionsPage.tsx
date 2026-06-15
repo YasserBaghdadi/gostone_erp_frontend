@@ -17,6 +17,7 @@ import {
 import { useCollections, usePrintCollection } from "@/hooks/useCollections";
 import { PAYMENT_TYPE_LABELS } from "@/types";
 import { RecordCollectionModal } from "../components/RecordCollectionModal";
+import { useCan } from "@/hooks/usePermissions";
 
 function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
@@ -26,6 +27,7 @@ function formatDateTime(value: string | null | undefined): string {
 }
 
 export default function CollectionsPage() {
+  const { can } = useCan();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: collections, isLoading } = useCollections();
   const printMutation = usePrintCollection();
@@ -53,11 +55,13 @@ export default function CollectionsPage() {
             سجل قبوضات العملاء عبر جميع القنوات في مكان واحد
           </p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-lg hover:shadow-primary/20 transition-all w-full sm:w-auto">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">تسجيل قبض</span>
-          <span className="sm:hidden">تسجيل</span>
-        </Button>
+        {can("collections.record") && (
+          <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-lg hover:shadow-primary/20 transition-all w-full sm:w-auto">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">تسجيل قبض</span>
+            <span className="sm:hidden">تسجيل</span>
+          </Button>
+        )}
       </div>
 
       <Card className="border-border/50 shadow-sm backdrop-blur-sm bg-card/95">

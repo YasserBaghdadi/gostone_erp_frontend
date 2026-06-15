@@ -49,6 +49,7 @@ import {
   useScheduleProductionOrder,
 } from "@/hooks/useProductionOrders";
 import { useItemDetails } from "@/hooks/useItems";
+import { useCan } from "@/hooks/usePermissions";
 import { useStorageAreas } from "@/hooks/useStorageAreas";
 import {
   useProductionResponsibles,
@@ -80,6 +81,7 @@ function datetimeLocalToIso(value: string): string | null {
 export default function ProductionOrderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = useCan();
 
   const { data: order, isLoading, isError, refetch } = useProductionOrderDetails(id!);
   // Materials are restricted to the finished item's linked purchasable materials.
@@ -281,28 +283,30 @@ export default function ProductionOrderDetails() {
               العودة
             </Button>
           </Link>
-          <Button
-            variant="outline"
-            className="rounded-xl gap-2 hover:bg-muted/50 transition-colors"
-            disabled={printMutation.isPending}
-            onClick={() => {
-              printMutation.mutate(
-                { id: order.id },
-                {
-                  onSuccess: () => toast.success("تم فتح أمر التصنيع للطباعة"),
-                  onError: () => toast.error("فشل تحميل أمر التصنيع"),
-                },
-              );
-            }}
-          >
-            {printMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Printer className="h-4 w-4" />
-            )}
-            طباعة أمر التصنيع
-          </Button>
-          {isActive && (
+          {can("production_orders.print") && (
+            <Button
+              variant="outline"
+              className="rounded-xl gap-2 hover:bg-muted/50 transition-colors"
+              disabled={printMutation.isPending}
+              onClick={() => {
+                printMutation.mutate(
+                  { id: order.id },
+                  {
+                    onSuccess: () => toast.success("تم فتح أمر التصنيع للطباعة"),
+                    onError: () => toast.error("فشل تحميل أمر التصنيع"),
+                  },
+                );
+              }}
+            >
+              {printMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Printer className="h-4 w-4" />
+              )}
+              طباعة أمر التصنيع
+            </Button>
+          )}
+          {isActive && can("production_orders.edit") && (
             <Button
               className="rounded-xl gap-2"
               onClick={() => setIsCloseModalOpen(true)}
@@ -460,18 +464,20 @@ export default function ProductionOrderDetails() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button
-              className="rounded-xl gap-2"
-              onClick={handleSaveSchedule}
-              disabled={scheduleMutation.isPending}
-            >
-              {scheduleMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              حفظ
-            </Button>
+            {can("production_orders.schedule") && (
+              <Button
+                className="rounded-xl gap-2"
+                onClick={handleSaveSchedule}
+                disabled={scheduleMutation.isPending}
+              >
+                {scheduleMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                حفظ
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -577,21 +583,23 @@ export default function ProductionOrderDetails() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="lg:col-span-2">
-                <Button
-                  type="button"
-                  className="w-full h-10 gap-2"
-                  onClick={handleAddMaterial}
-                  disabled={addMaterialMutation.isPending || !selectedItem}
-                >
-                  {addMaterialMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                  إضافة
-                </Button>
-              </div>
+              {can("production_orders.add_material") && (
+                <div className="lg:col-span-2">
+                  <Button
+                    type="button"
+                    className="w-full h-10 gap-2"
+                    onClick={handleAddMaterial}
+                    disabled={addMaterialMutation.isPending || !selectedItem}
+                  >
+                    {addMaterialMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                    إضافة
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

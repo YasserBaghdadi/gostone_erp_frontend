@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/providers/QueryProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { PermissionRoute } from "@/components/PermissionRoute";
+import { LandingRedirect } from "@/components/LandingRedirect";
 import { ROUTE_PERMISSIONS } from "@/lib/routePermissions";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import { authTokens } from "@/lib/auth";
@@ -121,6 +122,7 @@ const AccrualTemplatesList = lazy(() => import("@/modules/accruals/pages/Accrual
 const MonthEndDraftsPage = lazy(() => import("@/modules/accruals/pages/MonthEndDraftsPage"));
 const FixedAssetsList = lazy(() => import("@/modules/fixed_assets/pages/FixedAssetsList"));
 const SupplierPaymentsPage = lazy(() => import("@/modules/supplier_payments/pages/SupplierPaymentsPage"));
+const RolesPermissionsPage = lazy(() => import("@/modules/permissions/pages/RolesPermissionsPage"));
 
 // ... imports remain the same
 
@@ -160,11 +162,11 @@ function AppContent() {
     <>
       <OfflineBanner />
       <Routes>
-          <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/suppliers" />} />
+          <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/" />} />
           
           <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
-              <Route path="/" element={<Navigate to="/suppliers" replace />} />
+              <Route path="/" element={<LandingRedirect />} />
               <Route path="profile" element={<LazyRoute component={ProfilePage} moduleName="الملف الشخصي" />} />
               
               {/* Opportunities */}
@@ -288,6 +290,10 @@ function AppContent() {
                     <Route path=":id" element={<LazyRoute component={PurchaseOrderDetails} moduleName="تفاصيل طلب الشراء" />} />
                     <Route path=":id/edit" element={<LazyRoute component={CreatePurchaseOrder} moduleName="تعديل طلب الشراء" />} />
                 </Route>
+              </Route>
+
+              {/* Customer Returns */}
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.customerReturns} />}>
                 <Route path="customer-returns">
                     <Route index element={<LazyRoute component={CustomerReturnsList} moduleName="المرتجعات" />} />
                     <Route path="new" element={<LazyRoute component={CreateCustomerReturn} moduleName="إنشاء مرتجع" />} />
@@ -309,7 +315,11 @@ function AppContent() {
               {/* Storage Areas */}
               <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.storageAreas} />}>
                 <Route path="storage-areas" element={<LazyRoute component={StorageAreasList} moduleName="مناطق التخزين" />} />
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.stockTransfers} />}>
                 <Route path="stock-transfers" element={<LazyRoute component={StockTransfers} moduleName="تحويل المخزون" />} />
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.stockReport} />}>
                 <Route path="stock-report" element={<LazyRoute component={StockReport} moduleName="رصيد المخازن" />} />
               </Route>
               
@@ -318,10 +328,18 @@ function AppContent() {
                 <Route path="accounts">
                     <Route index element={<LazyRoute component={AccountsPage} moduleName="الحسابات" />} />
                     <Route path=":id" element={<LazyRoute component={AccountDetails} moduleName="تفاصيل الحساب" />} />
-                    <Route path="payment-gateways" element={<LazyRoute component={PaymentGatewaysPage} moduleName="إدارة بوابات الدفع" />} />
                 </Route>
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.paymentGateways} />}>
+                <Route path="accounts/payment-gateways" element={<LazyRoute component={PaymentGatewaysPage} moduleName="إدارة بوابات الدفع" />} />
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.expensesEntry} />}>
                 <Route path="expenses" element={<LazyRoute component={ExpensesEntryPage} moduleName="تسجيل المصروفات" />} />
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.notes} />}>
                 <Route path="notes" element={<LazyRoute component={NotesPage} moduleName="الملاحظات" />} />
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.paymentRequests} />}>
                 <Route path="payment-requests">
                     <Route index element={<LazyRoute component={PaymentRequestsPage} moduleName="طلبات الدفع" />} />
                     <Route path="cr/:id" element={<LazyRoute component={CRPaymentRequestDetails} moduleName="تفاصيل طلب دفع مرتجع" />} />
@@ -352,11 +370,20 @@ function AppContent() {
               </Route>
 
               {/* Recurring Accruals & Fixed-Asset Depreciation */}
-              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.accounts} />}>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.accrualTemplates} />}>
                 <Route path="accrual-templates" element={<LazyRoute component={AccrualTemplatesList} moduleName="قوالب الاستحقاق" />} />
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.fixedAssets} />}>
                 <Route path="fixed-assets" element={<LazyRoute component={FixedAssetsList} moduleName="الأصول الثابتة" />} />
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.monthEndDrafts} />}>
                 <Route path="month-end-drafts" element={<LazyRoute component={MonthEndDraftsPage} moduleName="مسودّات آخر الشهر" />} />
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.supplierPayments} />}>
                 <Route path="supplier-payments" element={<LazyRoute component={SupplierPaymentsPage} moduleName="دفعات الموردين" />} />
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.rolesPermissions} />}>
+                <Route path="roles-permissions" element={<LazyRoute component={RolesPermissionsPage} moduleName="الأدوار والصلاحيات" />} />
               </Route>
 
               </Route>

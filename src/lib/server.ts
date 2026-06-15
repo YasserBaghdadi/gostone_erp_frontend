@@ -274,6 +274,12 @@ export const API_ENDPOINTS = {
       `/custom-v1/employees/${id}/toggle-active/`,
   },
 
+  // Action-level permission catalog (role management)
+  PERMISSION_CATALOG: {
+    GET: "/custom-v1/permission-catalog/",
+    SET: "/custom-v1/permission-catalog/",
+  },
+
   // Permissions
   PERMISSIONS: {
     LIST: "/custom-v1/permissions/",

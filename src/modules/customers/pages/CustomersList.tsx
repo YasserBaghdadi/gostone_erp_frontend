@@ -35,6 +35,7 @@ import {
   OdooBadge,
 } from "@/components/shared";
 import { useCustomers, useSyncAllCustomersToOdoo } from "@/hooks/useCustomers";
+import { useCan } from "@/hooks/usePermissions";
 import { usePagination } from "@/hooks/usePagination";
 import { useSearch } from "@/hooks/useSearch";
 import { format } from "date-fns";
@@ -52,6 +53,7 @@ function salesmanLabel(s: Salesman): string {
 }
 
 export default function CustomersList() {
+  const { can } = useCan();
   const navigate = useNavigate();
   const syncAllCustomersToOdooMutation = useSyncAllCustomersToOdoo();
   
@@ -113,38 +115,42 @@ export default function CustomersList() {
         icon={<Users className="w-7 h-7" />}
         action={
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              size="lg"
-              className="rounded-xl gap-2 border-0 bg-[#875A7B] text-white hover:bg-[#714a67] shadow-sm"
-              disabled={syncAllCustomersToOdooMutation.isPending}
-              onClick={() => {
-                syncAllCustomersToOdooMutation.mutate(undefined, {
-                  onSuccess: () => {
-                    toast.success("تم بدء ربط جميع العملاء مع Odoo بنجاح");
-                  },
-                  onError: (error) => {
-                    toast.error(
-                      parseBackendError(error) || "فشل ربط جميع العملاء مع Odoo",
-                    );
-                  },
-                });
-              }}
-            >
-              {syncAllCustomersToOdooMutation.isPending ? (
-                <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-              ) : (
-                <OdooBadge className="ml-2" />
-              )}
-              ربط الكل مع Odoo
-            </Button>
-
-            <Link to="/customers/new">
-              <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
-                <Plus className="ml-2 h-5 w-5" />
-                عميل جديد
+            {can("customers.odoo_sync") && (
+              <Button
+                type="button"
+                size="lg"
+                className="rounded-xl gap-2 border-0 bg-[#875A7B] text-white hover:bg-[#714a67] shadow-sm"
+                disabled={syncAllCustomersToOdooMutation.isPending}
+                onClick={() => {
+                  syncAllCustomersToOdooMutation.mutate(undefined, {
+                    onSuccess: () => {
+                      toast.success("تم بدء ربط جميع العملاء مع Odoo بنجاح");
+                    },
+                    onError: (error) => {
+                      toast.error(
+                        parseBackendError(error) || "فشل ربط جميع العملاء مع Odoo",
+                      );
+                    },
+                  });
+                }}
+              >
+                {syncAllCustomersToOdooMutation.isPending ? (
+                  <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <OdooBadge className="ml-2" />
+                )}
+                ربط الكل مع Odoo
               </Button>
-            </Link>
+            )}
+
+            {can(["customers.create_individual", "customers.create_company"]) && (
+              <Link to="/customers/new">
+                <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
+                  <Plus className="ml-2 h-5 w-5" />
+                  عميل جديد
+                </Button>
+              </Link>
+            )}
           </div>
         }
       />
@@ -169,7 +175,8 @@ export default function CustomersList() {
             title="لا يوجد عملاء"
             description={searchTerm ? "لم يتم العثور على عملاء تطابق بحثك." : "لم يتم إضافة عملاء حالياً."}
             action={
-              !searchTerm && (
+              !searchTerm &&
+              can(["customers.create_individual", "customers.create_company"]) && (
                 <Link to="/customers/new">
                   <Button>
                     <Plus className="h-4 w-4 ml-2" />
@@ -225,6 +232,7 @@ export default function CustomersList() {
                             <Eye className="ml-2 h-4 w-4" />
                             عرض التفاصيل
                         </DropdownMenuItem>
+                        {can("customers.edit") && (
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
@@ -234,6 +242,8 @@ export default function CustomersList() {
                             <Edit className="ml-2 h-4 w-4" />
                             تعديل البيانات
                         </DropdownMenuItem>
+                        )}
+                        {can("customers.add_payment") && (
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
@@ -246,6 +256,7 @@ export default function CustomersList() {
                             <CreditCard className="ml-2 h-4 w-4" />
                             إضافة دفعة
                         </DropdownMenuItem>
+                        )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -394,10 +405,13 @@ export default function CustomersList() {
                               <Eye className="ml-2 h-4 w-4" />
                               عرض التفاصيل
                             </DropdownMenuItem>
+                            {can("customers.edit") && (
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/customers/${customer.id}/edit`); }}>
                               <Edit className="ml-2 h-4 w-4" />
                               تعديل البيانات
                             </DropdownMenuItem>
+                            )}
+                            {can("customers.add_payment") && (
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -410,6 +424,7 @@ export default function CustomersList() {
                               <CreditCard className="ml-2 h-4 w-4" />
                               إضافة دفعة
                             </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

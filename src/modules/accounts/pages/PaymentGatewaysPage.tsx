@@ -21,11 +21,13 @@ import {
 } from "@/hooks/usePaymentGateways";
 import { toast } from "sonner";
 import { parseBackendError } from "@/lib/utils";
+import { useCan } from "@/hooks/usePermissions";
 import type { BasePaymentGateway } from "@/types";
 
 type GatewayType = "banks" | "bnpl" | "card-machines" | "cash-registers";
 
 export default function PaymentGatewaysPage() {
+  const { can } = useCan();
   const [activeTab, setActiveTab] = useState<GatewayType>("banks");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BasePaymentGateway | null>(null);
@@ -100,11 +102,13 @@ export default function PaymentGatewaysPage() {
             إدارة البنوك، أجهزة الشبكة، الصناديق، وشركات التقسيط
           </p>
         </div>
-        <Button onClick={handleOpenCreate} className="gap-2 shadow-lg hover:shadow-primary/20 transition-all w-full sm:w-auto">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">إضافة جديد</span>
-          <span className="sm:hidden">إضافة</span>
-        </Button>
+        {can("payment_gateways.manage") && (
+          <Button onClick={handleOpenCreate} className="gap-2 shadow-lg hover:shadow-primary/20 transition-all w-full sm:w-auto">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">إضافة جديد</span>
+            <span className="sm:hidden">إضافة</span>
+          </Button>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as GatewayType)} className="space-y-4" dir="rtl">

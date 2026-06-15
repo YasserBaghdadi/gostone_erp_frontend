@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
+import { useCan } from "@/hooks/usePermissions";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   PENDING: { label: "قيد المراجعة", color: "warning" },
@@ -16,6 +17,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 export default function CustodyDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = useCan();
   const { data: request, isLoading, isError } = useCustodyDetails(id!);
 
 
@@ -57,12 +59,14 @@ export default function CustodyDetails() {
         </div>
         
         <div className="flex gap-2 items-center w-full md:w-auto">
-            <Link to={`/custody/${request.id}/edit`}>
-                <Button variant="outline" className="gap-2 rounded-xl">
-                    <Edit className="h-4 w-4" />
-                    تعديل
-                </Button>
-            </Link>
+            {can("custody.edit") && (
+              <Link to={`/custody/${request.id}/edit`}>
+                  <Button variant="outline" className="gap-2 rounded-xl">
+                      <Edit className="h-4 w-4" />
+                      تعديل
+                  </Button>
+              </Link>
+            )}
         </div>
       </div>
 

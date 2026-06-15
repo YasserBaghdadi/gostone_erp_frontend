@@ -28,6 +28,7 @@ import {
   useSupplierPayments,
   type SupplierOption,
 } from "@/hooks/useSupplierPayments";
+import { useCan } from "@/hooks/usePermissions";
 
 function supplierLabel(s: SupplierOption): string {
   return s.display_name || s.contact_name || s.first_name || `مورد #${s.id}`;
@@ -40,6 +41,7 @@ export default function SupplierPaymentsPage() {
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
+  const { can } = useCan();
   const { data: paymentsData, isLoading } = useSupplierPayments();
   const { data: suppliers = [] } = useSupplierOptions();
   const { data: sources = [] } = useSourceAccounts();
@@ -141,9 +143,11 @@ export default function SupplierPaymentsPage() {
               />
             </div>
           </div>
+          {can("supplier_payments.create") && (
           <Button onClick={handleSubmit} disabled={!canSubmit || createMutation.isPending}>
             {createMutation.isPending ? "جارٍ الترحيل..." : "تسجيل وترحيل الدفعة"}
           </Button>
+          )}
         </CardContent>
       </Card>
 

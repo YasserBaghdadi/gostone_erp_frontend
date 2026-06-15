@@ -37,6 +37,7 @@ import {
   type AccrualTemplatePayload,
 } from "@/hooks/useAccruals";
 import { ACCRUAL_KIND_LABELS, type AccrualKind } from "@/types";
+import { useCan } from "@/hooks/usePermissions";
 
 const EMPTY: AccrualTemplatePayload = {
   name: "",
@@ -52,6 +53,7 @@ export default function AccrualTemplatesList() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<AccrualTemplatePayload>(EMPTY);
 
+  const { can } = useCan();
   const { data, isLoading } = useAccrualTemplates();
   const createMutation = useCreateAccrualTemplate();
 
@@ -79,6 +81,7 @@ export default function AccrualTemplatesList() {
             الرواتب والإيجارات التي تُستحق آخر كل شهر تلقائياً
           </p>
         </div>
+        {can("accrual_templates.create") && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -166,6 +169,7 @@ export default function AccrualTemplatesList() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <Card>

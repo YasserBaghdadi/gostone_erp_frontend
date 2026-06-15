@@ -23,6 +23,7 @@ import {
 import { useAllAccounts } from "@/hooks/useAccounts";
 import { useRecordExpense, useRecentExpenses } from "@/hooks/useExpenses";
 import type { Account } from "@/types";
+import { useCan } from "@/hooks/usePermissions";
 
 function todayStr(): string {
   const d = new Date();
@@ -34,6 +35,7 @@ const fmt = (v: string | number) =>
   Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function ExpensesPage() {
+  const { can } = useCan();
   const { data: accounts = [], isLoading } = useAllAccounts();
   const record = useRecordExpense();
   const { data: recent = [] } = useRecentExpenses();
@@ -256,10 +258,12 @@ export default function ExpensesPage() {
           )}
 
           <div className="flex justify-end pt-2">
+            {can("expenses.create") && (
             <Button onClick={submit} disabled={!canSubmit} className="gap-2">
               {record.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               تسجيل المصروف
             </Button>
+            )}
           </div>
         </CardContent>
       </Card>

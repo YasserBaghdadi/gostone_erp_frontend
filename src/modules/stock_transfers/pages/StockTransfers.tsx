@@ -18,8 +18,10 @@ import { useStorageAreas } from "@/hooks/useStorageAreas";
 import { useStockTransfers, useCreateStockTransfer } from "@/hooks/useStockTransfers";
 import { parseBackendError, preventNegative, clampToPositive } from "@/lib/utils";
 import type { Item } from "@/types";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function StockTransfers() {
+  const { can } = useCan();
   const { data: warehousesData } = useStorageAreas({ page_size: 200 });
   const warehouses = warehousesData?.results ?? [];
   const { data: transfersData, isLoading } = useStockTransfers();
@@ -150,10 +152,12 @@ export default function StockTransfers() {
             <Input placeholder="سبب التحويل…" value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
 
+          {can("stock_transfers.create") && (
           <Button className="w-full h-11 gap-2" onClick={submit} disabled={createMutation.isPending}>
             {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             تنفيذ التحويل
           </Button>
+          )}
         </CardContent>
       </Card>
 

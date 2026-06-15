@@ -49,6 +49,7 @@ import {
 } from "@/types";
 import type { WashbasinSpec } from "@/types";
 import { toast } from "sonner";
+import { useCan } from "@/hooks/usePermissions";
 
 /** صفوف عرض مواصفات تصنيع المغسلة (قراءة فقط) للبنود من نوع «تفصيل» */
 /** ISO datetime → قيمة <input type="datetime-local"> بالتوقيت المحلي */
@@ -129,6 +130,7 @@ function invoiceUrlViewerKind(url: string): "pdf" | "image" | "unknown" {
 }
 
 export default function SellOrderDetails() {
+  const { can } = useCan();
   const { id } = useParams();
   const navigate = useNavigate();
   const invoiceInputRef = useRef<HTMLInputElement>(null);
@@ -286,6 +288,7 @@ export default function SellOrderDetails() {
           <Badge variant="success" className="text-sm px-4 py-1.5 rounded-lg shadow-sm">
             أمر بيع
           </Badge>
+          {can("customer_returns.create") && (
           <Link to={`/customer-returns/new?sell_order=${sellOrder.id}`}>
             <Button
               variant="outline"
@@ -296,8 +299,10 @@ export default function SellOrderDetails() {
               إنشاء مرتجع
             </Button>
           </Link>
+          )}
           {!hasInvoice && (
             <>
+              {can("sell_orders.edit") && (
               <Button
                 type="button"
                 variant="outline"
@@ -308,6 +313,8 @@ export default function SellOrderDetails() {
                 <Edit className="h-4 w-4" />
                 تعديل
               </Button>
+              )}
+              {can("sell_orders.upload_invoice") && (
               <Button
                 type="button"
                 variant="outline"
@@ -319,9 +326,10 @@ export default function SellOrderDetails() {
                 <Upload className="h-4 w-4" />
                 رفع الفاتورة
               </Button>
+              )}
             </>
           )}
-            {shouldShowPushToOdoo && (
+            {shouldShowPushToOdoo && can("sell_orders.push_odoo") && (
               <Button
                 type="button"
                 variant="outline"
@@ -341,9 +349,10 @@ export default function SellOrderDetails() {
                 مزامنة مع Odoo
               </Button>
             )}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            {can("sell_orders.print") && (
+            <Button
+              variant="outline"
+              size="sm"
               className="rounded-lg gap-2"
               disabled={printMutation.isPending}
               onClick={() => {
@@ -359,6 +368,7 @@ export default function SellOrderDetails() {
               {printMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
               طباعة أمر البيع
             </Button>
+            )}
         </div>
       </div>
 
@@ -599,6 +609,7 @@ export default function SellOrderDetails() {
                   <FileText className="h-5 w-5 text-primary" />
                   فاتورة أمر البيع
                 </CardTitle>
+                {can("sell_orders.download_invoice") && (
                 <Button variant="outline" size="sm" className="rounded-lg gap-2 shrink-0" asChild>
                   <a
                     href={invoiceHref}
@@ -610,6 +621,7 @@ export default function SellOrderDetails() {
                     فتح الفاتورة
                   </a>
                 </Button>
+                )}
               </CardHeader>
               <CardContent className="p-4 space-y-3">
                 {invoiceKind === "pdf" ? (
@@ -726,6 +738,7 @@ export default function SellOrderDetails() {
                           ? format(new Date(sellOrder.delivery_date), "yyyy/MM/dd HH:mm", { locale: arSA })
                           : "—"}
                       </p>
+                      {can("sell_orders.edit_delivery_date") && (
                       <button
                         type="button"
                         onClick={() => {
@@ -737,6 +750,7 @@ export default function SellOrderDetails() {
                       >
                         <Edit className="h-3.5 w-3.5" />
                       </button>
+                      )}
                     </div>
                   )}
                 </div>

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Wallet } from "lucide-react";
 import type { BasePaymentGateway } from "@/types";
 import { useNavigate } from "react-router-dom";
+import { useCan } from "@/hooks/usePermissions";
 
 interface PaymentGatewayListProps<T extends BasePaymentGateway> {
   data: T[];
@@ -23,6 +24,7 @@ export function PaymentGatewayList<T extends BasePaymentGateway>({
   isLoading,
 }: PaymentGatewayListProps<T>) {
   const navigate = useNavigate();
+  const { can } = useCan();
 
   if (isLoading) {
     return <div className="p-8 text-center text-muted-foreground">جاري التحميل...</div>;
@@ -61,15 +63,17 @@ export function PaymentGatewayList<T extends BasePaymentGateway>({
                   عرض الحساب
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => onEdit(item)}
-              >
-                <Edit className="h-4 w-4" />
-                تعديل
-              </Button>
+              {can("payment_gateways.manage") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => onEdit(item)}
+                >
+                  <Edit className="h-4 w-4" />
+                  تعديل
+                </Button>
+              )}
             </div>
           </div>
         ))}
@@ -114,14 +118,16 @@ export function PaymentGatewayList<T extends BasePaymentGateway>({
                         <Wallet className="h-4 w-4 text-info" />
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="تعديل"
-                      onClick={() => onEdit(item)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    {can("payment_gateways.manage") && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="تعديل"
+                        onClick={() => onEdit(item)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

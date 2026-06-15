@@ -20,6 +20,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { Pagination } from "@/components/shared";
 import { toast } from "sonner";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
+import { useCan } from "@/hooks/usePermissions";
 
 const measurementSchema = z.object({
   notes: z.string().optional(),
@@ -35,6 +36,7 @@ const measurementSchema = z.object({
 type MeasurementFormValues = z.infer<typeof measurementSchema>;
 
 export default function MeasurementsList() {
+  const { can } = useCan();
   const navigate = useNavigate();
   const [selectedOpp, setSelectedOpp] = useState<number | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -236,6 +238,7 @@ export default function MeasurementsList() {
                         </Button>
                    )}
                 
+                {can("measurements.create") && (
                 <Dialog open={isDialogOpen && selectedOpp === request.id} onOpenChange={(open) => {
                     setIsDialogOpen(open);
                     if (open) {
@@ -324,6 +327,7 @@ export default function MeasurementsList() {
                     </Form>
                   </DialogContent>
                 </Dialog>
+                )}
               </CardFooter>
             </Card>
           ))

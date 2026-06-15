@@ -17,6 +17,7 @@ import { useProductionOrders, usePrintProductionOrdersList } from "@/hooks/usePr
 import type { ProductionListPrintParams } from "@/hooks/useProductionOrders";
 import { useProductionResponsibles } from "@/hooks/useProductionResponsibles";
 import { usePagination } from "@/hooks/usePagination";
+import { useCan } from "@/hooks/usePermissions";
 import { PRODUCTION_ORDER_STATUS_LABELS } from "@/types";
 import type { ProductionOrder, ProductionOrderStatus } from "@/types";
 import { PageHeader, Pagination, LoadingState, EmptyState } from "@/components/shared";
@@ -136,6 +137,7 @@ function ProductionOrderMobileCard({ order }: { order: ProductionOrder }) {
 const STATUS_OPTIONS: ProductionOrderStatus[] = ["open", "in_progress", "closed", "canceled"];
 
 export default function ProductionOrdersList() {
+  const { can } = useCan();
   const { page, pageSize, setPage, setPageSize } = usePagination();
   const [responsibleFilter, setResponsibleFilter] = useState<string>("all"); // "all" | "unassigned" | "<id>"
   const [statusFilter, setStatusFilter] = useState<string>("all"); // "all" | ProductionOrderStatus
@@ -180,12 +182,14 @@ export default function ProductionOrdersList() {
             >
               <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
             </Button>
-            <Link to="/production-orders/new">
-              <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
-                <Plus className="ml-2 h-5 w-5" />
-                أمر تصنيع جديد
-              </Button>
-            </Link>
+            {can("production_orders.create") && (
+              <Link to="/production-orders/new">
+                <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
+                  <Plus className="ml-2 h-5 w-5" />
+                  أمر تصنيع جديد
+                </Button>
+              </Link>
+            )}
           </div>
         }
       />
@@ -239,16 +243,18 @@ export default function ProductionOrdersList() {
           </Select>
         </div>
 
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={() => printList.mutate(filterParams)}
-          disabled={printList.isPending}
-          title="طباعة القائمة الحالية كـ PDF"
-        >
-          <Printer className={`h-4 w-4 ${printList.isPending ? "animate-pulse" : ""}`} />
-          طباعة القائمة
-        </Button>
+        {can("production_orders.print") && (
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => printList.mutate(filterParams)}
+            disabled={printList.isPending}
+            title="طباعة القائمة الحالية كـ PDF"
+          >
+            <Printer className={`h-4 w-4 ${printList.isPending ? "animate-pulse" : ""}`} />
+            طباعة القائمة
+          </Button>
+        )}
       </div>
 
       {isLoading ? (

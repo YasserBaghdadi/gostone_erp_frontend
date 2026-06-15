@@ -43,60 +43,63 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 
+// Each item's `permission` is the screen's action-catalog `.view` key (granted
+// via /roles-permissions). A value may be an array (any-of). Superuser = all.
 const navigationGroups = [
   {
     title: "إدارة المخزون",
     items: [
-      { name: "الموردين", href: "/suppliers", icon: Users, permission: "suppliers_management" },
-      { name: "المنتجات", href: "/items", icon: Package, permission: "items_management" },
-      { name: "أوامر التصنيع", href: "/production-orders", icon: Factory, permission: "items_management" },
-      { name: "أوامر التسليم", href: "/delivery-orders", icon: Truck, permission: "items_management" },
-      { name: "طلبات الشراء", href: "/purchase-orders", icon: ShoppingCart, permission: "purchase_order_management" },
+      { name: "الموردين", href: "/suppliers", icon: Users, permission: "suppliers.view" },
+      { name: "المنتجات", href: "/items", icon: Package, permission: "items.view" },
+      { name: "أوامر التصنيع", href: "/production-orders", icon: Factory, permission: "production_orders.view" },
+      { name: "أوامر التسليم", href: "/delivery-orders", icon: Truck, permission: "delivery_orders.view" },
+      { name: "طلبات الشراء", href: "/purchase-orders", icon: ShoppingCart, permission: "purchase_orders.view" },
     ]
   },
   {
     title: "إدارة العملاء",
     items: [
-      { name: "العملاء", href: "/customers", icon: UserIcon, permission: "customer_management" },
-      { name: "العملاء المحتملون", href: "/potential-customers", icon: UserPlus, permission: "customer_management" },
-      { name: "الفرص", href: "/opportunities", icon: Users, permission: "opportunity_management" },
-      { name: "المقاسات", href: "/measurements", icon: Ruler, permission: "dim_management" },
-      { name: "أوامر البيع", href: "/sell-orders", icon: FileCheck, permission: "sell_order_management" },
-      { name: "المرتجعات", href: "/customer-returns", icon: PackageOpen, permission: "purchase_order_management" },
+      { name: "العملاء", href: "/customers", icon: UserIcon, permission: "customers.view" },
+      { name: "العملاء المحتملون", href: "/potential-customers", icon: UserPlus, permission: ["customers.view", "potential_customers.view"] },
+      { name: "الفرص", href: "/opportunities", icon: Users, permission: "opportunities.view" },
+      { name: "المقاسات", href: "/measurements", icon: Ruler, permission: "measurements.view" },
+      { name: "أوامر البيع", href: "/sell-orders", icon: FileCheck, permission: "sell_orders.view" },
+      { name: "المرتجعات", href: "/customer-returns", icon: PackageOpen, permission: "customer_returns.view" },
     ]
   },
   {
     title: "إدارة الموظفين",
     items: [
-      { name: "الموظفين", href: "/employees", icon: Users, permission: "employee_management" },
-      { name: "الجلسات", href: "/sessions", icon: ClipboardList, permission: "session_management" },
-      { name: "طلبات العهد", href: "/custody", icon: DollarSign, permission: "custodian_transaction_request" },
-      { name: "طلبات صرف", href: "/employee-expenses", icon: Receipt, permission: "disbursement_request_management" },
+      { name: "الموظفين", href: "/employees", icon: Users, permission: "employees.view" },
+      { name: "الجلسات", href: "/sessions", icon: ClipboardList, permission: "sessions.view" },
+      { name: "طلبات العهد", href: "/custody", icon: DollarSign, permission: "custody.view" },
+      { name: "طلبات صرف", href: "/employee-expenses", icon: Receipt, permission: "expenses_requests.view" },
+      { name: "الأدوار والصلاحيات", href: "/roles-permissions", icon: ClipboardList, permission: "employees.assign_permissions" },
     ]
   },
   {
     title: "إدارة الحسابات",
     items: [
-      { name: "الحسابات", href: "/accounts", icon: DollarSign, permission: "accounts_management" },
-      { name: "تسجيل المصروفات", href: "/expenses", icon: Receipt, permission: "accounts_management" },
-      { name: "الملاحظات", href: "/notes", icon: ClipboardList, permission: "accounts_management" },
-      { name: "سندات القيد", href: "/journal-entries", icon: FileText, permission: "journal_entries_management" },
-      { name: "بوابات الدفع", href: "/accounts/payment-gateways", icon: CreditCard, permission: "payment_gateways_management" },
-      { name: "بوابات القبض", href: "/collections", icon: HandCoins, permission: "payment_gateways_management" },
-      { name: "طلبات الدفع", href: "/payment-requests", icon: CreditCard, permission: "accounts_management" },
-      { name: "قوالب الاستحقاق", href: "/accrual-templates", icon: FileText, permission: "accounts_management" },
-      { name: "الأصول الثابتة", href: "/fixed-assets", icon: Package, permission: "accounts_management" },
-      { name: "مسودّات آخر الشهر", href: "/month-end-drafts", icon: ClipboardList, permission: "accounts_management" },
-      { name: "دفعات الموردين", href: "/supplier-payments", icon: HandCoins, permission: "accounts_management" },
+      { name: "الحسابات", href: "/accounts", icon: DollarSign, permission: "accounts.view" },
+      { name: "تسجيل المصروفات", href: "/expenses", icon: Receipt, permission: "expenses.view" },
+      { name: "الملاحظات", href: "/notes", icon: ClipboardList, permission: "notes.view" },
+      { name: "سندات القيد", href: "/journal-entries", icon: FileText, permission: "journal_entries.view" },
+      { name: "بوابات الدفع", href: "/accounts/payment-gateways", icon: CreditCard, permission: "payment_gateways.view" },
+      { name: "بوابات القبض", href: "/collections", icon: HandCoins, permission: "collections.view" },
+      { name: "طلبات الدفع", href: "/payment-requests", icon: CreditCard, permission: "payment_requests.view" },
+      { name: "قوالب الاستحقاق", href: "/accrual-templates", icon: FileText, permission: "accrual_templates.view" },
+      { name: "الأصول الثابتة", href: "/fixed-assets", icon: Package, permission: "fixed_assets.view" },
+      { name: "مسودّات آخر الشهر", href: "/month-end-drafts", icon: ClipboardList, permission: ["month_end_drafts.view", "accrual_templates.view"] },
+      { name: "دفعات الموردين", href: "/supplier-payments", icon: HandCoins, permission: "supplier_payments.view" },
     ]
   },
   {
     title: "عام",
     items: [
-      { name: "الموافقات", href: "/approvals", icon: ClipboardList, permission: "approval_management" },
-      { name: "المخازن", href: "/storage-areas", icon: Warehouse, permission: "storage_areas_management" },
-      { name: "تحويل المخزون", href: "/stock-transfers", icon: ArrowLeftRight, permission: "storage_areas_management" },
-      { name: "رصيد المخازن", href: "/stock-report", icon: ClipboardList, permission: "storage_areas_management" },
+      { name: "الموافقات", href: "/approvals", icon: ClipboardList, permission: "approvals.view" },
+      { name: "المخازن", href: "/storage-areas", icon: Warehouse, permission: "storage_areas.view" },
+      { name: "تحويل المخزون", href: "/stock-transfers", icon: ArrowLeftRight, permission: "stock_transfers.view" },
+      { name: "رصيد المخازن", href: "/stock-report", icon: ClipboardList, permission: ["stock_report.view", "items.stock_report"] },
     ]
   }
 ];
@@ -105,7 +108,7 @@ type NavLinkItem = {
   name: string;
   href: string;
   icon: LucideIcon;
-  permission?: string;
+  permission?: string | string[];
 };
 
 function SidebarNavLink({
@@ -279,12 +282,13 @@ export default function DashboardLayout() {
       setLogoutModalOpen(true);
   };
 
-  const hasPermission = (permission?: string) => {
+  const hasPermission = (permission?: string | string[]) => {
     if (!permission) return true;
     if (!user) return false;
     // A superuser (full manager) always sees every interface.
     if (user.is_superuser) return true;
-    return user.permission_groups?.some((g) => g.name === permission) ?? false;
+    const required = Array.isArray(permission) ? permission : [permission];
+    return user.permission_groups?.some((g) => required.includes(g.name)) ?? false;
   };
 
   // Helpers to check if we should hide the nav (Focus Mode)

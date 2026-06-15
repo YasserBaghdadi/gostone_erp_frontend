@@ -71,7 +71,6 @@ import {
 } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 
 // --- Schema ---
 const itemSchema = z.object({
@@ -231,14 +230,8 @@ export default function CreatePurchaseOrder() {
   useEffect(() => {
     if (isEditing && existingOrder) {
       const rawItems = existingOrder.items || [];
-      let mode: "order" | "per_line" = "order";
-      if (rawItems.length > 0) {
-        const orderSup = existingOrder.supplier;
-        const allSameAsOrder =
-          orderSup > 0 &&
-          rawItems.every((i) => (i.supplier ?? orderSup) === orderSup);
-        mode = allSameAsOrder ? "order" : "per_line";
-      }
+      // Single-supplier POs only: always load in order mode.
+      const mode: "order" | "per_line" = "order";
       const mappedItems = rawItems.map((item) => ({
         item: item.item,
         item_name: item.item_name,
@@ -398,60 +391,6 @@ export default function CreatePurchaseOrder() {
     setSupplierModalPurpose("change_group_supplier");
     setChangeSupplierLineIndices(indices);
     setIsSupplierModalOpen(true);
-  };
-
-  const handleModeChange = (next: "order" | "per_line") => {
-    if (next === supplierMode) return;
-
-    const currentItems = form.getValues("items");
-
-    if (next === "per_line") {
-      // مورد واحد → مورد لكل بند: نربط كل البنود بالمورد الحالي
-      const sid = form.getValues("supplier");
-      const sName = form.getValues("supplier_name") || "";
-
-      if (currentItems.length > 0 && sid && sid > 0) {
-        currentItems.forEach((item, i) => {
-          update(i, {
-            ...item,
-            line_supplier: sid,
-            line_supplier_name: sName,
-          });
-        });
-      }
-
-      form.setValue("supplierMode", next);
-      form.setValue("supplier", 0);
-      form.setValue("supplier_name", "");
-    } else {
-      // مورد لكل بند → مورد واحد: نحدد المورد تلقائياً إن أمكن
-      const supplierIds = new Set(
-        currentItems.map((item) => item.line_supplier).filter((s) => s > 0),
-      );
-
-      if (supplierIds.size === 1) {
-        const singleId = [...supplierIds][0];
-        const singleName =
-          currentItems.find((it) => it.line_supplier === singleId)
-            ?.line_supplier_name || `مورد #${singleId}`;
-
-        form.setValue("supplierMode", next);
-        form.setValue("supplier", singleId);
-        form.setValue("supplier_name", singleName);
-      } else if (supplierIds.size > 1) {
-        // عدة موردين → نحتفظ بالبنود ونطلب من المستخدم اختيار مورد الطلب
-        form.setValue("supplierMode", next);
-        form.setValue("supplier", 0);
-        form.setValue("supplier_name", "");
-        toast.info("يوجد أكثر من مورد — اختر مورد الطلب وسيتم تحديث كل البنود.");
-      } else {
-        form.setValue("supplierMode", next);
-        form.setValue("supplier", 0);
-        form.setValue("supplier_name", "");
-      }
-    }
-
-    setActiveGroupSupplier(null);
   };
 
   /** إضافة أصناف لمورد موجود بالفعل في البنود */
@@ -759,69 +698,7 @@ export default function CreatePurchaseOrder() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className='space-y-5'>
-                  {/* ── Mode Selector ── */}
-                  <div className='space-y-2'>
-                    <span className='text-sm font-medium text-foreground'>
-                      طريقة تحديد المورد
-                    </span>
-                    <div className='grid grid-cols-2 gap-3'>
-                      <button
-                        type='button'
-                        onClick={() => handleModeChange("order")}
-                        className={cn(
-                          "flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all duration-200",
-                          supplierMode === "order"
-                            ? "border-primary bg-primary/5 shadow-sm"
-                            : "border-border/60 bg-card hover:border-primary/40 hover:bg-muted/30",
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-                            supplierMode === "order"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          <Truck className='h-5 w-5' />
-                        </div>
-                        <span className='text-xs font-medium leading-tight'>
-                          مورد واحد
-                          <br />
-                          للطلب كاملاً
-                        </span>
-                      </button>
-
-                      <button
-                        type='button'
-                        onClick={() => handleModeChange("per_line")}
-                        className={cn(
-                          "flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all duration-200",
-                          supplierMode === "per_line"
-                            ? "border-primary bg-primary/5 shadow-sm"
-                            : "border-border/60 bg-card hover:border-primary/40 hover:bg-muted/30",
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-                            supplierMode === "per_line"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          <Users className='h-5 w-5' />
-                        </div>
-                        <span className='text-xs font-medium leading-tight'>
-                          مورد مختلف
-                          <br />
-                          لكل مجموعة
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* ── Supplier field (order mode only) ── */}
+                  {/* Single supplier per purchase order. */}
                   {supplierMode === "order" && (
                     <FormField
                       control={form.control}

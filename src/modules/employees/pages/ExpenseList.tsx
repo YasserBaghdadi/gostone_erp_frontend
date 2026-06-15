@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
+import { useCan } from "@/hooks/usePermissions";
 
 // Status logic based on approval fields
 const getStatus = (request: any) => {
@@ -27,6 +28,7 @@ const getStatus = (request: any) => {
 
 export default function ExpenseList() {
   const navigate = useNavigate();
+  const { can } = useCan();
   const [searchQuery, setSearchQuery] = useState("");
   const { page, pageSize, setPage, setPageSize } = usePagination();
 
@@ -76,12 +78,14 @@ export default function ExpenseList() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <Link to="/employee-expenses/new">
-                    <Button className="rounded-xl shadow-lg shadow-primary/20 gap-2">
-                        <Plus className="h-4 w-4" />
-                        <span className="hidden sm:inline">طلب جديد</span>
-                    </Button>
-                </Link>
+                {can("expenses_requests.create") && (
+                    <Link to="/employee-expenses/new">
+                        <Button className="rounded-xl shadow-lg shadow-primary/20 gap-2">
+                            <Plus className="h-4 w-4" />
+                            <span className="hidden sm:inline">طلب جديد</span>
+                        </Button>
+                    </Link>
+                )}
             </div>
       </div>
 

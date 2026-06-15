@@ -1,7 +1,8 @@
-import { useForm, useWatch } from "react-hook-form";
+import { useEffect, useRef } from "react";
+import { useForm, useWatch, type UseFormReturn, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Save, Phone } from "lucide-react";
+import { Loader2, Save, Phone, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,7 +13,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { normalizeSaudiPhone, formatPhoneForDisplay } from "@/components/form";
+import { nameImpliesCompany } from "@/lib/utils";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { CustomerNationalAddressFields } from "@/modules/customers/components/CustomerNationalAddressFields";
 import {
@@ -22,85 +31,161 @@ import {
 // Regex for Saudi phone number validation (accepts various formats)
 const saudiPhoneRegex = /^(\+966|966|0)?5\d{8}$/;
 
+// رسالة الحقول المطلوبة لعميل من نوع شركة
+const COMPANY_REQUIRED_MSG = "مطلوب لعميل شركة";
+
 // ... imports
 
-const customerSchema = z.object({
-  phone_number: z.string()
-    .min(9, "رقم الهاتف مطلوب")
-    .refine((val) => saudiPhoneRegex.test(val.replace(/\s/g, '')), {
-      message: "رقم الهاتف غير صحيح (مثال: 05xxxxxxxx)",
-    }),
-  first_name: z.string().min(2, "الاسم الأول مطلوب"),
-  last_name: z.string().min(2, "اسم العائلة مطلوب"),
-  email: z.string().email("البريد الإلكتروني غير صحيح").optional().or(z.literal("")),
-  phone_number2: z.string().optional(),
-  phone_number3: z.string().optional(),
-  
-  // New Fields
-  vat_number: z.string().optional(),
-  vat_number_file: z.any().optional(),
-  
-  cr_number: z.string().optional(),
-  cr_file: z.any().optional(),
-  
-  // Legacy fallback address (text as sent to backend)
-  address: z.string().optional().or(z.literal("")),
-  address_file: z.any().optional(),
+const customerSchema = z
+  .object({
+    phone_number: z.string()
+      .min(9, "رقم الهاتف مطلوب")
+      .refine((val) => saudiPhoneRegex.test(val.replace(/\s/g, '')), {
+        message: "رقم الهاتف غير صحيح (مثال: 05xxxxxxxx)",
+      }),
+    first_name: z.string().min(2, "الاسم مطلوب"),
+    last_name: z.string().optional().or(z.literal("")),
+    email: z.string().email("البريد الإلكتروني غير صحيح").optional().or(z.literal("")),
+    phone_number2: z.string().optional(),
+    phone_number3: z.string().optional(),
 
-  // National Address (structured UI fields, converted to `address` on submit)
-  na_short: z
-    .string()
-    .optional()
-    .or(z.literal(""))
-    .refine((s) => !s || s.length === 8, "العنوان المختصر 8 خانات أو اتركه فارغاً"),
-  na_governorate: z.string().optional().or(z.literal("")),
-  na_city: z.string().optional().or(z.literal("")),
-  na_street: z.string().optional().or(z.literal("")),
-  na_building: z
-    .string()
-    .optional()
-    .or(z.literal(""))
-    .refine((s) => !s || /^\d{4}$/.test(s), "رقم المبنى (4 أرقام)"),
-  na_district: z.string().optional().or(z.literal("")),
-  na_additional: z
-    .string()
-    .optional()
-    .or(z.literal(""))
-    .refine((s) => !s || /^\d{4}$/.test(s), "الرقم الفرعي (4 أرقام)"),
-  na_postal: z
-    .string()
-    .optional()
-    .or(z.literal(""))
-    .refine((s) => !s || /^\d{5}$/.test(s), "الرمز البريدي (5 أرقام)"),
+    // نوع العميل: فرد (individual) أو شركة (company). القيمة الافتراضية تُضبط عبر defaultValues.
+    customer_type: z.enum(["individual", "company"]),
 
-  // تفكيك العنوان المفكك للباك اند (لا نرسل `address` كنص)
-  street: z.string().optional().or(z.literal("")),
-  building_number: z.string().optional().or(z.literal("")),
-  district: z.string().optional().or(z.literal("")),
-  secondary_number: z.string().optional().or(z.literal("")),
-  postal_code: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
-});
+    // New Fields
+    vat_number: z.string().optional(),
+    vat_number_file: z.any().optional(),
+
+    cr_number: z.string().optional(),
+    cr_file: z.any().optional(),
+
+    // Legacy fallback address (text as sent to backend)
+    address: z.string().optional().or(z.literal("")),
+    address_file: z.any().optional(),
+
+    // National Address (structured UI fields, converted to `address` on submit)
+    na_short: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .refine((s) => !s || s.length === 8, "العنوان المختصر 8 خانات أو اتركه فارغاً"),
+    na_governorate: z.string().optional().or(z.literal("")),
+    na_city: z.string().optional().or(z.literal("")),
+    na_street: z.string().optional().or(z.literal("")),
+    na_building: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .refine((s) => !s || /^\d{4}$/.test(s), "رقم المبنى (4 أرقام)"),
+    na_district: z.string().optional().or(z.literal("")),
+    na_additional: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .refine((s) => !s || /^\d{4}$/.test(s), "الرقم الفرعي (4 أرقام)"),
+    na_postal: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .refine((s) => !s || /^\d{5}$/.test(s), "الرمز البريدي (5 أرقام)"),
+
+    // تفكيك العنوان المفكك للباك اند (لا نرسل `address` كنص)
+    street: z.string().optional().or(z.literal("")),
+    building_number: z.string().optional().or(z.literal("")),
+    district: z.string().optional().or(z.literal("")),
+    secondary_number: z.string().optional().or(z.literal("")),
+    postal_code: z.string().optional().or(z.literal("")),
+    city: z.string().optional().or(z.literal("")),
+  })
+  // الحقول السبعة الخاصة بالشركة مطلوبة فقط عندما يكون نوع العميل "شركة".
+  // نتحقق من حقول الإدخال (na_*) التي تُحوَّل لاحقاً إلى مفككات العنوان للباك اند،
+  // بالإضافة إلى الرقم الضريبي والسجل التجاري.
+  .superRefine((data, ctx) => {
+    // الفرد يحتاج اسماً أول + عائلة؛ الشركة تحتاج اسماً واحداً فقط (في first_name).
+    if (data.customer_type !== "company") {
+      if (!data.last_name || String(data.last_name).trim().length < 2) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["last_name"],
+          message: "اسم العائلة مطلوب",
+        });
+      }
+      return;
+    }
+
+    const requiredCompanyFields: Array<keyof typeof data> = [
+      "vat_number",
+      "cr_number",
+      "na_building",
+      "na_street",
+      "na_district",
+      "na_city",
+      "na_postal",
+    ];
+
+    requiredCompanyFields.forEach((field) => {
+      const value = data[field];
+      if (!value || String(value).trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: COMPANY_REQUIRED_MSG,
+        });
+      }
+    });
+  });
 
 export type CustomerFormValues = z.infer<typeof customerSchema>;
+
+/**
+ * يربط أخطاء الحقول القادمة من الباك اند (HTTP 400) على حقول النموذج الصحيحة.
+ * الباك اند يرجّع الأخطاء بأسماء حقول الـ payload (مثل building_number)، بينما
+ * النموذج يستخدم حقول الإدخال (مثل na_building)، فنحتاج إلى تحويل الأسماء.
+ */
+const BACKEND_TO_FORM_FIELD: Record<string, keyof CustomerFormValues> = {
+  vat_number: "vat_number",
+  cr_number: "cr_number",
+  building_number: "na_building",
+  street: "na_street",
+  district: "na_district",
+  city: "na_city",
+  postal_code: "na_postal",
+  secondary_number: "na_additional",
+  phone_number: "phone_number",
+  phone_number2: "phone_number2",
+  phone_number3: "phone_number3",
+  first_name: "first_name",
+  last_name: "last_name",
+  email: "email",
+  customer_type: "customer_type",
+};
 
 interface CustomerFormProps {
   defaultValues?: Partial<CustomerFormValues>;
   onSubmit: (values: CustomerFormValues) => void;
   isLoading?: boolean;
   buttonText?: string;
+  /** عند true: يُجبَر نوع العميل على "شركة" ويُخفى منتقي النوع (وضع إكمال بيانات التحويل). */
+  forceCompany?: boolean;
+  /**
+   * يستقبل الأب دالةً لتمرير أخطاء الباك اند (object من DRF) إلى النموذج.
+   * تُعيد true إذا تم التعرّف على خطأ حقل واحد على الأقل وعرضه على الإدخال المناسب.
+   */
+  registerBackendErrorHandler?: (
+    handler: (errors: Record<string, unknown>) => boolean,
+  ) => void;
 }
 
 // Phone Input Field Component
 
 // Phone Input Field Component
-function PhoneInputField({ 
-  value, 
-  onChange, 
+function PhoneInputField({
+  value,
+  onChange,
   placeholder = "05xxxxxxxx",
-  ...props 
-}: { 
-  value: string; 
+  ...props
+}: {
+  value: string;
   onChange: (value: string) => void;
   placeholder?: string;
 }) {
@@ -119,7 +204,7 @@ function PhoneInputField({
   return (
     <div className="relative">
       <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-      <Input 
+      <Input
         type="tel"
         inputMode="numeric"
         dir="ltr"
@@ -133,15 +218,35 @@ function PhoneInputField({
   );
 }
 
+/**
+ * يبني دالةً تربط أخطاء الباك اند على النموذج. تُستخدم من الأب عبر
+ * registerBackendErrorHandler.
+ */
+function buildBackendErrorHandler(form: UseFormReturn<CustomerFormValues>) {
+  return (errors: Record<string, unknown>): boolean => {
+    let handled = false;
+    Object.entries(errors).forEach(([key, value]) => {
+      const formField = BACKEND_TO_FORM_FIELD[key];
+      if (!formField) return;
+      const message = Array.isArray(value) ? value.join("، ") : String(value);
+      form.setError(formField as Path<CustomerFormValues>, { message });
+      handled = true;
+    });
+    return handled;
+  };
+}
+
 // ... helper components
 
-export default function CustomerForm({ 
-  defaultValues, 
-  onSubmit, 
-  isLoading, 
-  buttonText = "حفظ" 
+export default function CustomerForm({
+  defaultValues,
+  onSubmit,
+  isLoading,
+  buttonText = "حفظ",
+  forceCompany = false,
+  registerBackendErrorHandler,
 }: CustomerFormProps) {
-  
+
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
@@ -151,13 +256,29 @@ export default function CustomerForm({
       email: "",
       phone_number2: "",
       phone_number3: "",
+      customer_type: forceCompany ? "company" : "individual",
       vat_number: "",
       cr_number: "",
       address: "",
       ...emptyNationalAddressParts(),
       ...defaultValues,
+      ...(forceCompany ? { customer_type: "company" as const } : {}),
     },
   });
+
+  // عند وضع التحويل (forceCompany) نُثبّت نوع العميل على "شركة".
+  useEffect(() => {
+    if (forceCompany) {
+      form.setValue("customer_type", "company");
+    }
+  }, [forceCompany, form]);
+
+  // نمرّر للأب دالة ربط أخطاء الباك اند بالنموذج.
+  useEffect(() => {
+    if (registerBackendErrorHandler) {
+      registerBackendErrorHandler(buildBackendErrorHandler(form));
+    }
+  }, [registerBackendErrorHandler, form]);
 
   // Transform values before submit (ensure all phones are normalized)
   const handleSubmit = (values: CustomerFormValues) => {
@@ -165,6 +286,8 @@ export default function CustomerForm({
     // ملاحظة: لا نرسل `address` كنص لضمان توافق الـ backend.
     const payload = {
       ...values,
+      // شركة → اسم واحد في first_name و last_name فارغ.
+      last_name: values.customer_type === "company" ? "" : (values.last_name || ""),
       street: values.na_street || "",
       building_number: values.na_building || "",
       district: values.na_district || "",
@@ -200,10 +323,39 @@ export default function CustomerForm({
   };
 
   // Watch fields to conditionally show file uploads
+  const customerType = useWatch({ control: form.control, name: "customer_type" });
+  const firstName = useWatch({ control: form.control, name: "first_name" });
+  const lastName = useWatch({ control: form.control, name: "last_name" });
+
+  // عند ذكر "شركة"/"مؤسسة" في الاسم: نفرض النوع "شركة" ونمنع اختيار "فرد".
+  const lockCompanyByName = nameImpliesCompany(`${firstName ?? ""} ${lastName ?? ""}`);
+
+  useEffect(() => {
+    if (lockCompanyByName && form.getValues("customer_type") !== "company") {
+      form.setValue("customer_type", "company", { shouldValidate: true });
+    }
+  }, [lockCompanyByName, form]);
+
   const vatNumber = useWatch({ control: form.control, name: "vat_number" });
   const crNumber = useWatch({ control: form.control, name: "cr_number" });
   const vatFile = useWatch({ control: form.control, name: "vat_number_file" });
   const crFile = useWatch({ control: form.control, name: "cr_file" });
+
+  const isCompany = customerType === "company";
+
+  // عند التحويل إلى "شركة": اسم واحد فقط — ندمج الاسمين ونفرّغ خانة العائلة.
+  const wasCompany = useRef(false);
+  useEffect(() => {
+    if (isCompany && !wasCompany.current) {
+      const f = (form.getValues("first_name") || "").trim();
+      const l = (form.getValues("last_name") || "").trim();
+      if (l) {
+        form.setValue("first_name", `${f} ${l}`.trim());
+        form.setValue("last_name", "");
+      }
+    }
+    wasCompany.current = isCompany;
+  }, [isCompany, form]);
 
   const hasExistingFile = (v: unknown): boolean => {
     if (typeof v === "string") return v.trim().length > 0;
@@ -215,6 +367,38 @@ export default function CustomerForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
+            {/* نوع العميل */}
+            <FormField
+            control={form.control}
+            name="customer_type"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>نوع العميل <span className="text-destructive">*</span></FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  disabled={forceCompany || lockCompanyByName}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر نوع العميل" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="individual">فرد</SelectItem>
+                    <SelectItem value="company">شركة</SelectItem>
+                  </SelectContent>
+                </Select>
+                {lockCompanyByName && !forceCompany && (
+                  <p className="text-xs text-muted-foreground">
+                    تم ضبط النوع على «شركة» تلقائياً لأن الاسم يذكر «شركة/مؤسسة».
+                  </p>
+                )}
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+
             {/* Phone Number */}
             <FormField
             control={form.control}
@@ -223,8 +407,8 @@ export default function CustomerForm({
                 <FormItem>
                 <FormLabel>رقم الهاتف الأساسي <span className="text-destructive">*</span></FormLabel>
                 <FormControl>
-                    <PhoneInputField 
-                      value={field.value} 
+                    <PhoneInputField
+                      value={field.value}
                       onChange={field.onChange}
                     />
                 </FormControl>
@@ -247,6 +431,23 @@ export default function CustomerForm({
             )}
             />
 
+            {isCompany ? (
+            /* شركة/مؤسسة: اسم واحد فقط */
+            <FormField
+            control={form.control}
+            name="first_name"
+            render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                <FormLabel>اسم الشركة / المؤسسة <span className="text-destructive">*</span></FormLabel>
+                <FormControl>
+                    <Input placeholder="الاسم الكامل للشركة أو المؤسسة" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            ) : (
+            <>
             {/* First Name */}
             <FormField
             control={form.control}
@@ -270,12 +471,14 @@ export default function CustomerForm({
                 <FormItem>
                 <FormLabel>اسم العائلة <span className="text-destructive">*</span></FormLabel>
                 <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
             )}
             />
+            </>
+            )}
 
             {/* Phone 2 */}
             <FormField
@@ -285,8 +488,8 @@ export default function CustomerForm({
                 <FormItem>
                 <FormLabel>رقم هاتف إضافي 1</FormLabel>
                 <FormControl>
-                    <PhoneInputField 
-                      value={field.value || ''} 
+                    <PhoneInputField
+                      value={field.value || ''}
                       onChange={field.onChange}
                       placeholder="اختياري"
                     />
@@ -304,8 +507,8 @@ export default function CustomerForm({
                 <FormItem>
                 <FormLabel>رقم هاتف إضافي 2</FormLabel>
                 <FormControl>
-                    <PhoneInputField 
-                      value={field.value || ''} 
+                    <PhoneInputField
+                      value={field.value || ''}
                       onChange={field.onChange}
                       placeholder="اختياري"
                     />
@@ -315,18 +518,38 @@ export default function CustomerForm({
             )}
             />
         </div>
-        
-        <div className="border-t pt-6 mt-6">
-          <h3 className="text-lg font-medium mb-4">بيانات قانونية إضافية (اختياري)</h3>
+
+        {/* بيانات الشركة — تظهر فقط عندما يكون نوع العميل "شركة" */}
+        {isCompany && (
+        <div className="border-t pt-6 mt-6 animate-in fade-in slide-in-from-top-2">
+          <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-primary" />
+            بيانات الشركة (الضريبة + العنوان الوطني)
+          </h3>
           <div className="grid gap-6 md:grid-cols-2">
-            
+
             {/* VAT Number */}
             <FormField
               control={form.control}
               name="vat_number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الرقم الضريبي (VAT)</FormLabel>
+                  <FormLabel>الرقم الضريبي <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value?.toString() || ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* CR Number */}
+            <FormField
+              control={form.control}
+              name="cr_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>السجل التجاري <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value?.toString() || ''} />
                   </FormControl>
@@ -347,21 +570,6 @@ export default function CustomerForm({
                   />
               </div>
             )}
-
-            {/* CR Number */}
-            <FormField
-              control={form.control}
-              name="cr_number"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>السجل التجاري (CR)</FormLabel>
-                  <FormControl>
-                    <Input {...field} value={field.value?.toString() || ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
              {/* CR File */}
             {(crNumber || hasExistingFile(crFile)) && (
@@ -389,6 +597,7 @@ export default function CustomerForm({
             </div>
           </div>
         </div>
+        )}
 
         <Button type="submit" className="w-full md:w-auto min-w-[200px]" disabled={isLoading}>
           {isLoading ? (

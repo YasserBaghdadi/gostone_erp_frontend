@@ -56,6 +56,13 @@ export const API_ENDPOINTS = {
   // Opportunity Dimensions
   OPPORTUNITY_DIMENSIONS: {
     CREATE: "/opportunity-dimensions/",
+    FILE: (id: string | number) => `/opportunity-dimensions/${id}/file/`,
+  },
+
+  // Payments / Collections (قبض) — flat list across all customers
+  PAYMENTS: {
+    LIST: "/custom-v1/payments/",
+    PRINT: (id: string | number) => `/custom-v1/payments/${id}/print/`,
   },
 
   // Customers (Custom V1)
@@ -72,6 +79,8 @@ export const API_ENDPOINTS = {
     SYNC_ALL_TO_ODOO: "/custom-v1/customers/sync-all-to-odoo/",
     STATEMENT: (id: string | number) =>
       `/custom-v1/customers/${id}/statement/`,
+    CONVERT_TO_ACTUAL: (id: string | number) =>
+      `/custom-v1/customers/${id}/convert-to-actual/`,
   },
 
   // Work Orders
@@ -81,6 +90,22 @@ export const API_ENDPOINTS = {
     CREATE: "/work-orders",
     ADD_EXPENSE: (id: string) => `/work-orders/${id}/expenses`,
     ADD_PAYMENT: (id: string) => `/work-orders/${id}/payments`,
+  },
+
+  // Branches (الفروع)
+  BRANCHES: {
+    LIST: "/custom-v1/branches/",
+    CREATE: "/custom-v1/branches/",
+  },
+
+  DELIVERY_RESPONSIBLES: {
+    LIST: "/custom-v1/delivery-responsibles/",
+    CREATE: "/custom-v1/delivery-responsibles/",
+  },
+
+  PRODUCTION_RESPONSIBLES: {
+    LIST: "/custom-v1/production-responsibles/",
+    CREATE: "/custom-v1/production-responsibles/",
   },
 
   // Sell Orders (Sales Orders API)
@@ -138,6 +163,37 @@ export const API_ENDPOINTS = {
     CREATE: "/custom-v1/items/",
     UPDATE: (id: string | number) => `/custom-v1/items/${id}/`,
     DELETE: (id: string | number) => `/custom-v1/items/${id}/`,
+    STOCK_REPORT: "/custom-v1/items/stock-report/",
+    STOCK_REPORT_EXCEL: "/custom-v1/items/stock-report/excel/",
+  },
+
+  // Production Orders (أوامر التصنيع)
+  PRODUCTION_ORDERS: {
+    LIST: "/custom-v1/production-orders/",
+    DETAILS: (id: string | number) => `/custom-v1/production-orders/${id}/`,
+    CREATE: "/custom-v1/production-orders/",
+    ADD_MATERIAL: (id: string | number) =>
+      `/custom-v1/production-orders/${id}/add-material/`,
+    CLOSE: (id: string | number) =>
+      `/custom-v1/production-orders/${id}/close/`,
+    PRINT: (id: string | number) =>
+      `/custom-v1/production-orders/${id}/print/`,
+    PRINT_LIST: "/custom-v1/production-orders/print-list/",
+    SCHEDULE: (id: string | number) =>
+      `/custom-v1/production-orders/${id}/schedule/`,
+  },
+
+  // Delivery Orders (أوامر التسليم)
+  DELIVERY_ORDERS: {
+    LIST: "/custom-v1/delivery-orders/",
+    DETAILS: (id: string | number) => `/custom-v1/delivery-orders/${id}/`,
+    DELIVER: (id: string | number) =>
+      `/custom-v1/delivery-orders/${id}/deliver/`,
+    PRINT: (id: string | number) =>
+      `/custom-v1/delivery-orders/${id}/print/`,
+    PRINT_LIST: "/custom-v1/delivery-orders/print-list/",
+    SCHEDULE: (id: string | number) =>
+      `/custom-v1/delivery-orders/${id}/schedule/`,
   },
 
   // Purchase Orders
@@ -150,9 +206,13 @@ export const API_ENDPOINTS = {
     ACCEPT: (id: string | number) => `/custom-v1/purchase-orders/${id}/accept/`,
     REJECT: (id: string | number) => `/custom-v1/purchase-orders/${id}/reject/`,
     VERIFY: (id: string | number) => `/custom-v1/purchase-orders/${id}/verify/`,
+    RECEIVE: (id: string | number) =>
+      `/custom-v1/purchase-orders/${id}/receive/`,
     PRINT: (id: string | number) => `/custom-v1/purchase-orders/${id}/print/`,
     UPLOAD_INVOICE: (id: string | number) =>
       `/custom-v1/purchase-orders/${id}/upload-invoice/`,
+    SCHEDULE: (id: string | number) =>
+      `/custom-v1/purchase-orders/${id}/schedule/`,
   },
 
   // Suppliers
@@ -164,6 +224,16 @@ export const API_ENDPOINTS = {
     STATEMENT: (id: string | number) =>
       `/custom-v1/suppliers/${id}/statement/`,
   },
+
+  // General supplier payments (on-account)
+  SUPPLIER_PAYMENTS: {
+    LIST: "/custom-v1/supplier-payments/",
+    CREATE: "/custom-v1/supplier-payments/",
+  },
+
+  // Cash / bank accounts (payment sources)
+  CASH_ACCOUNTS: { LIST: "/custom-v1/cash-accounts/" },
+  BANK_ACCOUNTS: { LIST: "/custom-v1/bank-accounts/" },
 
   // Accounts (Chart of Accounts)
   ACCOUNTS: {
@@ -202,6 +272,12 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string | number) => `/custom-v1/employees/${id}/`,
     TOGGLE_ACTIVE: (id: string | number) =>
       `/custom-v1/employees/${id}/toggle-active/`,
+  },
+
+  // Action-level permission catalog (role management)
+  PERMISSION_CATALOG: {
+    GET: "/custom-v1/permission-catalog/",
+    SET: "/custom-v1/permission-catalog/",
   },
 
   // Permissions
@@ -260,12 +336,18 @@ export const API_ENDPOINTS = {
     DELETE: (id: string | number) => `/custom-v1/storage-areas/${id}/`,
   },
 
+  STOCK_TRANSFERS: {
+    LIST: "/custom-v1/stock-transfers/",
+    CREATE: "/custom-v1/stock-transfers/",
+  },
+
   // Customer Returns
   CUSTOMER_RETURNS: {
     LIST: "/custom-v1/customer-returns/",
     DETAILS: (id: string | number) => `/custom-v1/customer-returns/${id}/`,
     CREATE: "/custom-v1/customer-returns/",
     UPDATE: (id: string | number) => `/custom-v1/customer-returns/${id}/`,
+    ACCEPT: (id: string | number) => `/custom-v1/customer-returns/${id}/accept/`,
   },
 
   // Payment Requests — Customer Returns
@@ -299,5 +381,39 @@ export const API_ENDPOINTS = {
     CREATE: "/custom-v1/journal-entries/",
     UPLOAD_ATTACHMENT: (id: string | number) =>
       `/custom-v1/journal-entries/${id}/upload-attachment/`,
+  },
+
+  // Accrual Templates (قوالب الاستحقاق المتكررة)
+  ACCRUAL_TEMPLATES: {
+    LIST: "/custom-v1/accrual-templates/",
+    DETAILS: (id: string | number) => `/custom-v1/accrual-templates/${id}/`,
+    CREATE: "/custom-v1/accrual-templates/",
+    UPDATE: (id: string | number) => `/custom-v1/accrual-templates/${id}/`,
+    DELETE: (id: string | number) => `/custom-v1/accrual-templates/${id}/`,
+  },
+
+  // Accrual Runs (drafts → post)
+  ACCRUAL_RUNS: {
+    LIST: "/custom-v1/accrual-runs/",
+    DETAILS: (id: string | number) => `/custom-v1/accrual-runs/${id}/`,
+    GENERATE: "/custom-v1/accrual-runs/generate/",
+    POST: (id: string | number) => `/custom-v1/accrual-runs/${id}/post/`,
+  },
+
+  // Fixed Assets (الأصول الثابتة)
+  FIXED_ASSETS: {
+    LIST: "/custom-v1/fixed-assets/",
+    DETAILS: (id: string | number) => `/custom-v1/fixed-assets/${id}/`,
+    CREATE: "/custom-v1/fixed-assets/",
+    UPDATE: (id: string | number) => `/custom-v1/fixed-assets/${id}/`,
+    DELETE: (id: string | number) => `/custom-v1/fixed-assets/${id}/`,
+  },
+
+  // Depreciation Runs (drafts → post)
+  DEPRECIATION_RUNS: {
+    LIST: "/custom-v1/depreciation-runs/",
+    DETAILS: (id: string | number) => `/custom-v1/depreciation-runs/${id}/`,
+    GENERATE: "/custom-v1/depreciation-runs/generate/",
+    POST: (id: string | number) => `/custom-v1/depreciation-runs/${id}/post/`,
   },
 };

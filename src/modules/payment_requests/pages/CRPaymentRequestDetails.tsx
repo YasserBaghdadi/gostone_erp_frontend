@@ -15,6 +15,7 @@ import {
 import { parseBackendError } from "@/lib/utils";
 import { MarkPaymentTransferDialog } from "@/modules/payment_requests/components/MarkPaymentTransferDialog";
 import { formatCrPaymentCustomerLabel } from "@/lib/partyDisplay";
+import { useCan } from "@/hooks/usePermissions";
 
 function statusBadgeVariant(status: string): "secondary" | "success" | "destructive" | "warning" {
   const s = (status || "").toUpperCase();
@@ -39,6 +40,7 @@ export default function CRPaymentRequestDetails() {
     data?.customer_return ?? "",
   );
   const markDone = useMarkCRPaymentDone();
+  const { can } = useCan();
   const [markDialogOpen, setMarkDialogOpen] = useState(false);
 
   const handleConfirmMarkDone = (source_account: number) => {
@@ -108,7 +110,7 @@ export default function CRPaymentRequestDetails() {
             </p>
           </div>
         </div>
-        {isPending && (
+        {isPending && can("payment_requests.mark_done") && (
           <Button
             type="button"
             onClick={() => setMarkDialogOpen(true)}

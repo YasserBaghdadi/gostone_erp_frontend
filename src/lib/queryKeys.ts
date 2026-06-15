@@ -1,11 +1,53 @@
 /**
  * Centralized Query Keys
- * 
+ *
  * All React Query keys are defined here for:
  * - Consistency across the application
  * - Easier refactoring and maintenance
  * - Better cache invalidation
  */
+
+// =====================
+// Recurring Accruals & Fixed Assets
+// =====================
+export const accrualTemplateKeys = {
+  all: ['accrual-templates'] as const,
+  lists: () => [...accrualTemplateKeys.all, 'list'] as const,
+  list: (filters?: object) =>
+    filters ? [...accrualTemplateKeys.lists(), filters] as const : accrualTemplateKeys.lists(),
+  details: () => [...accrualTemplateKeys.all, 'detail'] as const,
+  detail: (id: string | number) => [...accrualTemplateKeys.details(), id] as const,
+};
+
+export const accrualRunKeys = {
+  all: ['accrual-runs'] as const,
+  lists: () => [...accrualRunKeys.all, 'list'] as const,
+  list: (filters?: object) =>
+    filters ? [...accrualRunKeys.lists(), filters] as const : accrualRunKeys.lists(),
+};
+
+export const fixedAssetKeys = {
+  all: ['fixed-assets'] as const,
+  lists: () => [...fixedAssetKeys.all, 'list'] as const,
+  list: (filters?: object) =>
+    filters ? [...fixedAssetKeys.lists(), filters] as const : fixedAssetKeys.lists(),
+  details: () => [...fixedAssetKeys.all, 'detail'] as const,
+  detail: (id: string | number) => [...fixedAssetKeys.details(), id] as const,
+};
+
+export const depreciationRunKeys = {
+  all: ['depreciation-runs'] as const,
+  lists: () => [...depreciationRunKeys.all, 'list'] as const,
+  list: (filters?: object) =>
+    filters ? [...depreciationRunKeys.lists(), filters] as const : depreciationRunKeys.lists(),
+};
+
+export const supplierPaymentKeys = {
+  all: ['supplier-payments'] as const,
+  lists: () => [...supplierPaymentKeys.all, 'list'] as const,
+  list: (filters?: object) =>
+    filters ? [...supplierPaymentKeys.lists(), filters] as const : supplierPaymentKeys.lists(),
+};
 
 // =====================
 // Customers
@@ -54,6 +96,27 @@ export const opportunityKeys = {
 };
 
 // =====================
+// Branches (الفروع)
+// =====================
+export const branchKeys = {
+  all: ['branches'] as const,
+  lists: () => [...branchKeys.all, 'list'] as const,
+  list: (filters?: object) => filters ? [...branchKeys.lists(), filters] as const : branchKeys.lists(),
+};
+
+export const deliveryResponsibleKeys = {
+  all: ['deliveryResponsibles'] as const,
+  lists: () => [...deliveryResponsibleKeys.all, 'list'] as const,
+  list: () => [...deliveryResponsibleKeys.lists()] as const,
+};
+
+export const productionResponsibleKeys = {
+  all: ['productionResponsibles'] as const,
+  lists: () => [...productionResponsibleKeys.all, 'list'] as const,
+  list: () => [...productionResponsibleKeys.lists()] as const,
+};
+
+// =====================
 // Sell Orders
 // =====================
 export const sellOrderKeys = {
@@ -73,6 +136,28 @@ export const purchaseOrderKeys = {
   list: (filters: object) => [...purchaseOrderKeys.lists(), filters] as const,
   details: () => [...purchaseOrderKeys.all, 'detail'] as const,
   detail: (id: string | number) => [...purchaseOrderKeys.details(), id] as const,
+};
+
+// =====================
+// Production Orders (أوامر التصنيع)
+// =====================
+export const productionOrderKeys = {
+  all: ['production-orders'] as const,
+  lists: () => [...productionOrderKeys.all, 'list'] as const,
+  list: (filters: object) => [...productionOrderKeys.lists(), filters] as const,
+  details: () => [...productionOrderKeys.all, 'detail'] as const,
+  detail: (id: string | number) => [...productionOrderKeys.details(), id] as const,
+};
+
+// =====================
+// Delivery Orders (أوامر التسليم)
+// =====================
+export const deliveryOrderKeys = {
+  all: ['delivery-orders'] as const,
+  lists: () => [...deliveryOrderKeys.all, 'list'] as const,
+  list: (filters: object) => [...deliveryOrderKeys.lists(), filters] as const,
+  details: () => [...deliveryOrderKeys.all, 'detail'] as const,
+  detail: (id: string | number) => [...deliveryOrderKeys.details(), id] as const,
 };
 
 // =====================
@@ -179,6 +264,15 @@ export const drPaymentRequestKeys = {
   list: (filters: object) => [...drPaymentRequestKeys.lists(), filters] as const,
   details: () => [...drPaymentRequestKeys.all, 'detail'] as const,
   detail: (id: string | number) => [...drPaymentRequestKeys.details(), id] as const,
+};
+
+// =====================
+// Collections (Customer Payments / قبض)
+// =====================
+export const collectionKeys = {
+  all: ['collections'] as const,
+  lists: () => [...collectionKeys.all, 'list'] as const,
+  list: (filters?: object) => filters ? [...collectionKeys.lists(), filters] as const : collectionKeys.lists(),
 };
 
 // =====================

@@ -29,6 +29,7 @@ interface CreatePurchaseOrderData {
   sell_order?: number;
   status?: string;
   notes?: string;
+  storage_area?: number;
   items: CreatePurchaseOrderItemData[];
 }
 
@@ -139,6 +140,63 @@ export function useDeletePurchaseOrder() {
       await api.delete(API_ENDPOINTS.PURCHASE_ORDERS.DELETE(id));
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.lists() });
+    },
+  });
+}
+
+interface ReceivePurchaseOrderItemPayload {
+  id: number;
+  received_quantity: number;
+}
+
+export function useReceivePurchaseOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      items,
+      attachment,
+    }: {
+      id: string | number;
+      items: ReceivePurchaseOrderItemPayload[];
+      attachment?: File | null;
+    }) => {
+      const fd = new FormData();
+      fd.append("items", JSON.stringify(items));
+      if (attachment) fd.append("attachment", attachment);
+      const res = await api.post(API_ENDPOINTS.PURCHASE_ORDERS.RECEIVE(id), fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data as PurchaseOrder;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({
+        queryKey: purchaseOrderKeys.detail(id),
+      });
+      queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.lists() });
+    },
+  });
+}
+
+interface SchedulePurchaseOrderArgs {
+  id: string | number;
+  scheduled_at: string | null;
+}
+
+export function useSchedulePurchaseOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, scheduled_at }: SchedulePurchaseOrderArgs) => {
+      const res = await api.patch(API_ENDPOINTS.PURCHASE_ORDERS.SCHEDULE(id), {
+        scheduled_at,
+      });
+      return res.data as PurchaseOrder;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({
+        queryKey: purchaseOrderKeys.detail(id),
+      });
       queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.lists() });
     },
   });

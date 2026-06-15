@@ -102,6 +102,50 @@ export const useCreateAccount = () => {
   });
 };
 
+// Update Account (edit name/note — number & parent are immutable server-side)
+export const useUpdateAccount = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string | number;
+      data: { name?: string; note?: string };
+    }) => {
+      const { data: response } = await api.patch<Account>(
+        `/custom-v1/accounts/${id}/`,
+        data,
+      );
+      return response;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [ACCOUNTS_QUERY_KEY] });
+      queryClient.invalidateQueries({
+        queryKey: [ACCOUNTS_QUERY_KEY, "detail", variables.id],
+      });
+      toast.success("تم تعديل الحساب بنجاح", {
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
+    },
+    onError: (error: any) => {
+      let msg = "حدث خطأ أثناء تعديل الحساب";
+      if (error.response?.data) {
+        if (typeof error.response.data.detail === "string") {
+          msg = error.response.data.detail;
+        } else if (typeof error.response.data === "object") {
+          const vals = Object.values(error.response.data).flat();
+          if (vals.length > 0 && typeof vals[0] === "string") {
+            msg = vals[0] as string;
+          }
+        }
+      }
+      toast.error("خطأ", { description: msg });
+    },
+  });
+};
+
 // Get Next Account Number (Suggestion)
 export const useNextAccountNumber = (parentId: string | number | null) => {
   return useQuery({
@@ -121,6 +165,137 @@ export const useNextAccountNumber = (parentId: string | number | null) => {
     },
     enabled: !!parentId,
     retry: false,
+  });
+};
+
+/** Downloads the branded chart-of-accounts Excel (.xlsx). */
+export const useExportAccountsExcel = () => {
+  return useMutation({
+    mutationFn: async (): Promise<void> => {
+      const response = await api.get("/custom-v1/accounts/export-excel/", {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "شجرة_الحسابات.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    },
+    onError: () => toast.error("تعذّر تصدير شجرة الحسابات"),
+  });
+};
+
+function downloadBlob(data: BlobPart, filename: string) {
+  const url = window.URL.createObjectURL(new Blob([data]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+/** Downloads the «ملخص ضريبة القيمة المضافة» Excel for a period. */
+export const useVatSummaryExcel = () => {
+  return useMutation({
+    mutationFn: async (params: { date_from: string; date_to: string }) => {
+      const res = await api.get("/custom-v1/accounts/vat-summary/", {
+        params,
+        responseType: "blob",
+      });
+      downloadBlob(res.data, "ملخص_الضريبة.xlsx");
+    },
+    onError: () => toast.error("تعذّر تصدير ملخص الضريبة"),
+  });
+};
+
+/** Downloads the «قائمة الدخل» Excel for a period (optional inventory values). */
+export const useIncomeStatementExcel = () => {
+  return useMutation({
+    mutationFn: async (params: {
+      date_from: string;
+      date_to: string;
+      opening_inventory?: string;
+      closing_inventory?: string;
+    }) => {
+      const res = await api.get("/custom-v1/accounts/income-statement/", {
+        params,
+        responseType: "blob",
+      });
+      downloadBlob(res.data, "قائمة_الدخل.xlsx");
+    },
+    onError: () => toast.error("تعذّر تصدير قائمة الدخل"),
+  });
+};
+
+/** Downloads the «الميزانية العمومية» (balance sheet) Excel as of a date. */
+export const useBalanceSheetExcel = () => {
+  return useMutation({
+    mutationFn: async (params: { as_of: string }) => {
+      const res = await api.get("/custom-v1/accounts/balance-sheet/", {
+        params,
+        responseType: "blob",
+      });
+      downloadBlob(res.data, "الميزانية_العمومية.xlsx");
+    },
+    onError: () => toast.error("تعذّر تصدير الميزانية العمومية"),
+  });
+};
+
+/** Posts the period-end inventory adjustment (تسوية جرد آخر المدة). */
+export const useInventoryAdjustment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (closing_inventory: string) => {
+      const res = await api.post("/custom-v1/accounts/inventory-adjustment/", {
+        closing_inventory,
+      });
+      return res.data as {
+        previous_inventory: string;
+        closing_inventory: string;
+        adjustment: string;
+        message: string;
+      };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [ACCOUNTS_QUERY_KEY] });
+      toast.success(data.message || "تمت تسوية الجرد", {
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
+    },
+    onError: (error: any) => {
+      let msg = "فشلت تسوية الجرد";
+      const data = error.response?.data;
+      if (data && typeof data === "object") {
+        const vals = Object.values(data).flat();
+        if (vals.length && typeof vals[0] === "string") msg = vals[0] as string;
+      }
+      toast.error("خطأ", { description: msg });
+    },
+  });
+};
+
+/** Downloads the branded «ميزان المراجعة» (trial balance) Excel (.xlsx). */
+export const useTrialBalanceExcel = () => {
+  return useMutation({
+    mutationFn: async (): Promise<void> => {
+      const response = await api.get("/custom-v1/accounts/trial-balance/", {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "ميزان_المراجعة.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    },
+    onError: () => toast.error("تعذّر تصدير ميزان المراجعة"),
   });
 };
 

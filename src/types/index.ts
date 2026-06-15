@@ -73,8 +73,12 @@ export interface Customer {
   last_visit?: string | null;
   visit_repetition_days?: number;
   color?: string;
-  salesmen?: Salesman[]; 
-  
+  salesmen?: Salesman[];
+  /** عميل محتمل (lead) أُضيف عبر الفرص ولم يُحوَّل إلى عميل فعلي بعد */
+  is_potential?: boolean;
+  /** نوع العميل: فرد (individual) أو شركة (company). الافتراضي فرد. */
+  customer_type?: "individual" | "company";
+
   // Legal & Address Info
   vat_number?: string | null;
   vat_number_file?: string | null;
@@ -140,6 +144,8 @@ export interface Employee {
   phone: string; // New spec uses 'phone' but let's keep phone_number for types consistency if mapped, or add both
   email?: string; // Optional now
   is_active: boolean | string;
+  is_staff?: boolean;
+  is_superuser?: boolean; // full manager — sees all interfaces
   gender?: string; // New field
   permission_groups?: string | PermissionGroup[]; // Updated to allow array of objects
   groups?: PermissionGroup[]; // Keep for compatibility if we map it, likely removed in raw response
@@ -372,6 +378,63 @@ export const PERMISSION_GROUP_LABELS: Record<string, string> = {
 
 export type InterestLevel = keyof typeof INTEREST_LEVELS;
 
+// ----------------------------------------------------------------------------
+// Washbasin manufacturing specs (مواصفات تصنيع المغاسل) — custom (تفصيل) lines
+// ----------------------------------------------------------------------------
+
+export type WashbasinHolePosition = 'right' | 'center' | 'left';
+
+export type WashbasinBowlType =
+  | 'porcelain_square'
+  | 'square_with_tile'
+  | 'waterfall_pipe'
+  | 'waterfall_slot'
+  | 'ceramic_round'
+  | 'ceramic_oval'
+  | 'ceramic_square'
+  | 'special';
+
+export type WashbasinFaucetHole = 'wall' | 'basin';
+
+export interface WashbasinSpec {
+  surface_length: number | null;
+  surface_width: number | null;
+  has_custom_bowl_size: boolean;
+  bowl_length: number | null;
+  bowl_width: number | null;
+  bowl_depth: number | null;
+  hole_position: WashbasinHolePosition | null;
+  bowl_type: WashbasinBowlType | null;
+  bowls_count: 1 | 2;
+  faucet_hole: WashbasinFaucetHole | null;
+  front_length: number | null;
+  front_height: number | null;
+  approved_color_number: string | null;
+  supplier_company: string | null;
+}
+
+export const HOLE_POSITION_LABELS: Record<WashbasinHolePosition, string> = {
+  right: 'يمين',
+  center: 'وسط',
+  left: 'يسار',
+};
+
+export const BOWL_TYPE_LABELS: Record<WashbasinBowlType, string> = {
+  porcelain_square: 'مربع بورسلين',
+  square_with_tile: 'مربع مع بلاطة',
+  waterfall_pipe: 'شلال ماسورة',
+  waterfall_slot: 'شلال شريحة',
+  ceramic_round: 'خزف دائري',
+  ceramic_oval: 'خزف بيضاوي',
+  ceramic_square: 'خزف مربع',
+  special: 'طلب خاص',
+};
+
+export const FAUCET_HOLE_LABELS: Record<WashbasinFaucetHole, string> = {
+  wall: 'جداري',
+  basin: 'في المغسلة',
+};
+
 // Sell Order Types
 export interface SellOrderItem {
   id: number;
@@ -388,7 +451,10 @@ export interface SellOrderItem {
     unit2_factor?: string;
     unit3_name?: string;
     unit3_factor?: string;
+    production_type?: ProductionType;
   };
+  /** مواصفات تصنيع المغسلة (للبنود من نوع تفصيل فقط) */
+  washbasin_spec?: WashbasinSpec | null;
   quantity: string;
   price_before_tax: string;
   price_after_tax: string;
@@ -402,10 +468,27 @@ export interface SellOrderItem {
   dis_total_after_tax: string;
 }
 
+export interface Branch {
+  id: number;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+  sell_orders_count: number;
+}
+
+export interface DeliveryResponsible {
+  id: number;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
 export interface SellOrder {
   id: number;
   opportunity_id?: number;
   customer: Customer;
+  branch?: number;
+  branch_name?: string;
   salesman?: Salesman;
   total_price_before_tax: string;
   total_price_after_tax: string;
@@ -424,6 +507,11 @@ export interface SellOrder {
   accepted_by?: number | null;
   verified_by?: number | null;
   rejected_by?: number | null;
+
+  /** موعد التنفيذ (YYYY-MM-DD أو null) */
+  execution_date?: string | null;
+  /** موعد العميل الرئيسي (ISO datetime أو null) */
+  delivery_date?: string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -432,6 +520,16 @@ export interface PaginatedResponse<T> {
   previous: string | null;
   results: T[];
 }
+
+/** نوع المنتج: جاهزة، تفصيل، مخزون تفصيل، أو مخزون درجة ثانية */
+export type ProductionType = 'ready' | 'custom' | 'custom_stock' | 'second_grade';
+
+export const PRODUCTION_TYPE_LABELS: Record<ProductionType, string> = {
+  ready: 'جاهزة',
+  custom: 'تفصيل',
+  custom_stock: 'مخزون تفصيل',
+  second_grade: 'مخزون درجة ثانية',
+};
 
 export interface Item {
   id: number;
@@ -450,23 +548,149 @@ export interface Item {
   linked_sellable_items: number[];
   inventory?: number;
   thickness?: string | null;
+  /** نوع الإنتاج: 'ready' (جاهزة) أو 'custom' (تفصيل) — الافتراضي 'ready' */
+  production_type?: ProductionType;
+  /** رصيد المخزون لكل مخزن (يُرجَع في تفاصيل الصنف) */
+  stocks?: ItemStockBreakdown[];
+}
+
+/** رصيد صنف في مخزن محدد */
+export interface ItemStockBreakdown {
+  storage_area: number;
+  storage_area_name: string;
+  quantity: string;
+}
+
+// ----------------------------------------------------------------------------
+// Production Orders (أوامر التصنيع)
+// ----------------------------------------------------------------------------
+
+export type ProductionOrderStatus = 'open' | 'in_progress' | 'closed' | 'canceled';
+
+export const PRODUCTION_ORDER_STATUS_LABELS: Record<ProductionOrderStatus, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
+  open: { label: 'جديد', color: 'info' },
+  in_progress: { label: 'تحت التصنيع', color: 'warning' },
+  closed: { label: 'تم الإنتاج', color: 'success' },
+  canceled: { label: 'ملغى', color: 'destructive' },
+};
+
+export interface ProductionOrderMaterial {
+  id: number;
+  item: number;
+  item_name: string;
+  quantity: string;
+  unit_name: string;
+  created_at: string;
+}
+
+export interface ProductionOrder {
+  id: number;
+  finished_item: number;
+  finished_item_name: string;
+  quantity: string;
+  unit_name: string;
+  status: ProductionOrderStatus;
+  /** اسم العميل المرتبط بأمر التصنيع (يأتي ضمن عناصر القائمة) */
+  customer_name?: string | null;
+  sell_order: number | null;
+  sell_order_item: number | null;
+  materials: ProductionOrderMaterial[];
+  created_at: string;
+  closed_at: string | null;
+  /** موعد العميل المجدول (ISO datetime أو null) */
+  scheduled_at?: string | null;
+  /** مواصفات تصنيع المغسلة الفعّالة (للبنود من نوع تفصيل)؛ متوفّر في تفاصيل الأمر فقط */
+  washbasin_spec?: WashbasinSpec | null;
+  /** مسؤول التصنيع المُسنَد للأمر */
+  responsible?: number | null;
+  /** اسم مسؤول التصنيع */
+  responsible_name?: string | null;
+}
+
+/** مسؤول التصنيع (قائمة مُدارة منفصلة عن مسؤولي التسليم) */
+export interface ProductionResponsible {
+  id: number;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
+// ----------------------------------------------------------------------------
+// Delivery Orders (أوامر التسليم)
+// ----------------------------------------------------------------------------
+
+export type DeliveryOrderStatus = 'pending' | 'delivered' | 'canceled';
+
+export const DELIVERY_ORDER_STATUS_LABELS: Record<DeliveryOrderStatus, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
+  pending: { label: 'معلّق', color: 'info' },
+  delivered: { label: 'مُسلّم', color: 'success' },
+  canceled: { label: 'ملغى', color: 'destructive' },
+};
+
+export interface DeliveryOrderItem {
+  id: number;
+  item: number;
+  item_name: string;
+  quantity: string;
+  unit_name: string | null;
+  sell_order_item: number | null;
+}
+
+export interface DeliveryOrder {
+  id: number;
+  sell_order: number;
+  customer: number | null;
+  /** اسم العميل المرتبط بأمر التسليم (يأتي ضمن عناصر القائمة) */
+  customer_name?: string | null;
+  status: DeliveryOrderStatus;
+  items: DeliveryOrderItem[];
+  created_at: string | null;
+  delivered_at: string | null;
+
+  /** موعد العميل المجدول (ISO datetime أو null) */
+  scheduled_at?: string | null;
+  /** معرّف الموظف المسؤول (أو null) */
+  responsible?: number | null;
+  /** اسم الموظف المسؤول (أو null) */
+  responsible_name?: string | null;
+  /** مخزن المصدر الذي يخرج منه التسليم */
+  storage_area?: number | null;
+  storage_area_name?: string | null;
 }
 
 export interface StorageArea {
   id: number;
   name: string;
+  is_default?: boolean;
+  is_active?: boolean;
+}
+
+/** تحويل مخزون بين مخزنين */
+export interface StockTransfer {
+  id: number;
+  item: number;
+  item_name: string;
+  from_storage_area: number;
+  from_storage_area_name: string;
+  to_storage_area: number;
+  to_storage_area_name: string;
+  quantity: string;
+  unit_name: string;
+  note: string;
+  created_at: string;
 }
 
 // Purchase Order Types
-export type PurchaseOrderStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING' | 'APPROVED' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
+export type PurchaseOrderStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING' | 'APPROVED' | 'ACCEPTED' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
 
 export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, { label: string; color: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" | "success" }> = {
   DRAFT: { label: 'مسودة', color: 'secondary' },
   SUBMITTED: { label: 'مُقدم', color: 'info' },
   PENDING: { label: 'قيد الانتظار', color: 'warning' },
   APPROVED: { label: 'تمت الموافقة', color: 'info' },
+  ACCEPTED: { label: 'مقبول', color: 'success' },
   ORDERED: { label: 'تم الطلب', color: 'default' },
-  RECEIVED: { label: 'تم الاستلام', color: 'success' },
+  RECEIVED: { label: 'مُستلَم', color: 'success' },
   CANCELLED: { label: 'ملغي', color: 'destructive' },
 };
 
@@ -477,6 +701,8 @@ export interface PurchaseOrderItem {
   supplier?: number;
   supplier_name?: string;
   quantity: string;
+  /** الكمية المستلمة فعلياً (تظهر بعد الاستلام)؛ null = لم تُحدَّد */
+  received_quantity?: number | null;
   unit_name: string;
   unit_factor?: string;
   normalized_quantity?: string;
@@ -518,9 +744,12 @@ export interface PurchaseOrder {
   supplier: number;
   supplier_name?: string;
   supplier_list?: PurchaseOrderSupplierSummary[];
+  /** اسم العميل المرتبط بطلب الشراء (يأتي ضمن عناصر القائمة) */
+  customer_name?: string | null;
   sell_order?: number;
   status: PurchaseOrderStatus;
   total_cost?: string;
+  total_cost_tax?: string;
   item_count?: number;
   notes?: string;
   items?: PurchaseOrderItem[];
@@ -530,6 +759,10 @@ export interface PurchaseOrder {
   updated_at?: string;
   created_by?: number;
   accepted_at?: string;
+  /** موعد العميل المجدول (ISO datetime أو null) */
+  scheduled_at?: string | null;
+  /** تاريخ استلام المواد وترحيلها للمخزون */
+  received_at?: string | null;
   /** رابط أو مسار ملف الفاتورة بعد الرفع */
   invoice_file?: string | null;
 
@@ -807,3 +1040,116 @@ export interface DRPaymentRequest {
 
 /** @deprecated kept for backward compatibility */
 export type PaymentRequest = CRPaymentRequest;
+
+// =====================
+// Collections (Customer Payments / قبض)
+// =====================
+export type PaymentType = 'card' | 'cash' | 'transfer' | 'tabby' | 'buy_now_pay_later';
+
+/** A single customer payment (قبض) as returned by the flat payments list endpoint. */
+export interface CollectionPayment {
+  id: number;
+  payment_type: PaymentType;
+  customer: { id: number; name: string } | null;
+  channel_name: string | null;
+  amount: string;
+  is_verified: boolean;
+  verified_at: string | null;
+  verified_by: string | null;
+  created_by: string | null;
+  actual_date_time: string | null;
+  created_at: string;
+}
+
+export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
+  card: 'شبكة',
+  cash: 'نقدي',
+  transfer: 'تحويل',
+  tabby: 'تابي',
+  buy_now_pay_later: 'اشترِ الآن وادفع لاحقاً',
+};
+
+// =====================
+// Recurring Accruals & Fixed-Asset Depreciation
+// =====================
+
+export type AccrualKind = 'SALARY' | 'RENT' | 'OTHER';
+
+export const ACCRUAL_KIND_LABELS: Record<AccrualKind, string> = {
+  SALARY: 'رواتب',
+  RENT: 'إيجار',
+  OTHER: 'أخرى',
+};
+
+export type RunStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
+
+export const RUN_STATUS_LABELS: Record<
+  RunStatus,
+  { label: string; color: 'secondary' | 'success' | 'destructive' }
+> = {
+  DRAFT: { label: 'مسودّة', color: 'secondary' },
+  POSTED: { label: 'مُرحّل', color: 'success' },
+  CANCELLED: { label: 'ملغي', color: 'destructive' },
+};
+
+export interface AccrualTemplate {
+  id: number;
+  name: string;
+  kind: AccrualKind;
+  expense_account: number;
+  liability_account: number;
+  amount: string;
+  is_taxable: boolean;
+  start_date: string; // YYYY-MM-DD
+  end_date: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AccrualRun {
+  id: number;
+  template: number;
+  template_name: string;
+  period_year: number;
+  period_month: number;
+  gross_amount: string;
+  net_amount: string;
+  tax_amount: string;
+  is_taxable: boolean;
+  status: RunStatus;
+  journal_entry: number | null;
+  posted_at: string | null;
+  created_at: string;
+}
+
+export interface FixedAsset {
+  id: number;
+  name: string;
+  cost: string;
+  salvage_value: string;
+  acquisition_date: string; // YYYY-MM-DD
+  useful_life_months: number;
+  method: string;
+  expense_account: number;
+  accumulated_account: number;
+  is_active: boolean;
+  monthly_depreciation: string;
+  accumulated_depreciation: string;
+  remaining_depreciable: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DepreciationRun {
+  id: number;
+  asset: number;
+  asset_name: string;
+  period_year: number;
+  period_month: number;
+  amount: string;
+  status: RunStatus;
+  journal_entry: number | null;
+  posted_at: string | null;
+  created_at: string;
+}

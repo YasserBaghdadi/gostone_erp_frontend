@@ -2,10 +2,11 @@ import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowRight, FileText, Calendar, Phone, MapPin, Edit, Calculator, User, Loader2, Printer } from "lucide-react";
 import { 
-  useOpportunityDetails, 
-  useRequestMeasurements, 
+  useOpportunityDetails,
+  useRequestMeasurements,
   useCreateSellOrder,
-  usePrintQuotation
+  usePrintQuotation,
+  useOpenDimensionFile
 } from "@/hooks/useOpportunities";
 import { useItems } from "@/hooks/useItems";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,13 @@ import { INTEREST_LEVELS, STATUS_LABELS } from "@/types";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
+import { parseBackendError } from "@/lib/utils";
+import CompleteCompanyDataModal from "@/modules/customers/components/CompleteCompanyDataModal";
+import IssueWorkOrderSpecsModal, { type SpecItem } from "@/modules/opportunities/components/IssueWorkOrderSpecsModal";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function OpportunityDetails() {
+  const { can } = useCan();
   const { id } = useParams();
   const navigate = useNavigate();
   
@@ -26,7 +32,12 @@ export default function OpportunityDetails() {
   const requestMeasurementsMutation = useRequestMeasurements();
   const createSellOrderMutation = useCreateSellOrder();
   const printQuotationMutation = usePrintQuotation();
+  const openDimensionFileMutation = useOpenDimensionFile();
   const [confirmAction, setConfirmAction] = useState<"measurements" | "sellOrder" | null>(null);
+  // العميل الذي يجب إكمال بياناته (شركة) قبل إصدار الأمر — يفتح نافذة البيانات.
+  const [companyDataCustomerId, setCompanyDataCustomerId] = useState<number | null>(null);
+  // بنود تفصيل تحتاج تفاصيل تصنيع قبل الإصدار — تفتح نافذة المواصفات.
+  const [specsItems, setSpecsItems] = useState<SpecItem[] | null>(null);
 
   const itemNameMap = useMemo(() => {
     const map = new Map<number, string>();
@@ -74,13 +85,30 @@ export default function OpportunityDetails() {
       setConfirmAction(null);
   };
 
-  const handleCreateSellOrder = () => {
-      createSellOrderMutation.mutate({ id: opportunity.id.toString() }, {
-          onSuccess: () => {
+  const handleCreateSellOrder = (specs?: Record<string, unknown>) => {
+      createSellOrderMutation.mutate({ id: opportunity.id.toString(), specs }, {
+          onSuccess: (data: unknown) => {
               toast.success("تم إنشاء أمر البيع بنجاح");
+              setSpecsItems(null);
+              // بعد التحويل ننتقل لأمر البيع ونغادر صفحة الفرصة.
+              const sellOrderId = (data as { sell_order_id?: number | string })?.sell_order_id;
+              if (sellOrderId) {
+                  navigate(`/sell-orders/${sellOrderId}`);
+              }
           },
-          onError: () => {
-              toast.error("فشل إنشاء أمر البيع");
+          onError: (error: unknown) => {
+              const data = (error as { response?: { data?: { company_data_required?: boolean; customer_id?: number; specs_required?: boolean; items?: SpecItem[] } } })?.response?.data;
+              // عميل شركة ناقص بياناته → افتح نافذة إكمال البيانات بدل رسالة فقط.
+              if (data?.company_data_required && data?.customer_id) {
+                  setCompanyDataCustomerId(data.customer_id);
+                  return;
+              }
+              // مغاسل تفصيل تحتاج تفاصيل تصنيع → افتح نافذة المواصفات.
+              if (data?.specs_required && Array.isArray(data?.items)) {
+                  setSpecsItems(data.items);
+                  return;
+              }
+              toast.error(parseBackendError(error) || "فشل إنشاء أمر البيع");
           }
       });
       setConfirmAction(null);
@@ -146,44 +174,49 @@ export default function OpportunityDetails() {
             </div>
             
              <div className="flex items-center gap-2 w-full md:w-auto">
-                 <Button 
-                     variant="outline" 
-                     size="sm" 
-                     className="gap-2 rounded-lg" 
+                 {can("opportunities.print") && (
+                 <Button
+                     variant="outline"
+                     size="sm"
+                     className="gap-2 rounded-lg"
                      onClick={handlePrintQuotation}
                      disabled={printQuotationMutation.isPending}
                  >
                      {printQuotationMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
                      طباعة عرض السعر
                  </Button>
-                
+                 )}
+
                  {opportunity.status !== 'converted' && opportunity.status !== 'rejected' && opportunity.status !== 'work_order_pending' && (
                      <>
+                         {can("opportunities.edit") && (
                          <Link to={`/opportunities/${opportunity.id}/edit`}>
                              <Button variant="outline" size="sm" className="hidden md:flex gap-2 rounded-lg">
                                 <Edit className="h-4 w-4" />
                                 تعديل
                              </Button>
                          </Link>
+                         )}
 
-                        {!opportunity.need_dim_order && (!opportunity.status || opportunity.status === 'new') && (
-                             <Button 
-                                variant="secondary" 
-                                size="sm" 
-                                className="gap-2 rounded-lg" 
+                        {/* متاح دائماً ما لم يوجد طلب مقاسات مفتوح — لإعادة طلب المقاس */}
+                        {!opportunity.need_dim_order && can("opportunities.request_dim") && (
+                             <Button
+                                variant="secondary"
+                                size="sm"
+                                className="gap-2 rounded-lg"
                                 onClick={() => setConfirmAction("measurements")}
                                 disabled={requestMeasurementsMutation.isPending}
                              >
                                 {requestMeasurementsMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                                طلب مقاسات
+                                {opportunity.dimensions && opportunity.dimensions.length > 0 ? "طلب مقاسات جديد" : "طلب مقاسات"}
                              </Button>
                         )}
-                        
+
                          {/* Create Sell Order Button - Hide if already has sell order */}
-                          {!opportunity.have_sell_order && (
-                            <Button 
-                               size="sm" 
-                               className="gap-2 rounded-lg shadow-lg shadow-primary/20" 
+                          {!opportunity.have_sell_order && can("opportunities.create_sell_order") && (
+                            <Button
+                               size="sm"
+                               className="gap-2 rounded-lg shadow-lg shadow-primary/20"
                                onClick={() => setConfirmAction("sellOrder")}
                                disabled={createSellOrderMutation.isPending}
                             >
@@ -437,15 +470,15 @@ export default function OpportunityDetails() {
                                          {dim.notes}
                                      </p>
                                  )}
-                                 <a 
-                                     href={dim.file} 
-                                     target="_blank" 
-                                     rel="noopener noreferrer"
-                                     className="flex items-center gap-2 text-xs text-primary hover:underline mt-1"
+                                 <button
+                                     type="button"
+                                     onClick={() => openDimensionFileMutation.mutate(dim.id)}
+                                     disabled={openDimensionFileMutation.isPending}
+                                     className="flex items-center gap-2 text-xs text-primary hover:underline mt-1 disabled:opacity-50"
                                  >
                                      <FileText className="h-3 w-3" />
-                                     عرض الملف
-                                 </a>
+                                     {openDimensionFileMutation.isPending ? "جارٍ الفتح..." : "عرض الملف"}
+                                 </button>
                              </div>
                          ))}
                      </CardContent>
@@ -507,12 +540,29 @@ export default function OpportunityDetails() {
       <ConfirmModal
         isOpen={confirmAction === "sellOrder"}
         onClose={() => setConfirmAction(null)}
-        onConfirm={handleCreateSellOrder}
+        onConfirm={() => handleCreateSellOrder()}
         title="تأكيد إنشاء أمر بيع"
         description="هل أنت متأكد من إنشاء أمر بيع من هذه الفرصة؟"
         confirmText="إنشاء أمر بيع"
         variant="success"
         isLoading={createSellOrderMutation.isPending}
+      />
+      <CompleteCompanyDataModal
+        customerId={companyDataCustomerId}
+        open={companyDataCustomerId !== null}
+        onClose={() => setCompanyDataCustomerId(null)}
+        onCompleted={() => {
+          // بعد حفظ بيانات الشركة، أغلق النافذة وأعد إصدار الأمر تلقائياً.
+          setCompanyDataCustomerId(null);
+          handleCreateSellOrder();
+        }}
+      />
+      <IssueWorkOrderSpecsModal
+        items={specsItems ?? []}
+        open={specsItems !== null}
+        onClose={() => setSpecsItems(null)}
+        onSubmit={(specs) => handleCreateSellOrder(specs)}
+        isSubmitting={createSellOrderMutation.isPending}
       />
     </>
   );

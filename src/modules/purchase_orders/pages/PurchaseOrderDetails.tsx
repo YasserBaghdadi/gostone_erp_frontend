@@ -17,8 +17,16 @@ import {
   ListOrdered,
   Upload,
   ExternalLink,
+  PackageCheck,
+  CheckCircle2,
+  CalendarClock,
+  Save,
 } from "lucide-react";
+import { format } from "date-fns";
+import { arSA } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -32,6 +40,8 @@ import {
   usePurchaseOrderDetails,
   usePrintPurchaseOrder,
   useUploadPurchaseOrderInvoice,
+  useReceivePurchaseOrder,
+  useSchedulePurchaseOrder,
 } from "@/hooks/usePurchaseOrders";
 import {
   Dialog,
@@ -55,10 +65,28 @@ import { AttachmentLinksList } from "@/components/shared";
 import { toast } from "sonner";
 import { formatNameWithBalance } from "@/lib/partyDisplay";
 import { parseBackendError } from "@/lib/utils";
+import { useCan } from "@/hooks/usePermissions";
 
 function formatLineNotes(notes?: string | null): string | null {
   const t = notes?.trim();
   return t && t.length > 0 ? t : null;
+}
+
+/** ISO datetime → قيمة <input type="datetime-local"> بالتوقيت المحلي (YYYY-MM-DDTHH:mm) */
+function isoToDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** قيمة <input type="datetime-local"> (محلية) → ISO datetime، أو null إذا فارغة */
+function datetimeLocalToIso(value: string): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
 }
 
 /** ترجمة رموز الإجراء القادمة من الباك إند (سجل طلب الشراء) */
@@ -70,6 +98,7 @@ const PO_HISTORY_ACTION_AR: Record<string, string> = {
   ACCEPTED: "تم القبول",
   REJECTED: "تم الرفض",
   VERIFIED: "تم التحقق",
+  RECEIVED: "تم الاستلام",
   STATUS_CHANGED: "تغيير الحالة",
   CANCELLED: "تم الإلغاء",
 };
@@ -124,6 +153,7 @@ function supplierBalanceForSupplierId(
 }
 
 export default function PurchaseOrderDetails() {
+  const { can } = useCan();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -145,6 +175,39 @@ export default function PurchaseOrderDetails() {
   } = usePurchaseOrderDetails(id!);
   const printMutation = usePrintPurchaseOrder();
   const uploadInvoiceMutation = useUploadPurchaseOrderInvoice();
+  const receiveMutation = useReceivePurchaseOrder();
+  const scheduleMutation = useSchedulePurchaseOrder();
+
+  // حقل الجدولة (موعد العميل) — يُعبّأ من بيانات الطلب.
+  const [scheduledAtInput, setScheduledAtInput] = useState("");
+
+  useEffect(() => {
+    setScheduledAtInput(isoToDatetimeLocal(purchaseOrder?.scheduled_at));
+  }, [purchaseOrder?.scheduled_at]);
+
+  const handleSaveSchedule = () => {
+    if (!purchaseOrder) return;
+    scheduleMutation.mutate(
+      {
+        id: purchaseOrder.id,
+        scheduled_at: datetimeLocalToIso(scheduledAtInput),
+      },
+      {
+        onSuccess: () => toast.success("تم حفظ موعد العميل"),
+        onError: (err) =>
+          toast.error("فشل حفظ موعد العميل", {
+            description: parseBackendError(err),
+          }),
+      },
+    );
+  };
+
+  const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
+  const [receiveInvoice, setReceiveInvoice] = useState<File | null>(null);
+  // map: po_item_id -> الكمية المستلمة (كنص لتمكين الإدخال)
+  const [receivedQtyById, setReceivedQtyById] = useState<
+    Record<number, string>
+  >({});
 
   const itemsBySupplier = useMemo(() => {
     if (!purchaseOrder?.items?.length) return [];
@@ -236,6 +299,53 @@ export default function PurchaseOrderDetails() {
     );
   };
 
+  const openReceiveDialog = () => {
+    const initial: Record<number, string> = {};
+    for (const item of purchaseOrder?.items ?? []) {
+      if (item.id != null) initial[item.id] = item.quantity ?? "";
+    }
+    setReceivedQtyById(initial);
+    setReceiveInvoice(null);
+    setReceiveDialogOpen(true);
+  };
+
+  // البنود التي لها معرف صالح فقط يمكن استلامها مع كمية مخصّصة
+  const receivableItems = useMemo(
+    () => (purchaseOrder?.items ?? []).filter((it) => it.id != null),
+    [purchaseOrder],
+  );
+
+  // التحقق: كل القيم أرقام صالحة >= 0
+  const receiveQtyInvalid = useMemo(
+    () =>
+      receivableItems.some((item) => {
+        const raw = receivedQtyById[item.id!];
+        const n = Number(raw);
+        return raw == null || raw.trim() === "" || !Number.isFinite(n) || n < 0;
+      }),
+    [receivableItems, receivedQtyById],
+  );
+
+  const poHasVat = parseFloat(purchaseOrder?.total_cost_tax || "0") > 0;
+
+  const handleConfirmReceive = (poId: string | number) => {
+    const items = receivableItems.map((item) => ({
+      id: item.id!,
+      received_quantity: Number(receivedQtyById[item.id!]),
+    }));
+    receiveMutation.mutate(
+      { id: poId, items, attachment: poHasVat ? receiveInvoice : null },
+      {
+        onSuccess: () => {
+          toast.success("تم استلام المواد وترحيلها للمخزون");
+          setReceiveDialogOpen(false);
+          setReceiveInvoice(null);
+        },
+        onError: (err) => toast.error(parseBackendError(err)),
+      },
+    );
+  };
+
   if (isLoading) {
     return (
       <div className='flex flex-col items-center justify-center min-h-[60vh] gap-4'>
@@ -268,6 +378,10 @@ export default function PurchaseOrderDetails() {
     purchaseOrder.status as PurchaseOrderStatus
   ] || { label: purchaseOrder.status, color: "secondary" };
   const totalCost = parseFloat(purchaseOrder.total_cost || "0");
+  const isReceived = purchaseOrder.status === "RECEIVED";
+  const canReceive =
+    purchaseOrder.status === "SUBMITTED" ||
+    purchaseOrder.status === "ACCEPTED";
   const hasInvoice =
     typeof purchaseOrder.invoice_file === "string" &&
     purchaseOrder.invoice_file.trim().length > 0;
@@ -384,55 +498,213 @@ export default function PurchaseOrderDetails() {
               </Button>
             </a>
           ) : (
+            can("purchase_orders.upload_invoice") && (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl gap-2"
+                disabled={uploadInvoiceMutation.isPending || invoiceDialogOpen}
+                onClick={() => invoiceInputRef.current?.click()}
+                title="رفع فاتورة طلب الشراء"
+              >
+                {uploadInvoiceMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                رفع الفاتورة
+              </Button>
+            )
+          )}
+          {can("purchase_orders.edit") && (
             <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl gap-2"
-              disabled={uploadInvoiceMutation.isPending || invoiceDialogOpen}
-              onClick={() => invoiceInputRef.current?.click()}
-              title="رفع فاتورة طلب الشراء"
+              variant='outline'
+              className='rounded-xl gap-2'
+              onClick={() =>
+                navigate(`/purchase-orders/${purchaseOrder.id}/edit`)
+              }
             >
-              {uploadInvoiceMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4" />
-              )}
-              رفع الفاتورة
+              <Edit className='h-4 w-4' />
+              تعديل
             </Button>
           )}
-          <Button
-            variant='outline'
-            className='rounded-xl gap-2'
-            onClick={() =>
-              navigate(`/purchase-orders/${purchaseOrder.id}/edit`)
-            }
-          >
-            <Edit className='h-4 w-4' />
-            تعديل
-          </Button>
-          <Button
-            variant='outline'
-            className='rounded-xl gap-2'
-            disabled={printMutation.isPending}
-            onClick={() => {
-              printMutation.mutate(
-                { id: purchaseOrder.id },
-                {
-                  onSuccess: () => toast.success("تم فتح طلب الشراء للطباعة"),
-                  onError: () => toast.error("فشل تحميل طلب الشراء"),
-                },
-              );
-            }}
-          >
-            {printMutation.isPending ? (
-              <Loader2 className='h-4 w-4 animate-spin' />
-            ) : (
-              <Printer className='h-4 w-4' />
-            )}
-            طباعة طلب الشراء
-          </Button>
+          {can("purchase_orders.print") && (
+            <Button
+              variant='outline'
+              className='rounded-xl gap-2'
+              disabled={printMutation.isPending}
+              onClick={() => {
+                printMutation.mutate(
+                  { id: purchaseOrder.id },
+                  {
+                    onSuccess: () => toast.success("تم فتح طلب الشراء للطباعة"),
+                    onError: () => toast.error("فشل تحميل طلب الشراء"),
+                  },
+                );
+              }}
+            >
+              {printMutation.isPending ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <Printer className='h-4 w-4' />
+              )}
+              طباعة طلب الشراء
+            </Button>
+          )}
+          {canReceive && can("purchase_orders.receive") && (
+            <Button
+              className='rounded-xl gap-2 bg-success hover:bg-success-dark text-success-foreground border-0'
+              disabled={receiveMutation.isPending}
+              onClick={openReceiveDialog}
+              title='استلام المواد وترحيلها للمخزون'
+            >
+              {receiveMutation.isPending ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <PackageCheck className='h-4 w-4' />
+              )}
+              استلام المواد
+            </Button>
+          )}
+          {isReceived && (
+            <Badge
+              variant='success'
+              className='gap-1.5 rounded-xl px-3 py-1.5 text-sm'
+            >
+              <CheckCircle2 className='h-4 w-4' />
+              مُستلَم
+            </Badge>
+          )}
         </div>
       </div>
+
+      <Dialog
+        open={receiveDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !receiveMutation.isPending) setReceiveDialogOpen(false);
+        }}
+      >
+        <DialogContent className='max-w-2xl' dir='rtl'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <PackageCheck className='h-5 w-5 text-success' />
+              استلام المواد
+            </DialogTitle>
+            <DialogDescription>
+              راجع الكميات المستلمة فعلياً لكل بند ثم اضغط “تأكيد الاستلام”.
+              الكمية المستلمة هي ما سيُرحَّل للمخزون.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='max-h-[55vh] overflow-y-auto pr-1 space-y-3'>
+            {receivableItems.length > 0 ? (
+              receivableItems.map((item) => {
+                const qtyStr = receivedQtyById[item.id!] ?? "";
+                const n = Number(qtyStr);
+                const invalid =
+                  qtyStr.trim() === "" ||
+                  !Number.isFinite(n) ||
+                  n < 0;
+                return (
+                  <div
+                    key={item.id}
+                    className='flex flex-col gap-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:flex-row sm:items-end sm:justify-between'
+                  >
+                    <div className='min-w-0 flex-1 space-y-1'>
+                      <span className='block font-medium text-foreground'>
+                        {item.item_name || `بند #${item.item}`}
+                      </span>
+                      <div className='flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
+                        <span>
+                          الكمية المطلوبة:{" "}
+                          <span className='font-mono text-foreground'>
+                            {item.quantity}
+                          </span>
+                        </span>
+                        {item.unit_name && <span>· {item.unit_name}</span>}
+                      </div>
+                    </div>
+                    <div className='w-full sm:w-40 space-y-1'>
+                      <Label
+                        htmlFor={`received-qty-${item.id}`}
+                        className='text-xs text-muted-foreground'
+                      >
+                        الكمية المستلمة
+                      </Label>
+                      <Input
+                        id={`received-qty-${item.id}`}
+                        type='number'
+                        inputMode='decimal'
+                        min={0}
+                        step='any'
+                        value={qtyStr}
+                        onChange={(e) =>
+                          setReceivedQtyById((prev) => ({
+                            ...prev,
+                            [item.id!]: e.target.value,
+                          }))
+                        }
+                        className={`font-mono ${
+                          invalid ? "border-destructive" : ""
+                        }`}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className='py-6 text-center text-sm text-muted-foreground'>
+                لا توجد بنود قابلة للاستلام في هذا الطلب.
+              </p>
+            )}
+          </div>
+
+          {poHasVat && (
+            <div className='space-y-2 rounded-xl border border-dashed p-3'>
+              <label className='text-sm font-medium'>
+                الفاتورة الضريبية للمورد{" "}
+                <span className='text-destructive'>(إلزامي)</span>
+              </label>
+              <Input
+                type='file'
+                accept='.pdf,image/*'
+                onChange={(e) => setReceiveInvoice(e.target.files?.[0] ?? null)}
+              />
+              <p className='text-xs text-muted-foreground'>
+                PDF أو صورة بها رمز QR متوافق مع ZATCA — تُراجَع تلقائياً وتبقى «بانتظار التأكد».
+              </p>
+            </div>
+          )}
+
+          <DialogFooter className='gap-2 sm:gap-0'>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => setReceiveDialogOpen(false)}
+              disabled={receiveMutation.isPending}
+              className='rounded-xl'
+            >
+              إلغاء
+            </Button>
+            <Button
+              type='button'
+              onClick={() => handleConfirmReceive(purchaseOrder.id)}
+              disabled={
+                receiveMutation.isPending ||
+                receivableItems.length === 0 ||
+                receiveQtyInvalid ||
+                (poHasVat && !receiveInvoice)
+              }
+              className='rounded-xl bg-success hover:bg-success-dark text-success-foreground border-0'
+            >
+              {receiveMutation.isPending ? (
+                <Loader2 className='h-4 w-4 animate-spin ml-2' />
+              ) : null}
+              تأكيد الاستلام
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={invoiceDialogOpen}
@@ -610,6 +882,16 @@ export default function PurchaseOrderDetails() {
                                 <span>الوحدة:</span>
                                 <span>{item.unit_name}</span>
                               </div>
+                              {isReceived && (
+                                <div className='flex justify-between bg-success/10 p-2 rounded col-span-2'>
+                                  <span>المستلَم:</span>
+                                  <span className='font-mono text-foreground'>
+                                    {item.received_quantity != null
+                                      ? item.received_quantity
+                                      : "—"}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                             <div className='flex justify-between items-center text-xs text-muted-foreground pt-1'>
                               <span>سعر الشراء:</span>
@@ -654,6 +936,11 @@ export default function PurchaseOrderDetails() {
                           <th className='p-4 font-medium text-muted-foreground text-center whitespace-nowrap'>
                             الكمية
                           </th>
+                          {isReceived && (
+                            <th className='p-4 font-medium text-muted-foreground text-center whitespace-nowrap'>
+                              المستلَم
+                            </th>
+                          )}
                           <th className='p-4 font-medium text-muted-foreground text-center whitespace-nowrap'>
                             الوحدة
                           </th>
@@ -672,7 +959,10 @@ export default function PurchaseOrderDetails() {
                         {itemsBySupplier.map(([sid, group]) => (
                           <Fragment key={sid}>
                             <tr className='border-0'>
-                              <td colSpan={6} className='p-0 border-0'>
+                              <td
+                                colSpan={isReceived ? 7 : 6}
+                                className='p-0 border-0'
+                              >
                                 <div className='flex flex-wrap items-center gap-3 border-y border-primary/25 bg-linear-to-l from-primary/12 to-primary/5 px-4 py-3 border-r-[5px] border-r-primary'>
                                   <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary'>
                                     <Truck className='h-4 w-4' />
@@ -735,6 +1025,22 @@ export default function PurchaseOrderDetails() {
                                     {item.quantity}
                                   </Badge>
                                 </td>
+                                {isReceived && (
+                                  <td className='p-4 text-center'>
+                                    {item.received_quantity != null ? (
+                                      <Badge
+                                        variant='success'
+                                        className='font-mono'
+                                      >
+                                        {item.received_quantity}
+                                      </Badge>
+                                    ) : (
+                                      <span className='text-muted-foreground/50'>
+                                        —
+                                      </span>
+                                    )}
+                                  </td>
+                                )}
                                 <td className='p-4 text-center text-muted-foreground'>
                                   {item.unit_name}
                                 </td>
@@ -902,6 +1208,58 @@ export default function PurchaseOrderDetails() {
                   </span>
                 </div>
               )}
+              {purchaseOrder.received_at && (
+                <div className='flex items-center justify-between'>
+                  <span className='text-muted-foreground flex items-center gap-2'>
+                    <PackageCheck className='h-4 w-4 text-success' />
+                    تاريخ الاستلام
+                  </span>
+                  <span className='text-sm font-mono'>
+                    {new Date(purchaseOrder.received_at).toLocaleDateString(
+                      "ar-SA",
+                    )}
+                  </span>
+                </div>
+              )}
+              <div className='flex items-center justify-between'>
+                <span className='text-muted-foreground flex items-center gap-2'>
+                  <CalendarClock className='h-4 w-4' />
+                  موعد العميل
+                </span>
+                <span className='text-sm font-mono'>
+                  {purchaseOrder.scheduled_at
+                    ? format(new Date(purchaseOrder.scheduled_at), "yyyy/MM/dd HH:mm", {
+                        locale: arSA,
+                      })
+                    : "—"}
+                </span>
+              </div>
+              <Separator />
+              <div className='space-y-2'>
+                <Label htmlFor='scheduled_at'>تعديل موعد العميل</Label>
+                <div className='flex items-center gap-2'>
+                  <Input
+                    id='scheduled_at'
+                    type='datetime-local'
+                    value={scheduledAtInput}
+                    onChange={(e) => setScheduledAtInput(e.target.value)}
+                    className='flex-1'
+                  />
+                  <Button
+                    type='button'
+                    className='rounded-xl gap-2 shrink-0'
+                    onClick={handleSaveSchedule}
+                    disabled={scheduleMutation.isPending}
+                  >
+                    {scheduleMutation.isPending ? (
+                      <Loader2 className='h-4 w-4 animate-spin' />
+                    ) : (
+                      <Save className='h-4 w-4' />
+                    )}
+                    حفظ
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

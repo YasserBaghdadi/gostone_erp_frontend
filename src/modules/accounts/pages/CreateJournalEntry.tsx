@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { parseBackendError } from "@/lib/utils";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
+import { useCan } from "@/hooks/usePermissions";
 import type { Account } from "@/types";
 
 interface JournalItem {
@@ -38,6 +39,7 @@ function createEmptyJournalRow(): JournalItem {
 
 export default function CreateJournalEntry() {
   const navigate = useNavigate();
+  const { can } = useCan();
   const createMutation = useCreateJournalEntry();
 
   const [items, setItems] = useState<JournalItem[]>(() => [
@@ -524,15 +526,17 @@ export default function CreateJournalEntry() {
       </Card>
 
       {/* Submit Button */}
-      <Button
-        onClick={handlePreSubmit}
-        disabled={!isBalanced || createMutation.isPending}
-        className="w-full h-12 text-lg rounded-xl shadow-lg shadow-primary/20"
-      >
-        {createMutation.isPending && <Loader2 className="ml-2 h-5 w-5 animate-spin" />}
-        <Save className="ml-2 h-5 w-5" />
-        حفظ القيد
-      </Button>
+      {can("journal_entries.create") && (
+        <Button
+          onClick={handlePreSubmit}
+          disabled={!isBalanced || createMutation.isPending}
+          className="w-full h-12 text-lg rounded-xl shadow-lg shadow-primary/20"
+        >
+          {createMutation.isPending && <Loader2 className="ml-2 h-5 w-5 animate-spin" />}
+          <Save className="ml-2 h-5 w-5" />
+          حفظ القيد
+        </Button>
+      )}
 
       {/* Account Selection Modal */}
       <AccountSelectionModal

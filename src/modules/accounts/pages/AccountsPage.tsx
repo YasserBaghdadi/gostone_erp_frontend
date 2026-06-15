@@ -1,15 +1,26 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Plus, Search, FileText, Wallet, ChevronDown, ChevronLeft, Loader2, CornerDownLeft } from "lucide-react";
+import { Plus, Search, FileText, Wallet, ChevronDown, ChevronLeft, Loader2, CornerDownLeft, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAllAccounts } from "@/hooks/useAccounts";
+import {
+  useAllAccounts,
+  useExportAccountsExcel,
+  useTrialBalanceExcel,
+  useVatSummaryExcel,
+  useIncomeStatementExcel,
+  useBalanceSheetExcel,
+} from "@/hooks/useAccounts";
+import { ReportPeriodDialog } from "../components/ReportPeriodDialog";
+import { InventoryAdjustmentDialog } from "../components/InventoryAdjustmentDialog";
+import { ReportPreviewModal } from "../components/ReportPreviewModal";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import type { Account } from "@/types";
 import { cn } from "@/lib/utils";
+import { useCan } from "@/hooks/usePermissions";
 
 interface AccountTreeNode extends Account {
   children: AccountTreeNode[];
@@ -31,6 +42,15 @@ function buildTree(accounts: Account[]): AccountTreeNode[] {
       roots.push(node);
     }
   }
+
+  // Order every level by account number (the natural chart-of-accounts order).
+  const sortByNumber = (nodes: AccountTreeNode[]) => {
+    nodes.sort((a, b) =>
+      (a.number || "").localeCompare(b.number || "", undefined, { numeric: true }),
+    );
+    for (const node of nodes) sortByNumber(node.children);
+  };
+  sortByNumber(roots);
 
   return roots;
 }
@@ -254,10 +274,47 @@ function AccountTreeCard({
 export default function AccountsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { can } = useCan();
   const search = searchParams.get("search") || "";
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const exportExcel = useExportAccountsExcel();
+  const trialBalance = useTrialBalanceExcel();
+  const vatSummary = useVatSummaryExcel();
+  const incomeStatement = useIncomeStatementExcel();
+  const balanceSheet = useBalanceSheetExcel();
+  const [reportDialog, setReportDialog] = useState<
+    null | "vat" | "income" | "balance"
+  >(null);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [preview, setPreview] = useState<{
+    kind: "vat" | "income" | "balance" | "trial";
+    endpoint: string;
+    params: Record<string, string>;
+  } | null>(null);
+
+  const downloadPreview = () => {
+    if (!preview) return;
+    const p = preview.params;
+    if (preview.kind === "vat")
+      vatSummary.mutate({ date_from: p.date_from, date_to: p.date_to });
+    else if (preview.kind === "income")
+      incomeStatement.mutate({
+        date_from: p.date_from,
+        date_to: p.date_to,
+        opening_inventory: p.opening_inventory,
+        closing_inventory: p.closing_inventory,
+      });
+    else if (preview.kind === "balance")
+      balanceSheet.mutate({ as_of: p.as_of });
+    else if (preview.kind === "trial") trialBalance.mutate();
+  };
+  const downloadPending =
+    vatSummary.isPending ||
+    incomeStatement.isPending ||
+    balanceSheet.isPending ||
+    trialBalance.isPending;
 
   const isSearching = search.length > 0;
 
@@ -268,11 +325,15 @@ export default function AccountsPage() {
     if (!allAccounts) return [];
     if (!search) return [];
     const term = search.toLowerCase();
-    return allAccounts.filter(
-      (a) =>
-        (a.name && a.name.toLowerCase().includes(term)) ||
-        (a.number && a.number.includes(term))
-    );
+    return allAccounts
+      .filter(
+        (a) =>
+          (a.name && a.name.toLowerCase().includes(term)) ||
+          (a.number && a.number.includes(term))
+      )
+      .sort((a, b) =>
+        (a.number || "").localeCompare(b.number || "", undefined, { numeric: true })
+      );
   }, [allAccounts, search]);
 
   const tree = useMemo(() => {
@@ -311,10 +372,74 @@ export default function AccountsPage() {
           </h1>
           <p className="text-muted-foreground mt-1">إدارة الحسابات المالية وقيود اليومية</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          حساب جديد
-        </Button>
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() =>
+              setPreview({ kind: "trial", endpoint: "trial-balance", params: {} })
+            }
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            ميزان المراجعة
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={incomeStatement.isPending}
+            onClick={() => setReportDialog("income")}
+          >
+            <FileText className="h-4 w-4" />
+            قائمة الدخل
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={vatSummary.isPending}
+            onClick={() => setReportDialog("vat")}
+          >
+            <FileText className="h-4 w-4" />
+            ملخص الضريبة
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={balanceSheet.isPending}
+            onClick={() => setReportDialog("balance")}
+          >
+            <FileText className="h-4 w-4" />
+            الميزانية العمومية
+          </Button>
+          {can("accounts.edit") && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setInventoryOpen(true)}
+            >
+              <Wallet className="h-4 w-4" />
+              تسوية الجرد
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={exportExcel.isPending}
+            onClick={() => exportExcel.mutate()}
+          >
+            {exportExcel.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            تصدير الشجرة
+          </Button>
+          {can("accounts.create") && (
+            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              حساب جديد
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Main Content */}
@@ -506,6 +631,69 @@ export default function AccountsPage() {
       </Card>
 
       <CreateAccountDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
+
+      <ReportPeriodDialog
+        open={reportDialog === "vat"}
+        onOpenChange={(o) => setReportDialog(o ? "vat" : null)}
+        title="ملخص ضريبة القيمة المضافة"
+        description="اختر الربع والسنة لعرض ملخص الضريبة (إقرار ZATCA الربعي)."
+        quarterMode
+        submitLabel="عرض"
+        onGenerate={(p) => {
+          setPreview({
+            kind: "vat",
+            endpoint: "vat-summary",
+            params: { date_from: p.date_from, date_to: p.date_to },
+          });
+          setReportDialog(null);
+        }}
+      />
+      <ReportPeriodDialog
+        open={reportDialog === "income"}
+        onOpenChange={(o) => setReportDialog(o ? "income" : null)}
+        title="قائمة الدخل"
+        description="اختر الفترة (والمخزون اختيارياً) لعرض قائمة الدخل."
+        showInventory
+        submitLabel="عرض"
+        onGenerate={(p) => {
+          setPreview({
+            kind: "income",
+            endpoint: "income-statement",
+            params: {
+              date_from: p.date_from,
+              date_to: p.date_to,
+              opening_inventory: p.opening_inventory ?? "0",
+              closing_inventory: p.closing_inventory ?? "0",
+            },
+          });
+          setReportDialog(null);
+        }}
+      />
+      <ReportPeriodDialog
+        open={reportDialog === "balance"}
+        onOpenChange={(o) => setReportDialog(o ? "balance" : null)}
+        title="الميزانية العمومية"
+        description="اختر التاريخ لعرض الميزانية العمومية."
+        singleDate
+        submitLabel="عرض"
+        onGenerate={(p) => {
+          setPreview({
+            kind: "balance",
+            endpoint: "balance-sheet",
+            params: { as_of: p.date_to },
+          });
+          setReportDialog(null);
+        }}
+      />
+      <InventoryAdjustmentDialog open={inventoryOpen} onOpenChange={setInventoryOpen} />
+      <ReportPreviewModal
+        open={!!preview}
+        onOpenChange={(o) => !o && setPreview(null)}
+        endpoint={preview?.endpoint ?? ""}
+        params={preview?.params ?? {}}
+        onDownload={downloadPreview}
+        downloadPending={downloadPending}
+      />
     </div>
   );
 }

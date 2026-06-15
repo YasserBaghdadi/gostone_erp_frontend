@@ -24,6 +24,7 @@ import type { Opportunity } from "@/types";
 import { cn } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
 import { PageHeader, Pagination, LoadingState, EmptyState } from "@/components/shared";
+import { useCan } from "@/hooks/usePermissions";
 
 // --- Desktop Table Row ---
 function OpportunityRow({ opportunity }: { opportunity: Opportunity }) {
@@ -238,6 +239,7 @@ function OpportunityMobileCard({ opportunity }: { opportunity: Opportunity }) {
 
 // --- Main Page ---
 export default function OpportunitiesList() {
+  const { can } = useCan();
   // Use custom hooks for pagination and search
   const { page, pageSize, setPage, setPageSize, reset: resetPage } = usePagination();
   const { searchTerm, debouncedTerm, setSearchTerm, clear: clearSearch } = useSearch({ debounceMs: 300 });
@@ -308,12 +310,14 @@ export default function OpportunitiesList() {
         subtitle="إدارة ومتابعة طلبات العملاء والفرص البيعية"
         icon={<Target className="w-7 h-7" />}
         action={
-          <Link to="/opportunities/new">
-            <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
-              <Plus className="ml-2 h-5 w-5" />
-              فرصة جديدة
-            </Button>
-          </Link>
+          can("opportunities.create") && (
+            <Link to="/opportunities/new">
+              <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
+                <Plus className="ml-2 h-5 w-5" />
+                فرصة جديدة
+              </Button>
+            </Link>
+          )
         }
       />
 
@@ -464,12 +468,14 @@ export default function OpportunitiesList() {
             hasActiveFilters ? (
               <Button variant="link" onClick={clearFilters}>مسح عوامل التصفية</Button>
             ) : (
-              <Link to="/opportunities/new">
-                <Button>
-                  <Plus className="h-4 w-4 ml-2" />
-                  فرصة جديدة
-                </Button>
-              </Link>
+              can("opportunities.create") && (
+                <Link to="/opportunities/new">
+                  <Button>
+                    <Plus className="h-4 w-4 ml-2" />
+                    فرصة جديدة
+                  </Button>
+                </Link>
+              )
             )
           }
         />

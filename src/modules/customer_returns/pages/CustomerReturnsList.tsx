@@ -28,8 +28,10 @@ import { useSearch } from "@/hooks/useSearch";
 import { CUSTOMER_RETURN_STATUS_LABELS, type CustomerReturnStatus, type CustomerReturn } from "@/types";
 import { PageHeader, Pagination, SearchBar, LoadingState, EmptyState } from "@/components/shared";
 import { formatCustomerReturnPartyLabel } from "@/lib/partyDisplay";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function CustomerReturnsList() {
+  const { can } = useCan();
   const { page, pageSize, setPage, setPageSize, reset: resetPage } = usePagination();
   const { searchTerm, debouncedTerm, setSearchTerm, clear: clearSearch } = useSearch({ debounceMs: 300 });
 
@@ -74,12 +76,14 @@ export default function CustomerReturnsList() {
         subtitle="إدارة ومتابعة طلبات المرتجعات للعملاء"
         icon={<PackageOpen className="w-7 h-7" />}
         action={
-          <Link to="/customer-returns/new">
-            <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
-              <Plus className="ml-2 h-5 w-5" />
-              إنشاء مرتجع
-            </Button>
-          </Link>
+          can("customer_returns.create") && (
+            <Link to="/customer-returns/new">
+              <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
+                <Plus className="ml-2 h-5 w-5" />
+                إنشاء مرتجع
+              </Button>
+            </Link>
+          )
         }
       />
 
@@ -188,7 +192,7 @@ export default function CustomerReturnsList() {
                 : "لم يتم إضافة مرتجعات حالياً."
             }
             action={
-              !(searchTerm || hasActiveFilters) && (
+              !(searchTerm || hasActiveFilters) && can("customer_returns.create") && (
                 <Link to="/customer-returns/new">
                   <Button>
                     <Plus className="h-4 w-4 ml-2" />

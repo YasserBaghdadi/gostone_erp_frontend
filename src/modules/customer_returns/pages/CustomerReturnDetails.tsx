@@ -1,22 +1,35 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, PackageOpen, Loader2, AlertCircle,
-  Edit, FileText, Calculator, User, Calendar, ShoppingCart, Clock,
+  Edit, FileText, Calculator, User, Calendar, ShoppingCart, Clock, CheckCircle2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useCustomerReturnDetails } from "@/hooks/useCustomerReturns";
+import { useCustomerReturnDetails, useAcceptCustomerReturn } from "@/hooks/useCustomerReturns";
 import { CUSTOMER_RETURN_STATUS_LABELS, type CustomerReturnStatus } from "@/types";
 import { formatCustomerReturnPartyLabel } from "@/lib/partyDisplay";
+import { parseBackendError } from "@/lib/utils";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function CustomerReturnDetails() {
+  const { can } = useCan();
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: returnData, isLoading, isError } = useCustomerReturnDetails(id || "");
+  const acceptMutation = useAcceptCustomerReturn();
+
+  const handleAccept = () => {
+    if (!returnData) return;
+    acceptMutation.mutate(returnData.id, {
+      onSuccess: () => toast.success("تم اعتماد المرتجع — رجعت الكمية للمخزون"),
+      onError: (e) => toast.error("فشل اعتماد المرتجع", { description: parseBackendError(e) }),
+    });
+  };
 
   if (isLoading) {
     return (
@@ -81,10 +94,20 @@ export default function CustomerReturnDetails() {
             </Button>
           </Link>
           {isDraft && (
-            <Button variant="outline" className="rounded-xl gap-2" onClick={() => navigate(`/customer-returns/${returnData.id}/edit`)}>
-              <Edit className="h-4 w-4" />
-              تعديل
-            </Button>
+            <>
+              {can("customer_returns.edit") && (
+              <Button variant="outline" className="rounded-xl gap-2" onClick={() => navigate(`/customer-returns/${returnData.id}/edit`)}>
+                <Edit className="h-4 w-4" />
+                تعديل
+              </Button>
+              )}
+              {can("customer_returns.accept") && (
+              <Button className="rounded-xl gap-2" onClick={handleAccept} disabled={acceptMutation.isPending}>
+                {acceptMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                قبول واعتماد
+              </Button>
+              )}
+            </>
           )}
         </div>
       </div>

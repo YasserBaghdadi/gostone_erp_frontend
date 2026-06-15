@@ -37,10 +37,12 @@ import { NationalAddressReadOnlyFields } from "@/components/shared";
 import { inferAttachmentKindFromUrl } from "@/lib/attachmentPreview";
 import { formatSupplierWithBalance } from "@/lib/partyDisplay";
 import { toast } from "sonner";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function SupplierDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = useCan();
   const { data: supplier, isLoading, isError } = useSupplierDetails(id!);
   const printStatement = usePrintSupplierStatement();
 
@@ -114,35 +116,39 @@ export default function SupplierDetails() {
           </div>
         </div>
         <div className="flex gap-3 w-full md:w-auto flex-wrap">
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1 md:flex-none rounded-xl gap-2 font-bold min-w-[140px]"
-            disabled={printStatement.isPending}
-            onClick={() =>
-              id &&
-              printStatement.mutate(
-                { id },
-                {
-                  onError: () =>
-                    toast.error("تعذّر طباعة كشف الحساب"),
-                },
-              )
-            }
-          >
-            {printStatement.isPending ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Printer className="h-5 w-5" />
-            )}
-            طباعة كشف حساب
-          </Button>
-          <Link to={`/suppliers/${id}/edit`} className="flex-1 md:flex-none">
-            <Button size="lg" className="w-full rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 gap-2 font-bold min-w-[160px]">
-              <Edit className="h-5 w-5" />
-              تعديل المورد
+          {can("suppliers.statement") && (
+            <Button
+              variant="outline"
+              size="lg"
+              className="flex-1 md:flex-none rounded-xl gap-2 font-bold min-w-[140px]"
+              disabled={printStatement.isPending}
+              onClick={() =>
+                id &&
+                printStatement.mutate(
+                  { id },
+                  {
+                    onError: () =>
+                      toast.error("تعذّر طباعة كشف الحساب"),
+                  },
+                )
+              }
+            >
+              {printStatement.isPending ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Printer className="h-5 w-5" />
+              )}
+              طباعة كشف حساب
             </Button>
-          </Link>
+          )}
+          {can("suppliers.edit") && (
+            <Link to={`/suppliers/${id}/edit`} className="flex-1 md:flex-none">
+              <Button size="lg" className="w-full rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 gap-2 font-bold min-w-[160px]">
+                <Edit className="h-5 w-5" />
+                تعديل المورد
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

@@ -29,6 +29,13 @@ interface ProductSelectionModalProps {
   filterPurchable?: boolean; // Only show purchasable products
   /** عند التمرير (>0) تُجلب أصناف المورد فقط */
   filterSupplier?: number;
+  /** تصفية حسب نوع المنتج: 'ready' (جاهزة)، 'custom' (تفصيل)، 'custom_stock' (مخزون تفصيل)، أو 'second_grade' (مخزون درجة ثانية) */
+  filterProductionType?: "ready" | "custom" | "custom_stock" | "second_grade";
+  /**
+   * قصر الاختيار على مجموعة معرّفات محددة (مثل المواد المرتبطة بصنف التصنيع).
+   * عند تمريرها فارغة [] لا يظهر أي صنف.
+   */
+  restrictToIds?: number[];
 }
 
 export function ProductSelectionModal({
@@ -39,6 +46,8 @@ export function ProductSelectionModal({
   filterSellable,
   filterPurchable,
   filterSupplier,
+  filterProductionType,
+  restrictToIds,
 }: ProductSelectionModalProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -67,6 +76,10 @@ export function ProductSelectionModal({
     setPage(1);
   }, [filterSupplier]);
 
+  // When restrictToIds is provided, limit results to that set. An empty set must
+  // yield NO items (send id__in="0" — no item has id 0), never the full catalog.
+  const restricted = restrictToIds !== undefined;
+
   const { data, isLoading, isError } = useItems({
     page,
     search: debouncedSearch,
@@ -74,6 +87,8 @@ export function ProductSelectionModal({
     is_sellable: filterSellable,
     is_purchable: filterPurchable,
     ...(filterSupplier && filterSupplier > 0 ? { supplier: filterSupplier } : {}),
+    ...(filterProductionType ? { production_type: filterProductionType } : {}),
+    ...(restricted ? { id__in: restrictToIds.length ? restrictToIds.join(",") : "0" } : {}),
   });
 
   const handleSelect = (item: Item, checked: boolean) => {

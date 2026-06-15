@@ -23,6 +23,7 @@ import { PURCHASE_ORDER_STATUS_LABELS, type PurchaseOrderStatus } from "@/types"
 import { PageHeader, Pagination, LoadingState, EmptyState } from "@/components/shared";
 import { LinkedSellOrderLink } from "@/modules/purchase_orders/components/LinkedSellOrderLink";
 import { formatNameWithBalance } from "@/lib/partyDisplay";
+import { useCan } from "@/hooks/usePermissions";
 
 function SupplierBadge({
   supplier,
@@ -73,6 +74,9 @@ function PurchaseOrderRow({ order }: { order: any }) {
     >
       <td className="px-4 py-3">
         <span className="font-mono text-sm text-foreground">#{order.id}</span>
+      </td>
+      <td className="px-4 py-3">
+        <span className="text-sm text-foreground">{order.customer_name || "—"}</span>
       </td>
       <td className="px-4 py-3 align-top whitespace-normal">
         <div
@@ -248,6 +252,11 @@ function PurchaseOrderMobileCard({ order }: { order: any }) {
       </CardHeader>
       
       <CardContent className="space-y-3 pb-4">
+        <div className="flex items-center justify-between text-sm gap-2 min-w-0">
+          <span className="text-muted-foreground shrink-0">العميل</span>
+          <span className="truncate text-foreground">{order.customer_name || "—"}</span>
+        </div>
+
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">التاريخ</span>
           <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
@@ -286,7 +295,8 @@ function PurchaseOrderMobileCard({ order }: { order: any }) {
 }
 
 export default function PurchaseOrdersList() {
-  
+  const { can } = useCan();
+
   // Use custom hooks for pagination and search
   const { page, pageSize, setPage, setPageSize, reset: resetPage } = usePagination();
   const { searchTerm, debouncedTerm, setSearchTerm, clear: clearSearch } = useSearch({ debounceMs: 300 });
@@ -337,12 +347,14 @@ export default function PurchaseOrdersList() {
         subtitle="إدارة طلبات الشراء من الموردين"
         icon={<ShoppingCart className="w-7 h-7" />}
         action={
-          <Link to="/purchase-orders/new">
-            <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
-              <Plus className="ml-2 h-5 w-5" />
-              طلب شراء جديد
-            </Button>
-          </Link>
+          can("purchase_orders.create") && (
+            <Link to="/purchase-orders/new">
+              <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
+                <Plus className="ml-2 h-5 w-5" />
+                طلب شراء جديد
+              </Button>
+            </Link>
+          )
         }
       />
 
@@ -447,14 +459,14 @@ export default function PurchaseOrdersList() {
           action={
             hasActiveFilters ? (
               <Button variant="link" onClick={clearFilters}>مسح عوامل التصفية</Button>
-            ) : (
+            ) : can("purchase_orders.create") ? (
               <Link to="/purchase-orders/new">
                 <Button>
                   <Plus className="h-4 w-4 ml-2" />
                   طلب شراء جديد
                 </Button>
               </Link>
-            )
+            ) : null
           }
         />
       ) : (
@@ -471,6 +483,7 @@ export default function PurchaseOrdersList() {
                   <thead>
                     <tr className="bg-muted/50 border-b border-border/50 text-muted-foreground">
                       <th className="px-4 py-3 text-right font-medium">رقم الطلب</th>
+                      <th className="px-4 py-3 text-right font-medium">العميل</th>
                       <th className="px-4 py-3 text-right font-medium">المورد</th>
                       <th className="px-4 py-3 text-center font-medium">أمر بيع</th>
                       <th className="px-4 py-3 text-center font-medium">البنود</th>

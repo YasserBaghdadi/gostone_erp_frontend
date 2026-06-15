@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ShoppingCart,
   Plus,
@@ -10,10 +10,13 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSellOrders } from "@/hooks/useSellOrders";
+import { useBranches, useCreateBranch } from "@/hooks/useBranches";
 import { usePagination } from "@/hooks/usePagination";
 import { useSearch } from "@/hooks/useSearch";
 import type { SellOrder } from "@/types";
@@ -25,9 +28,11 @@ import {
   EmptyState,
   SellOrderInvoiceOdooBadge,
 } from "@/components/shared";
-import { cn } from "@/lib/utils";
+import { cn, parseBackendError } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
 import { sellOrderHasInvoice } from "@/hooks/useSellOrders";
+import { BranchDialog } from "../components/BranchDialog";
+import { useCan } from "@/hooks/usePermissions";
 
 function sellOrderCustomerLabel(order: SellOrder): string {
   if (!order.customer) return "—";
@@ -111,6 +116,11 @@ function SellOrderRow({ order }: { order: SellOrderRowData }) {
         </span>
       </td>
       <td className='px-4 py-3 text-center'>
+        <span className='text-xs text-muted-foreground'>
+          {order.delivery_date ? format(new Date(order.delivery_date), "yyyy/MM/dd", { locale: arSA }) : "—"}
+        </span>
+      </td>
+      <td className='px-4 py-3 text-center'>
         <Badge
           variant={statusInfo.color as "default" | "secondary" | "destructive" | "outline"}
           className='text-[10px] px-2 py-0.5 rounded-full font-semibold'
@@ -190,6 +200,14 @@ function SellOrderMobileCard({ order }: { order: SellOrderRowData }) {
           </span>
         </div>
 
+        <div className='flex items-center justify-between text-sm'>
+          <span className='text-muted-foreground'>موعد العميل</span>
+          <span className='text-muted-foreground flex items-center gap-1.5 text-xs'>
+            <Calendar className='h-3.5 w-3.5' />
+            {order.delivery_date ? format(new Date(order.delivery_date), "yyyy/MM/dd", { locale: arSA }) : "—"}
+          </span>
+        </div>
+
         <div className='flex items-center justify-between pt-2 border-t border-border/50'>
           <span className='text-sm font-medium text-foreground'>الإجمالي</span>
           <div className='flex items-baseline gap-1'>
@@ -205,8 +223,12 @@ function SellOrderMobileCard({ order }: { order: SellOrderRowData }) {
 }
 
 export default function SellOrdersList() {
+  const { can } = useCan();
   /** الافتراضي: كل الأوامر. عند التفعيل يُرسل `have_invoice=false` لإخفاء التي لها فاتورة. */
   const [hideOrdersWithInvoice, setHideOrdersWithInvoice] = useState(false);
+  const [isBranchDialogOpen, setIsBranchDialogOpen] = useState(false);
+
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { page, pageSize, setPage, setPageSize, reset: resetPage } = usePagination();
   const {
@@ -215,11 +237,50 @@ export default function SellOrdersList() {
     setSearchTerm: setSearchQuery,
   } = useSearch({ debounceMs: 300 });
 
+  // --- الفروع ---
+  const { data: branches = [] } = useBranches();
+  const createBranch = useCreateBranch();
+
+  // الفروع النشطة فقط تظهر كتبويبات (تبويب «الكل» يظهر دائماً).
+  const activeBranches = useMemo(
+    () => branches.filter((b) => b.is_active === true),
+    [branches],
+  );
+
+  const branchParam = searchParams.get("branch");
+  /**
+   * التحديد الفعّال: «الكل» أو رقم فرع.
+   * - "all" → لا نُرسل فلتر الفرع (تظهر كل الأوامر بما فيها التي بلا فرع).
+   * - رقم   → نُرسل branch=<id>.
+   * القيمة تُشتق من ?branch=: "all" لتبويب الكل، أو الرقم؛ الافتراضي (لا قيمة/غير صالحة) → "all".
+   */
+  const activeSelection = useMemo<"all" | number>(() => {
+    if (branchParam === "all") return "all";
+    const fromUrl = branchParam ? Number(branchParam) : NaN;
+    if (
+      Number.isFinite(fromUrl) &&
+      activeBranches.some((b) => b.id === fromUrl)
+    ) {
+      return fromUrl;
+    }
+    return "all";
+  }, [activeBranches, branchParam]);
+
+  const tabValue = activeSelection === "all" ? "all" : String(activeSelection);
+
+  const handleBranchChange = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("branch", value);
+    setSearchParams(next);
+    resetPage();
+  };
+
   const { data, isLoading, isError, error, refetch, isRefetching } =
     useSellOrders({
       search: debouncedTerm,
       page,
       page_size: pageSize,
+      ...(activeSelection !== "all" ? { branch: activeSelection } : {}),
       ...(hideOrdersWithInvoice ? { have_invoice: false } : {}),
     });
 
@@ -227,9 +288,30 @@ export default function SellOrdersList() {
   const totalCount = data?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
 
+  const createOrderHref =
+    activeSelection !== "all"
+      ? `/sell-orders/new?branch=${activeSelection}`
+      : "/sell-orders/new";
+
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     resetPage();
+  };
+
+  const handleCreateBranch = (values: { name: string }) => {
+    createBranch.mutate(values, {
+      onSuccess: (branch) => {
+        toast.success("تم إضافة الفرع بنجاح");
+        setIsBranchDialogOpen(false);
+        const next = new URLSearchParams(searchParams);
+        next.set("branch", String(branch.id));
+        setSearchParams(next);
+        resetPage();
+      },
+      onError: (err) => {
+        toast.error(parseBackendError(err));
+      },
+    });
   };
 
   return (
@@ -256,15 +338,63 @@ export default function SellOrdersList() {
                 className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`}
               />
             </Button>
-            <Link to='/sell-orders/new'>
-              <Button className='rounded-xl shadow-lg shadow-primary/20 gap-2'>
-                <Plus className='h-4 w-4' />
-                <span className='hidden sm:inline'>أمر بيع جديد</span>
-              </Button>
-            </Link>
+            {/* A new order auto-assigns to the active branch, so creation is
+                only offered from a specific branch tab — not from «الكل». */}
+            {activeSelection !== "all" && can("sell_orders.create") && (
+              <Link to={createOrderHref}>
+                <Button className='rounded-xl shadow-lg shadow-primary/20 gap-2'>
+                  <Plus className='h-4 w-4' />
+                  <span className='hidden sm:inline'>أمر بيع جديد</span>
+                </Button>
+              </Link>
+            )}
           </div>
         }
       />
+
+      {/* تبويبات الفروع */}
+      <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+        <Tabs
+          value={tabValue}
+          onValueChange={handleBranchChange}
+          dir='rtl'
+          className='w-full sm:w-auto'
+        >
+          <TabsList className='flex flex-wrap h-auto gap-1 bg-muted/50 w-full sm:w-auto'>
+            <TabsTrigger
+              value='all'
+              className='gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm'
+            >
+              الكل
+            </TabsTrigger>
+            {activeBranches.map((branch) => (
+              <TabsTrigger
+                key={branch.id}
+                value={String(branch.id)}
+                className='gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm'
+              >
+                {branch.name}
+                <Badge
+                  variant='secondary'
+                  className='font-mono text-[10px] px-1.5 py-0'
+                >
+                  {branch.sell_orders_count}
+                </Badge>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <Button
+          type='button'
+          variant='outline'
+          size='sm'
+          className='shrink-0 gap-2 rounded-full self-start'
+          onClick={() => setIsBranchDialogOpen(true)}
+        >
+          <Plus className='h-4 w-4' />
+          إضافة فرع
+        </Button>
+      </div>
 
       <div className='bg-card p-4 rounded-2xl border shadow-sm'>
         <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
@@ -324,11 +454,13 @@ export default function SellOrdersList() {
           description={
             searchQuery
               ? "لم يتم العثور على أوامر بيع تطابق بحثك."
-              : "لم يتم إنشاء أوامر بيع حالية. يمكنك إنشاء أمر بيع جديد للبدء."
+              : activeSelection === "all"
+                ? "اختر فرعاً من التبويبات لإنشاء أمر بيع جديد."
+                : "لم يتم إنشاء أوامر بيع حالية. يمكنك إنشاء أمر بيع جديد للبدء."
           }
           action={
-            !searchQuery && (
-              <Link to='/sell-orders/new'>
+            !searchQuery && activeSelection !== "all" && can("sell_orders.create") && (
+              <Link to={createOrderHref}>
                 <Button>
                   <Plus className='h-4 w-4 ml-2' />
                   أمر بيع جديد
@@ -358,6 +490,7 @@ export default function SellOrdersList() {
                     <th className='px-4 py-3 text-center font-medium'>
                       تاريخ الإنشاء
                     </th>
+                    <th className='px-4 py-3 text-center font-medium'>موعد العميل</th>
                     <th className='px-4 py-3 text-center font-medium'>الحالة</th>
                     <th className='px-4 py-3 text-center font-medium w-28'>
                       الإجراءات
@@ -385,6 +518,13 @@ export default function SellOrdersList() {
           />
         </>
       )}
+
+      <BranchDialog
+        open={isBranchDialogOpen}
+        onOpenChange={setIsBranchDialogOpen}
+        onSubmit={handleCreateBranch}
+        isLoading={createBranch.isPending}
+      />
     </div>
   );
 }

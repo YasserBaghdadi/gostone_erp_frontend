@@ -191,14 +191,21 @@ export function useRequestWorkOrder(): UseMutationResult<Opportunity, Error, { i
   });
 }
 
-// Create Sell Order from Opportunity
-export function useCreateSellOrder(): UseMutationResult<Opportunity, Error, { id: string }> {
+// Create Sell Order from Opportunity. `specs` carries the manufacturing details
+// (تفاصيل التصنيع) per custom item, keyed by opportunity-item id, when required.
+export function useCreateSellOrder(): UseMutationResult<
+  Opportunity,
+  Error,
+  { id: string; specs?: Record<string, unknown> }
+> {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ id }): Promise<Opportunity> => {
-      // POST with empty body as requested
-      const response = await api.post(API_ENDPOINTS.OPPORTUNITIES.CREATE_SELL_ORDER(id), {});
+    mutationFn: async ({ id, specs }): Promise<Opportunity> => {
+      const response = await api.post(
+        API_ENDPOINTS.OPPORTUNITIES.CREATE_SELL_ORDER(id),
+        specs ? { specs } : {},
+      );
       return response.data;
     },
     onSuccess: (_, variables) => {
@@ -225,6 +232,32 @@ export function usePrintQuotation(): UseMutationResult<void, Error, { id: string
         `opportunity_quotation_${id}.pdf`,
       );
       openPdfInWindow(response.data, filename);
+    },
+  });
+}
+
+// Open an attached measurements file (يفتح ملف المقاسات في تبويب جديد).
+// Fetched as an authenticated blob — the direct /media link is not served by
+// the SPA host, so it would never open.
+export function useOpenDimensionFile(): UseMutationResult<void, Error, string | number> {
+  return useMutation({
+    mutationFn: async (id): Promise<void> => {
+      const response = await api.get(API_ENDPOINTS.OPPORTUNITY_DIMENSIONS.FILE(id), {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(response.data as Blob);
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        // popup blocked → fall back to a programmatic click
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      setTimeout(() => window.URL.revokeObjectURL(url), 300000);
     },
   });
 }

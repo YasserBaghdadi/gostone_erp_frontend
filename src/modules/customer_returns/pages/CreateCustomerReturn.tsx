@@ -43,6 +43,14 @@ import {
   useUpdateCustomerReturn,
   useCustomerReturnDetails,
 } from "@/hooks/useCustomerReturns";
+import { useStorageAreas } from "@/hooks/useStorageAreas";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { parseBackendError, preventNegative } from "@/lib/utils";
 import type { SellOrder } from "@/types";
 
@@ -62,6 +70,7 @@ const formSchema = z.object({
   sell_order_display: z.string().optional(),
   return_date: z.string().min(1, "تاريخ المرتجع مطلوب"),
   notes: z.string().optional(),
+  storage_area: z.number().optional(),
   items: z.array(returnItemSchema),
 });
 
@@ -86,6 +95,8 @@ export default function CreateCustomerReturn() {
 
   const createMutation = useCreateCustomerReturn();
   const updateMutation = useUpdateCustomerReturn();
+  const { data: warehousesData } = useStorageAreas({ page_size: 200 });
+  const warehouses = warehousesData?.results ?? [];
 
   const { data: existingReturn, isLoading: isLoadingDetails } =
     useCustomerReturnDetails(id!);
@@ -102,6 +113,15 @@ export default function CreateCustomerReturn() {
       items: [],
     },
   });
+
+  // Default the return warehouse to «المخزن الرئيسي».
+  useEffect(() => {
+    if (!form.getValues("storage_area") && warehouses.length) {
+      const def = warehouses.find((w) => w.is_default) ?? warehouses[0];
+      if (def) form.setValue("storage_area", def.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouses.length]);
 
   const { fields, replace } = useFieldArray({
     control: form.control,
@@ -203,14 +223,10 @@ export default function CreateCustomerReturn() {
       return;
     }
     for (const item of selected) {
-      const qty = Number.parseInt(item.quantity || "0", 10);
-      const originalQty = Math.floor(parseFloat(item.original_quantity || "0"));
+      const qty = parseFloat(item.quantity || "0");
+      const originalQty = parseFloat(item.original_quantity || "0");
       if (!Number.isFinite(qty) || qty <= 0) {
         toast.error(`الكمية يجب أن تكون أكبر من صفر للبند: ${item.item_name}`);
-        return;
-      }
-      if (qty.toString() !== String(item.quantity).trim()) {
-        toast.error(`الكمية يجب أن تكون عدد صحيح للبند: ${item.item_name}`);
         return;
       }
       if (qty > originalQty) {
@@ -240,6 +256,7 @@ export default function CreateCustomerReturn() {
       sell_order: values.sell_order,
       return_date: values.return_date,
       notes: values.notes || "",
+      storage_area: values.storage_area,
       items: selectedReturnItems,
     };
 
@@ -410,6 +427,34 @@ export default function CreateCustomerReturn() {
 
                 <FormField
                   control={form.control}
+                  name='storage_area'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>المخزن (يُرجَع إليه)</FormLabel>
+                      <Select
+                        value={field.value ? String(field.value) : undefined}
+                        onValueChange={(v) => field.onChange(Number(v))}
+                      >
+                        <FormControl>
+                          <SelectTrigger className='w-full'>
+                            <SelectValue placeholder='اختر المخزن' />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {warehouses.map((w) => (
+                            <SelectItem key={w.id} value={String(w.id)}>
+                              {w.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name='notes'
                   render={({ field }) => (
                     <FormItem>
@@ -552,10 +597,9 @@ export default function CreateCustomerReturn() {
                                       field.onChange("");
                                       return;
                                     }
-                                    const n = Number.parseInt(raw, 10);
-                                    if (!Number.isFinite(n)) return;
-                                    if (n < 1) {
-                                      field.onChange("1");
+                                    const n = parseFloat(raw);
+                                    if (!Number.isFinite(n) || n <= 0) {
+                                      field.onChange("");
                                       return;
                                     }
                                     if (
@@ -573,28 +617,23 @@ export default function CreateCustomerReturn() {
                                       <FormControl>
                                         <Input
                                           type='number'
-                                          inputMode='numeric'
-                                          min={1}
+                                          inputMode='decimal'
+                                          min={0.01}
                                           max={maxQty}
-                                          step={1}
+                                          step='any'
                                           className='h-9 text-sm min-w-[80px] text-center'
                                           disabled={!isSelected}
                                           name={field.name}
                                           ref={field.ref}
                                           value={field.value ?? ""}
-                                          onKeyDown={(e) => {
-                                            preventNegative(e);
-                                            if (
-                                              [".", ",", "Decimal"].includes(
-                                                e.key,
-                                              )
-                                            ) {
-                                              e.preventDefault();
-                                            }
-                                          }}
+                                          onKeyDown={preventNegative}
                                           onChange={(e) => {
                                             if (!isSelected) return;
-                                            commitQty(e.currentTarget.value);
+                                            // allow free decimal typing (digits + a single dot); normalize on blur
+                                            const raw = e.currentTarget.value
+                                              .replace(/[^\d.]/g, "")
+                                              .replace(/(\..*)\./g, "$1");
+                                            field.onChange(raw);
                                           }}
                                           onBlur={(e) => {
                                             field.onBlur();

@@ -45,9 +45,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatSupplierWithBalance } from "@/lib/partyDisplay";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function SuppliersList() {
   const navigate = useNavigate();
+  const { can } = useCan();
   const [searchTerm, setSearchTerm] = useState("");
   const { page, pageSize, setPage, setPageSize } = usePagination();
   const [hasVat, setHasVat] = useState<string>("all");
@@ -91,12 +93,14 @@ export default function SuppliersList() {
             قائمة بجميع الموردين المسجلين في النظام
           </p>
         </div>
-        <Link to="/suppliers/new" className="w-full sm:w-auto">
-          <Button size="lg" className="w-full sm:w-auto rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 gap-2">
-            <Plus className="h-5 w-5" />
-            مورد جديد
-          </Button>
-        </Link>
+        {can("suppliers.create") && (
+          <Link to="/suppliers/new" className="w-full sm:w-auto">
+            <Button size="lg" className="w-full sm:w-auto rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 gap-2">
+              <Plus className="h-5 w-5" />
+              مورد جديد
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="bg-card p-4 rounded-2xl border shadow-sm space-y-4">
@@ -242,10 +246,12 @@ export default function SuppliersList() {
                                         <Eye className="ml-2 h-4 w-4" />
                                         عرض التفاصيل
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => navigate(`/suppliers/${supplier.id}/edit`)}>
-                                        <Edit className="ml-2 h-4 w-4" />
-                                        تعديل
-                                    </DropdownMenuItem>
+                                    {can("suppliers.edit") && (
+                                        <DropdownMenuItem onClick={() => navigate(`/suppliers/${supplier.id}/edit`)}>
+                                            <Edit className="ml-2 h-4 w-4" />
+                                            تعديل
+                                        </DropdownMenuItem>
+                                    )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
@@ -467,15 +473,17 @@ export default function SuppliersList() {
                             <Eye className="ml-2 h-4 w-4" />
                             عرض التفاصيل
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/suppliers/${supplier.id}/edit`);
-                            }}
-                          >
-                            <Edit className="ml-2 h-4 w-4" />
-                            تعديل
-                          </DropdownMenuItem>
+                          {can("suppliers.edit") && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/suppliers/${supplier.id}/edit`);
+                              }}
+                            >
+                              <Edit className="ml-2 h-4 w-4" />
+                              تعديل
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

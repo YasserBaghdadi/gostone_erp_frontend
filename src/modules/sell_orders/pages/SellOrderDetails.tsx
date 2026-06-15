@@ -6,6 +6,7 @@ import {
   Phone,
   MapPin,
   Calendar,
+  CalendarClock,
   User,
   Loader2,
   AlertCircle,
@@ -16,6 +17,8 @@ import {
   Upload,
   ExternalLink,
 } from "lucide-react";
+import { format } from "date-fns";
+import { arSA } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,10 +38,81 @@ import {
   useUploadSellOrderInvoice,
   sellOrderHasInvoice,
   usePushSellOrderToOdoo,
+  useUpdateSellOrder,
 } from "@/hooks/useSellOrders";
 import { parseBackendError } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
+import {
+  HOLE_POSITION_LABELS,
+  BOWL_TYPE_LABELS,
+  FAUCET_HOLE_LABELS,
+} from "@/types";
+import type { WashbasinSpec } from "@/types";
 import { toast } from "sonner";
+import { useCan } from "@/hooks/usePermissions";
+
+/** صفوف عرض مواصفات تصنيع المغسلة (قراءة فقط) للبنود من نوع «تفصيل» */
+/** ISO datetime → قيمة <input type="datetime-local"> بالتوقيت المحلي */
+function isoToDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** قيمة <input type="datetime-local"> → ISO datetime، أو null إذا فارغة */
+function datetimeLocalToIso(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+function washbasinSpecRows(spec: WashbasinSpec): { label: string; value: string }[] {
+  const rows: { label: string; value: string }[] = [];
+  const num = (v: number | null | undefined) =>
+    v === null || v === undefined ? "" : String(v);
+  const add = (label: string, value: string) => {
+    if (value !== "") rows.push({ label, value });
+  };
+
+  add("طول السطح", num(spec.surface_length));
+  add("عمق السطح", num(spec.surface_width));
+  if (spec.has_custom_bowl_size) {
+    add("طول الحوض", num(spec.bowl_length));
+    add("عرض الحوض", num(spec.bowl_width));
+    add("عمق الحوض", num(spec.bowl_depth));
+  }
+  if (spec.hole_position) add("مكان فتحة الحوض", HOLE_POSITION_LABELS[spec.hole_position]);
+  if (spec.bowl_type) add("نوع الحوض", BOWL_TYPE_LABELS[spec.bowl_type]);
+  add("عدد الأحواض", spec.bowls_count === 2 ? "حوضين" : spec.bowls_count === 1 ? "حوض" : "");
+  if (spec.faucet_hole) add("فتحة الخلاط", FAUCET_HOLE_LABELS[spec.faucet_hole]);
+  add("طول المنظور الأمامي", num(spec.front_length));
+  add("ارتفاع المنظور الأمامي", num(spec.front_height));
+  add("رقم اللون المعتمد", spec.approved_color_number ?? "");
+  add("الشركة الموردة", spec.supplier_company ?? "");
+
+  return rows;
+}
+
+function WashbasinSpecView({ spec }: { spec: WashbasinSpec }) {
+  const rows = washbasinSpecRows(spec);
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
+      <p className="mb-1.5 text-xs font-semibold text-primary">تفاصيل التصنيع</p>
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+        {rows.map((r) => (
+          <div key={r.label} className="flex justify-between gap-2">
+            <dt className="text-muted-foreground">{r.label}:</dt>
+            <dd className="font-medium text-foreground">{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
 
 /** مسار أو رابط ملف الفاتورة من الـ API لعرضه في المتصفح */
 function buildInvoiceFileHref(raw: string | null | undefined): string {
@@ -56,6 +130,7 @@ function invoiceUrlViewerKind(url: string): "pdf" | "image" | "unknown" {
 }
 
 export default function SellOrderDetails() {
+  const { can } = useCan();
   const { id } = useParams();
   const navigate = useNavigate();
   const invoiceInputRef = useRef<HTMLInputElement>(null);
@@ -67,6 +142,27 @@ export default function SellOrderDetails() {
   const [odooConfirmOpen, setOdooConfirmOpen] = useState(false);
 
   const { data: sellOrder, isLoading, isError } = useSellOrderDetails(id || "");
+  const updateSellOrder = useUpdateSellOrder();
+  const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
+  const [deliveryDateInput, setDeliveryDateInput] = useState("");
+
+  const handleSaveDeliveryDate = () => {
+    if (!sellOrder) return;
+    updateSellOrder.mutate(
+      {
+        id: sellOrder.id,
+        data: { delivery_date: datetimeLocalToIso(deliveryDateInput) } as never,
+      },
+      {
+        onSuccess: () => {
+          toast.success("تم تحديث موعد العميل");
+          setEditingDeliveryDate(false);
+        },
+        onError: (e) =>
+          toast.error("فشل تحديث الموعد", { description: parseBackendError(e) }),
+      },
+    );
+  };
   const printMutation = usePrintSellOrder();
   const uploadInvoiceMutation = useUploadSellOrderInvoice();
   const pushToOdooMutation = usePushSellOrderToOdoo();
@@ -192,16 +288,7 @@ export default function SellOrderDetails() {
           <Badge variant="success" className="text-sm px-4 py-1.5 rounded-lg shadow-sm">
             أمر بيع
           </Badge>
-          <Link to={`/purchase-orders/${sellOrder.id}`}>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-lg gap-2 text-primary hover:text-primary hover:bg-primary/10 border-primary/20"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              طلب الشراء المرتبط
-            </Button>
-          </Link>
+          {can("customer_returns.create") && (
           <Link to={`/customer-returns/new?sell_order=${sellOrder.id}`}>
             <Button
               variant="outline"
@@ -212,8 +299,10 @@ export default function SellOrderDetails() {
               إنشاء مرتجع
             </Button>
           </Link>
+          )}
           {!hasInvoice && (
             <>
+              {can("sell_orders.edit") && (
               <Button
                 type="button"
                 variant="outline"
@@ -224,6 +313,8 @@ export default function SellOrderDetails() {
                 <Edit className="h-4 w-4" />
                 تعديل
               </Button>
+              )}
+              {can("sell_orders.upload_invoice") && (
               <Button
                 type="button"
                 variant="outline"
@@ -235,9 +326,10 @@ export default function SellOrderDetails() {
                 <Upload className="h-4 w-4" />
                 رفع الفاتورة
               </Button>
+              )}
             </>
           )}
-            {shouldShowPushToOdoo && (
+            {shouldShowPushToOdoo && can("sell_orders.push_odoo") && (
               <Button
                 type="button"
                 variant="outline"
@@ -257,24 +349,26 @@ export default function SellOrderDetails() {
                 مزامنة مع Odoo
               </Button>
             )}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            {can("sell_orders.print") && (
+            <Button
+              variant="outline"
+              size="sm"
               className="rounded-lg gap-2"
               disabled={printMutation.isPending}
               onClick={() => {
                 printMutation.mutate(
                   { id: sellOrder.id },
                   {
-                    onSuccess: () => toast.success("تم فتح عرض السعر للطباعة"),
-                    onError: () => toast.error("فشل تحميل عرض السعر"),
+                    onSuccess: () => toast.success("تم فتح أمر البيع للطباعة"),
+                    onError: () => toast.error("فشل تحميل أمر البيع"),
                   }
                 );
               }}
             >
               {printMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-              طباعة عرض السعر
+              طباعة أمر البيع
             </Button>
+            )}
         </div>
       </div>
 
@@ -449,6 +543,7 @@ export default function SellOrderDetails() {
                           <p className="whitespace-pre-wrap wrap-break-word break-all">{item.notes}</p>
                         </div>
                       )}
+                      {item.washbasin_spec && <WashbasinSpecView spec={item.washbasin_spec} />}
                     </div>
                   ))}
                 </div>
@@ -484,6 +579,7 @@ export default function SellOrderDetails() {
                               </p>
                             </div>
                           )}
+                          {item.washbasin_spec && <WashbasinSpecView spec={item.washbasin_spec} />}
                         </td>
                         <td className="p-4 text-center">
                           <Badge variant="outline" className="font-mono">
@@ -513,6 +609,7 @@ export default function SellOrderDetails() {
                   <FileText className="h-5 w-5 text-primary" />
                   فاتورة أمر البيع
                 </CardTitle>
+                {can("sell_orders.download_invoice") && (
                 <Button variant="outline" size="sm" className="rounded-lg gap-2 shrink-0" asChild>
                   <a
                     href={invoiceHref}
@@ -524,6 +621,7 @@ export default function SellOrderDetails() {
                     فتح الفاتورة
                   </a>
                 </Button>
+                )}
               </CardHeader>
               <CardContent className="p-4 space-y-3">
                 {invoiceKind === "pdf" ? (
@@ -612,6 +710,51 @@ export default function SellOrderDetails() {
                   </div>
                 </div>
               )}
+              <div className="p-4 flex items-center gap-3 hover:bg-muted/5 transition-colors">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                  <CalendarClock className="h-5 w-5" />
+                </div>
+                <div className="overflow-hidden flex-1">
+                  <p className="text-xs text-muted-foreground mb-0.5">موعد العميل</p>
+                  {editingDeliveryDate ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="datetime-local"
+                        value={deliveryDateInput}
+                        onChange={(e) => setDeliveryDateInput(e.target.value)}
+                        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                      />
+                      <Button size="sm" onClick={handleSaveDeliveryDate} disabled={updateSellOrder.isPending}>
+                        {updateSellOrder.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "حفظ"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingDeliveryDate(false)}>
+                        إلغاء
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-sm font-mono">
+                        {sellOrder.delivery_date
+                          ? format(new Date(sellOrder.delivery_date), "yyyy/MM/dd HH:mm", { locale: arSA })
+                          : "—"}
+                      </p>
+                      {can("sell_orders.edit_delivery_date") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeliveryDateInput(isoToDatetimeLocal(sellOrder.delivery_date));
+                          setEditingDeliveryDate(true);
+                        }}
+                        className="text-primary hover:text-primary/80"
+                        title="تعديل موعد العميل"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
 

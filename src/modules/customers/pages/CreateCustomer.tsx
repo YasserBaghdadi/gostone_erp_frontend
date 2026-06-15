@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,15 @@ import CustomerForm, { type CustomerFormValues } from "../components/CustomerFor
 import { parseBackendError } from "@/lib/utils";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 
+type BackendErrorHandler = (errors: Record<string, unknown>) => boolean;
+
 export default function CreateCustomer() {
   const navigate = useNavigate();
   const createMutation = useCreateCustomer();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<CustomerFormValues | null>(null);
+  // دالة ربط أخطاء الباك اند بحقول النموذج (يُسجّلها CustomerForm).
+  const backendErrorHandler = useRef<BackendErrorHandler | null>(null);
 
   const handleFormSubmit = (values: CustomerFormValues) => {
     setPendingFormData(values);
@@ -47,9 +51,18 @@ export default function CreateCustomer() {
         toast.success("تم إضافة العميل بنجاح");
         navigate("/customers");
       },
-      onError: (error) => {
-        const errorMessage = parseBackendError(error);
-        toast.error(errorMessage || "فشل إضافة العميل");
+      onError: (error: unknown) => {
+        // نحاول عرض أخطاء الحقول (مثل حقول الشركة) على الإدخالات المناسبة.
+        const data = (error as { response?: { data?: unknown } })?.response?.data;
+        let mappedToFields = false;
+        if (data && typeof data === "object" && !("detail" in (data as object))) {
+          mappedToFields =
+            backendErrorHandler.current?.(data as Record<string, unknown>) ?? false;
+        }
+        if (!mappedToFields) {
+          const errorMessage = parseBackendError(error);
+          toast.error(errorMessage || "فشل إضافة العميل");
+        }
         console.error(error);
       },
     });
@@ -82,10 +95,13 @@ export default function CreateCustomer() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <CustomerForm 
-            onSubmit={handleFormSubmit} 
-            isLoading={createMutation.isPending} 
+          <CustomerForm
+            onSubmit={handleFormSubmit}
+            isLoading={createMutation.isPending}
             buttonText="إضافة العميل"
+            registerBackendErrorHandler={(handler) => {
+              backendErrorHandler.current = handler;
+            }}
           />
         </CardContent>
       </Card>

@@ -15,6 +15,7 @@ import { API_ENDPOINTS } from "@/lib/server";
 import type { Account, Employee } from "@/types";
 import { parseBackendError } from "@/lib/utils";
 import { MarkPaymentTransferDialog } from "@/modules/payment_requests/components/MarkPaymentTransferDialog";
+import { useCan } from "@/hooks/usePermissions";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +55,7 @@ export default function DRPaymentRequestDetails() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useDRPaymentRequestDetails(id || "");
   const markDone = useMarkDRPaymentDone();
+  const { can } = useCan();
   const [markDialogOpen, setMarkDialogOpen] = useState(false);
   const [actualAmount, setActualAmount] = useState("");
   const [selectedSourceAccount, setSelectedSourceAccount] = useState<number | null>(null);
@@ -149,7 +151,7 @@ export default function DRPaymentRequestDetails() {
             </p>
           </div>
         </div>
-        {isPending && (
+        {isPending && can("payment_requests.mark_done") && (
           <Button
             type="button"
             onClick={handleOpenMarkDialog}

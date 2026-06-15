@@ -26,6 +26,7 @@ interface CreateCustomerReturnData {
   sell_order: number;
   return_date: string;
   notes?: string;
+  storage_area?: number;
   items: {
     sell_order_item: number;
     quantity: string;
@@ -71,6 +72,21 @@ export function useCreateCustomerReturn() {
       return res.data;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerReturnKeys.lists() });
+    },
+  });
+}
+
+// Accept (approve) a draft return — returns the goods to stock + posts the credit.
+export function useAcceptCustomerReturn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string | number) => {
+      const res = await api.post(API_ENDPOINTS.CUSTOMER_RETURNS.ACCEPT(id), {});
+      return res.data;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: customerReturnKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: customerReturnKeys.lists() });
     },
   });

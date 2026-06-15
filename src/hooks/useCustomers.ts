@@ -23,12 +23,20 @@ interface CreateCustomerRequest {
   cr_file?: File | null;
   address?: string;
   address_file?: File | null;
+  customer_type?: "individual" | "company";
+  is_potential?: boolean;
 }
 
 interface CustomersListFilters {
   search?: string;
   page?: number;
   page_size?: number;
+  /**
+   * Filter by lead status.
+   * `false` → actual customers only, `true` → potential customers (leads) only.
+   * When omitted, the backend returns its default set (existing behaviour).
+   */
+  is_potential?: boolean;
 }
 
 interface UpdateCustomerRequest extends Partial<CreateCustomerRequest> {}
@@ -72,7 +80,10 @@ export function useCustomers(filters: CustomersListFilters = {}): UseQueryResult
       if (filters.search) params.append('search', filters.search);
       params.append('page', (filters.page || 1).toString());
       params.append('page_size', (filters.page_size || 10).toString());
-      
+      if (filters.is_potential !== undefined) {
+        params.append('is_potential', filters.is_potential ? 'true' : 'false');
+      }
+
       const response = await api.get(`${API_ENDPOINTS.CUSTOMERS.LIST}?${params.toString()}`);
       return response.data;
     },
@@ -126,6 +137,24 @@ export function useAddCustomerPayment(): UseMutationResult<void, Error, { id: st
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: customerKeys.detail(variables.id) });
       // Invalidate relevant order lists too if needed, but detail is primary
+    },
+  });
+}
+
+// Convert Potential Customer (Lead) To Actual Customer
+export function useConvertToActual(): UseMutationResult<Customer, Error, string | number> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string | number): Promise<Customer> => {
+      const response = await api.patch(API_ENDPOINTS.CUSTOMERS.CONVERT_TO_ACTUAL(id));
+      return response.data;
+    },
+    onSuccess: (_data, id) => {
+      // Invalidates every customers list (both actual and potential),
+      // so the converted lead leaves the leads list and appears in actual customers.
+      queryClient.invalidateQueries({ queryKey: customerKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: customerKeys.detail(id) });
     },
   });
 }

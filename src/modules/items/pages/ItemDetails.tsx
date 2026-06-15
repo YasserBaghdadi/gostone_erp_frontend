@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useItemDetails, useItems } from "@/hooks/useItems";
+import { PRODUCTION_TYPE_LABELS } from "@/types";
 import { useMemo } from "react";
+import { useCan } from "@/hooks/usePermissions";
 
 export default function ItemDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = useCan();
   const { data: item, isLoading, isError } = useItemDetails(id!);
 
   // Fetch all items to resolve linked IDs to names
@@ -54,12 +57,14 @@ export default function ItemDetails() {
             </p>
           </div>
         </div>
-        <Link to={`/items/${id}/edit`}>
-          <Button className="rounded-xl shadow-lg shadow-primary/20">
-            <Edit className="ml-2 h-4 w-4" />
-            تعديل
-          </Button>
-        </Link>
+        {can("items.edit") && (
+          <Link to={`/items/${id}/edit`}>
+            <Button className="rounded-xl shadow-lg shadow-primary/20">
+              <Edit className="ml-2 h-4 w-4" />
+              تعديل
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -87,9 +92,26 @@ export default function ItemDetails() {
               <Badge variant="outline">{item.default_unit_name}</Badge>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-muted-foreground">المخزون</span>
+              <span className="text-muted-foreground">نوع المنتج</span>
+              <Badge variant="secondary">
+                {PRODUCTION_TYPE_LABELS[item.production_type ?? "ready"]}
+              </Badge>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b">
+              <span className="text-muted-foreground">المخزون (الإجمالي)</span>
               <span className="font-mono font-medium">{item.inventory ?? 0}</span>
             </div>
+            {item.stocks && item.stocks.length > 0 && (
+              <div className="py-2 border-b space-y-1.5">
+                <span className="text-xs text-muted-foreground">المخزون حسب المخزن</span>
+                {item.stocks.map((s) => (
+                  <div key={s.storage_area} className="flex justify-between items-center text-sm pr-3">
+                    <span className="text-muted-foreground">{s.storage_area_name}</span>
+                    <span className="font-mono">{s.quantity}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-muted-foreground">قابل للبيع</span>
               {item.is_sellable ? (

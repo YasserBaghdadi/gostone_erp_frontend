@@ -40,6 +40,7 @@ import { inferAttachmentKindFromUrl } from "@/lib/attachmentPreview";
 import { toast } from "sonner";
 import { parseBackendError } from "@/lib/utils";
 import { formatCustomerWithBalance } from "@/lib/partyDisplay";
+import { useCan } from "@/hooks/usePermissions";
 
 function CustomerAttachmentCard({
   url,
@@ -112,6 +113,7 @@ function CustomerAttachmentCard({
 }
 
 export default function CustomerDetails() {
+  const { can } = useCan();
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: customer, isLoading, isError } = useCustomerDetails(id!);
@@ -181,6 +183,7 @@ export default function CustomerDetails() {
                 </div>
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0">
+                {can("customers.statement") && (
                 <Button
                     variant="outline"
                     className="flex-1 md:flex-none gap-2"
@@ -204,6 +207,8 @@ export default function CustomerDetails() {
                     <span className="sm:hidden md:inline">طباعة كشف حساب</span>
                     <span className="hidden sm:inline md:hidden">طباعة</span>
                 </Button>
+                )}
+                {can("customers.odoo_sync") && (
                 <Button
                     className="flex-1 md:flex-none gap-2 border-0 bg-[#875A7B] text-white hover:bg-[#714a67] shadow-sm"
                     disabled={syncCustomerToOdooMutation.isPending}
@@ -227,11 +232,15 @@ export default function CustomerDetails() {
                     <span className="sm:hidden md:inline">ربط مع Odoo</span>
                     <span className="hidden sm:inline md:hidden">ربط</span>
                 </Button>
+                )}
+                {can("customers.add_payment") && (
                 <Button className="flex-1 md:flex-none gap-2" onClick={() => setIsPaymentModalOpen(true)}>
                     <CreditCard className="h-4 w-4" />
                     <span className="sm:hidden md:inline">إضافة دفعة</span>
                     <span className="hidden sm:inline md:hidden">دفعة</span>
                 </Button>
+                )}
+                {can("customers.edit") && (
                 <Link to={`/customers/${id}/edit`} className="flex-1 md:flex-none">
                     <Button variant="outline" className="w-full gap-2">
                         <Edit className="h-4 w-4" />
@@ -239,6 +248,7 @@ export default function CustomerDetails() {
                         <span className="hidden sm:inline md:hidden">تعديل</span>
                     </Button>
                 </Link>
+                )}
             </div>
           </div>
         </div>

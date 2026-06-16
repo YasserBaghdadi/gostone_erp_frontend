@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,9 +19,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCreateEmployee, useUpdateEmployee, useEmployeeDetails, usePermissionGroups } from "@/hooks/useEmployees";
+import { usePermissionCatalog } from "@/hooks/usePermissions";
+import { PermissionCatalogPicker } from "@/components/permissions/PermissionCatalogPicker";
 import { toast } from "sonner";
 import { parseBackendError } from "@/lib/utils";
-import { PERMISSION_GROUP_LABELS } from "@/types";
 import { PhoneInputField, normalizeSaudiPhone } from "@/components/form";
 
 // Update EmployeeFormValues and Schema
@@ -48,8 +49,26 @@ export default function CreateEmployee() {
 
   const { data: existingEmployee, isLoading: isLoadingDetails } = useEmployeeDetails(id!);
   const { data: permissionGroups, isLoading: isLoadingGroups } = usePermissionGroups();
+  const { data: catalog = [], isLoading: isLoadingCatalog } = usePermissionCatalog();
   const createMutation = useCreateEmployee();
   const updateMutation = useUpdateEmployee();
+
+  // Map between catalog action keys (e.g. "customers.create_individual") and the
+  // numeric Group ids the employee form submits as `permission_group_ids`.
+  const { nameToId, idToName, catalogIds } = useMemo(() => {
+    const nameToId = new Map<string, number>();
+    const idToName = new Map<number, string>();
+    const catalogIds = new Set<number>();
+    const catalogKeys = new Set(
+      catalog.flatMap((s) => s.screens.flatMap((sc) => sc.actions.map((a) => a.key))),
+    );
+    for (const g of permissionGroups ?? []) {
+      nameToId.set(g.name, g.id);
+      idToName.set(g.id, g.name);
+      if (catalogKeys.has(g.name)) catalogIds.add(g.id);
+    }
+    return { nameToId, idToName, catalogIds };
+  }, [permissionGroups, catalog]);
 
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema) as any,
@@ -70,6 +89,28 @@ export default function CreateEmployee() {
     name: "permission_group_ids",
     defaultValue: [],
   });
+
+  // Catalog keys currently selected (derived from the chosen group ids).
+  const selectedKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const gid of selectedGroupIds ?? []) {
+      const name = idToName.get(gid);
+      if (name) s.add(name);
+    }
+    return s;
+  }, [selectedGroupIds, idToName]);
+
+  // Apply a new set of catalog keys, preserving any non-catalog group ids.
+  const handleCatalogChange = (next: Set<string>) => {
+    const current = form.getValues("permission_group_ids") || [];
+    const preserved = current.filter((gid) => !catalogIds.has(gid));
+    const fromKeys = Array.from(next)
+      .map((k) => nameToId.get(k))
+      .filter((v): v is number => typeof v === "number");
+    form.setValue("permission_group_ids", [...new Set([...preserved, ...fromKeys])], {
+      shouldDirty: true,
+    });
+  };
 
   const lastLoadedIdRef = useRef<string | number | undefined>(undefined);
 
@@ -375,49 +416,19 @@ export default function CreateEmployee() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 md:p-8">
-                {isLoadingGroups ? (
+                {isLoadingGroups || isLoadingCatalog ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {permissionGroups?.map((group) => {
-                      const isChecked = selectedGroupIds?.includes(group.id) ?? false;
-                      
-                      const handleToggle = () => {
-                        const currentIds = form.getValues("permission_group_ids") || [];
-                        const newValue = isChecked
-                          ? currentIds.filter((gId) => gId !== group.id)
-                          : [...currentIds, group.id];
-                        form.setValue("permission_group_ids", newValue, { shouldDirty: true });
-                      };
-
-                      return (
-                        <label
-                          key={group.id}
-                          className={`
-                            flex items-center gap-3 p-4 rounded-xl border-2 transition-all cursor-pointer
-                            ${isChecked 
-                              ? "border-primary bg-primary/5" 
-                              : "border-muted hover:border-primary/50 hover:bg-muted/30"}
-                          `}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={handleToggle}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
-                          />
-                          <span className="cursor-pointer font-medium text-sm flex-1">
-                            {PERMISSION_GROUP_LABELS[group.name] || group.name}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <PermissionCatalogPicker
+                    catalog={catalog}
+                    selected={selectedKeys}
+                    onChange={handleCatalogChange}
+                  />
                 )}
                 <div className="mt-2 text-xs text-muted-foreground">
-                   يجب اختيار مجموعة واحدة على الأقل.
+                   حدّد الصلاحيات المسموحة للموظف على مستوى كل إجراء.
                 </div>
               </CardContent>
             </Card>

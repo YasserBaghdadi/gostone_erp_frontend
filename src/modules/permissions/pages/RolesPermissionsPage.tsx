@@ -168,16 +168,19 @@ export default function RolesPermissionsPage() {
                       </CardHeader>
                       <CardContent className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                         {screen.actions.map((action) => (
-                          <label
+                          <div
                             key={action.key}
-                            className="flex items-center gap-2 rounded-md p-1 text-sm cursor-pointer hover:bg-muted/40"
+                            className="flex items-center gap-2 rounded-md p-1 text-sm hover:bg-muted/40"
                           >
                             <Checkbox
+                              id={`role-perm-${action.key}`}
                               checked={selected.has(action.key)}
                               onCheckedChange={(v) => toggle(action.key, v === true)}
                             />
-                            {action.label}
-                          </label>
+                            <label htmlFor={`role-perm-${action.key}`} className="flex-1 cursor-pointer">
+                              {action.label}
+                            </label>
+                          </div>
                         ))}
                       </CardContent>
                     </Card>

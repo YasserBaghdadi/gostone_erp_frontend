@@ -341,6 +341,11 @@ export const API_ENDPOINTS = {
     CREATE: "/custom-v1/stock-transfers/",
   },
 
+  INVENTORY_WRITE_OFFS: {
+    LIST: "/custom-v1/inventory-write-offs/",
+    CREATE: "/custom-v1/inventory-write-offs/",
+  },
+
   // Customer Returns
   CUSTOMER_RETURNS: {
     LIST: "/custom-v1/customer-returns/",

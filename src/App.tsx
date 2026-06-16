@@ -82,6 +82,7 @@ const StorageAreasList = lazy(() => import("@/modules/storage/pages/StorageAreas
 const StockTransfers = lazy(() => import("@/modules/stock_transfers/pages/StockTransfers"));
 const InventoryWriteOffs = lazy(() => import("@/modules/inventory_write_offs/pages/InventoryWriteOffs"));
 const StockReport = lazy(() => import("@/modules/storage/pages/StockReport"));
+const ItemMovementLedger = lazy(() => import("@/modules/storage/pages/ItemMovementLedger"));
 
 // Customer Returns
 const CustomerReturnsList = lazy(() => import("@/modules/customer_returns/pages/CustomerReturnsList"));
@@ -326,7 +327,10 @@ function AppContent() {
               <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.stockReport} />}>
                 <Route path="stock-report" element={<LazyRoute component={StockReport} moduleName="رصيد المخازن" />} />
               </Route>
-              
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.itemMovements} />}>
+                <Route path="item-movements" element={<LazyRoute component={ItemMovementLedger} moduleName="كشف حركة الصنف" />} />
+              </Route>
+
               {/* Financial Management */}
               <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.accounts} />}>
                 <Route path="accounts">

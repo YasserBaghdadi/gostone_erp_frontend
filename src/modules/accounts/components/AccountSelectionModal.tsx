@@ -30,6 +30,7 @@ export function AccountSelectionModal({
     search,
     page: 1,
     page_size: 50,
+    leaf_only: true,
   });
 
   const accounts = data?.results || [];

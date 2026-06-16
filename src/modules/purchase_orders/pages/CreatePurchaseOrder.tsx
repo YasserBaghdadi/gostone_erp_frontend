@@ -103,6 +103,7 @@ const formSchema = z
     sell_order_display: z.string().optional(),
     notes: z.string().optional(),
     storage_area: z.coerce.number().min(1, "يجب اختيار المخزن (المستودع)"),
+    purchase_type: z.enum(["LOCAL", "FOREIGN"]).default("LOCAL"),
     items: z.array(itemSchema).min(1, "يجب إضافة بند واحد على الأقل"),
   })
   .superRefine((data, ctx) => {
@@ -188,6 +189,7 @@ export default function CreatePurchaseOrder() {
       sell_order: undefined,
       sell_order_display: "",
       notes: "",
+      purchase_type: "LOCAL",
       items: [],
     },
   });
@@ -254,6 +256,7 @@ export default function CreatePurchaseOrder() {
           ? `${existingOrder.sell_order}`
           : "",
         notes: existingOrder.notes || "",
+        purchase_type: existingOrder.purchase_type ?? "LOCAL",
         items: mappedItems,
       });
     }
@@ -446,6 +449,7 @@ export default function CreatePurchaseOrder() {
       sell_order: values.sell_order || undefined,
       notes: values.notes,
       storage_area: values.storage_area,
+      purchase_type: values.purchase_type,
       items: values.items.map((item) => ({
         item: item.item,
         ...(isOrderMode ? {} : { supplier: item.line_supplier }),
@@ -799,6 +803,32 @@ export default function CreatePurchaseOrder() {
                                 {w.name}
                               </SelectItem>
                             ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Purchase type: local (601) / foreign (602) */}
+                  <FormField
+                    control={form.control}
+                    name='purchase_type'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نوع الشراء</FormLabel>
+                        <Select
+                          value={field.value ?? "LOCAL"}
+                          onValueChange={(v) => field.onChange(v)}
+                        >
+                          <FormControl>
+                            <SelectTrigger className='w-full'>
+                              <SelectValue placeholder='اختر نوع الشراء' />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value='LOCAL'>محلي</SelectItem>
+                            <SelectItem value='FOREIGN'>خارجي</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

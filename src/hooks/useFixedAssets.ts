@@ -33,6 +33,7 @@ export interface FixedAssetPayload {
   salvage_value: string;
   acquisition_date: string;
   useful_life_months: number;
+  category?: string;
   is_active?: boolean;
 }
 

@@ -748,6 +748,8 @@ export interface PurchaseOrder {
   customer_name?: string | null;
   sell_order?: number;
   status: PurchaseOrderStatus;
+  /** نوع الشراء: محلي (601) أو خارجي (602) — يحدد حساب الترحيل */
+  purchase_type?: 'LOCAL' | 'FOREIGN';
   total_cost?: string;
   total_cost_tax?: string;
   item_count?: number;
@@ -1131,6 +1133,7 @@ export interface FixedAsset {
   acquisition_date: string; // YYYY-MM-DD
   useful_life_months: number;
   method: string;
+  category?: string;
   expense_account: number;
   accumulated_account: number;
   is_active: boolean;

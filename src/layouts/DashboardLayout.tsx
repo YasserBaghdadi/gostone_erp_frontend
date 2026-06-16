@@ -102,6 +102,7 @@ const navigationGroups = [
       { name: "المخازن", href: "/storage-areas", icon: Warehouse, permission: "storage_areas.view" },
       { name: "تحويل المخزون", href: "/stock-transfers", icon: ArrowLeftRight, permission: "stock_transfers.view" },
       { name: "رصيد المخازن", href: "/stock-report", icon: ClipboardList, permission: ["stock_report.view", "items.stock_report"] },
+      { name: "كشف حركة الصنف", href: "/item-movements", icon: ClipboardList, permission: "item_movements.view" },
     ]
   }
 ];

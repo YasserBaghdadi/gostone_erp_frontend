@@ -7,6 +7,21 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const ASSET_CATEGORIES: { value: string; label: string }[] = [
+  { value: "FURNITURE", label: "أثاث ومعدات مكتبية" },
+  { value: "MACHINERY", label: "آلات ومعدات" },
+  { value: "VEHICLES", label: "سيارات ووسائل نقل" },
+  { value: "IMPROVEMENTS", label: "تحسينات على مباني مستأجرة" },
+  { value: "COMPUTERS", label: "أجهزة حاسب آلي" },
+];
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -32,6 +47,7 @@ interface AssetForm {
   salvage_value: string;
   acquisition_date: string;
   useful_life_years: string;
+  category: string;
 }
 
 const EMPTY: AssetForm = {
@@ -40,6 +56,7 @@ const EMPTY: AssetForm = {
   salvage_value: "0",
   acquisition_date: "",
   useful_life_years: "",
+  category: "MACHINERY",
 };
 
 export default function FixedAssetsList() {
@@ -62,6 +79,7 @@ export default function FixedAssetsList() {
         salvage_value: form.salvage_value || "0",
         acquisition_date: form.acquisition_date,
         useful_life_months: Math.round(years * 12),
+        category: form.category,
       },
       {
         onSuccess: () => {
@@ -139,6 +157,24 @@ export default function FixedAssetsList() {
                     placeholder="مثال: 5"
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>الفئة (تحدّد حساب مجمع الإهلاك)</Label>
+                <Select
+                  value={form.category}
+                  onValueChange={(v) => setForm({ ...form, category: v })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="اختر الفئة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ASSET_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>

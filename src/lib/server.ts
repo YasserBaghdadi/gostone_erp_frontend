@@ -165,6 +165,9 @@ export const API_ENDPOINTS = {
     DELETE: (id: string | number) => `/custom-v1/items/${id}/`,
     STOCK_REPORT: "/custom-v1/items/stock-report/",
     STOCK_REPORT_EXCEL: "/custom-v1/items/stock-report/excel/",
+    MOVEMENTS: (id: string | number) => `/custom-v1/items/${id}/movements/`,
+    MOVEMENTS_EXCEL: (id: string | number) =>
+      `/custom-v1/items/${id}/movements/excel/`,
   },
 
   // Production Orders (أوامر التصنيع)

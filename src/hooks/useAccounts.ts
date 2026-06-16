@@ -10,6 +10,8 @@ interface AccountsParams {
   page?: number;
   page_size?: number;
   search?: string;
+  /** restrict to postable (leaf) accounts — excludes parent/summary accounts */
+  leaf_only?: boolean;
 }
 
 // Fetch Accounts List (paginated, for search)

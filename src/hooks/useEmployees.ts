@@ -95,10 +95,15 @@ export function usePermissionGroups() {
   return useQuery({
     queryKey: ['permission-groups'],
     queryFn: async () => {
-      const response = await api.get<PaginatedResponse<PermissionGroup>>(API_ENDPOINTS.PERMISSION_GROUPS.LIST, {
-        params: { page_size: 20 },
+      // Fetch ALL groups — the employee form maps every catalog action key to
+      // its group id, so a truncated page would leave later screens
+      // (delivery orders onward) unselectable. The endpoint returns an
+      // unpaginated array; tolerate a paginated shape too just in case.
+      const response = await api.get(API_ENDPOINTS.PERMISSION_GROUPS.LIST, {
+        params: { page_size: 1000 },
       });
-      return response.data.results;
+      const data = response.data as PermissionGroup[] | PaginatedResponse<PermissionGroup>;
+      return Array.isArray(data) ? data : data.results;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });

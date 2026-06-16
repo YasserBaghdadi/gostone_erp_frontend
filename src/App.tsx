@@ -80,6 +80,7 @@ const SupplierDetails = lazy(() => import("@/modules/purchase_orders/pages/Suppl
 const CreateSupplier = lazy(() => import("@/modules/purchase_orders/pages/CreateSupplier"));
 const StorageAreasList = lazy(() => import("@/modules/storage/pages/StorageAreasList"));
 const StockTransfers = lazy(() => import("@/modules/stock_transfers/pages/StockTransfers"));
+const InventoryWriteOffs = lazy(() => import("@/modules/inventory_write_offs/pages/InventoryWriteOffs"));
 const StockReport = lazy(() => import("@/modules/storage/pages/StockReport"));
 
 // Customer Returns
@@ -318,6 +319,9 @@ function AppContent() {
               </Route>
               <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.stockTransfers} />}>
                 <Route path="stock-transfers" element={<LazyRoute component={StockTransfers} moduleName="تحويل المخزون" />} />
+              </Route>
+              <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.inventoryWriteOffs} />}>
+                <Route path="inventory-write-offs" element={<LazyRoute component={InventoryWriteOffs} moduleName="إهلاك المخزون" />} />
               </Route>
               <Route element={<PermissionRoute permission={ROUTE_PERMISSIONS.stockReport} />}>
                 <Route path="stock-report" element={<LazyRoute component={StockReport} moduleName="رصيد المخازن" />} />

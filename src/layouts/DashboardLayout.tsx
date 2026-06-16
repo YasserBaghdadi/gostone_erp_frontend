@@ -24,7 +24,8 @@ import {
   Factory,
   Truck,
   HandCoins,
-  UserPlus
+  UserPlus,
+  Trash2
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useUser } from "@/hooks/useAuth";
@@ -54,6 +55,7 @@ const navigationGroups = [
       { name: "أوامر التصنيع", href: "/production-orders", icon: Factory, permission: "production_orders.view" },
       { name: "أوامر التسليم", href: "/delivery-orders", icon: Truck, permission: "delivery_orders.view" },
       { name: "طلبات الشراء", href: "/purchase-orders", icon: ShoppingCart, permission: "purchase_orders.view" },
+      { name: "إهلاك المخزون", href: "/inventory-write-offs", icon: Trash2, permission: "inventory_write_offs.view" },
     ]
   },
   {

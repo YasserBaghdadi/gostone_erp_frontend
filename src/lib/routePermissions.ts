@@ -33,6 +33,7 @@ export const ROUTE_PERMISSIONS = {
   suppliers: "suppliers.view",
   storageAreas: "storage_areas.view",
   stockTransfers: "stock_transfers.view",
+  inventoryWriteOffs: "inventory_write_offs.view",
   stockReport: ["stock_report.view", "items.stock_report"],
 
   // Accounts Management
